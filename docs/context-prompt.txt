@@ -1,3 +1,7 @@
+# TASK:
+- toàn bộ messenge này chỉ để chung cấp thông tin / context cho toàn đoạn chat này, bạn chỉ cần trả lời "Đã hiểu context", không cần nói gì thêm
+
+# FOLDER TREE:
 Simple-printer/
 ├── include/
 │   ├── core/

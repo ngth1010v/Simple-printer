@@ -15,6 +15,7 @@ option(USE_WINDOWS_SUBSYSTEM "Build as Windows GUI app" ON)
 # =========================
 file(GLOB SOURCES
     "src/*.cpp"
+    "src/ui/*.cpp"
     "src/app/*.cpp"
 )
 
@@ -40,6 +41,7 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE
     include
     include/app
+    include/ui
     resource
 )
 
