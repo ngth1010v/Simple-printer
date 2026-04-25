@@ -31,7 +31,7 @@ Simple-printer/
 │   │   ├── BaseWindow.h (done)
 │   │   │
 │   │   ├── ReviewWindow.h
-│   │   ├── PrintingWindow.h
+│   │   ├── PrintingWindow.h (done)
 │   │   ├── AdvancedWindow.h
 │   │   │
 │   │   ├── controls/
@@ -73,7 +73,7 @@ Simple-printer/
 │   │   ├── BaseWindow.cpp (done)
 │   │   │
 │   │   ├── ReviewWindow.cpp
-│   │   ├── PrintingWindow.cpp
+│   │   ├── PrintingWindow.cpp (done)
 │   │   ├── AdvancedWindow.cpp
 │   │   │
 │   │   └── controls/

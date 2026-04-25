@@ -1,6 +1,9 @@
 # TASK:
 - toàn bộ messenge này chỉ để chung cấp thông tin / context cho toàn đoạn chat này, bạn chỉ cần trả lời "Đã hiểu context", không cần nói gì thêm
 
+# DESCRIPTION:
+- app này là 1 app print đơn giản trên win 11 được build = ninja + UCRT64
+
 # FOLDER TREE:
 Simple-printer/
 ├── include/

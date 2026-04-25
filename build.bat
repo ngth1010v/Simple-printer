@@ -7,12 +7,6 @@ echo ================================
 
 cd /d %~dp0
 
-REM DELETE OLD BUILD FOLDER
-if exist build (
-echo Cleaning old build folder...
-rmdir /s /q build
-)
-
 REM Recreate build folder
 mkdir build
 cd build
