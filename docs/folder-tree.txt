@@ -28,7 +28,7 @@ Simple-printer/
 │   │   └── WinUtils.h
 │   │
 │   ├── ui/
-│   │   ├── BaseWindow.h
+│   │   ├── BaseWindow.h (done)
 │   │   │
 │   │   ├── ReviewWindow.h
 │   │   ├── PrintingWindow.h
@@ -70,7 +70,7 @@ Simple-printer/
 │   │   └── WinUtils.cpp
 │   │
 │   ├── ui/
-│   │   ├── BaseWindow.cpp
+│   │   ├── BaseWindow.cpp (done)
 │   │   │
 │   │   ├── ReviewWindow.cpp
 │   │   ├── PrintingWindow.cpp
