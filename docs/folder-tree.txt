@@ -1,0 +1,91 @@
+printer-app/
+├── include/
+│   ├── core/
+│   │   ├── PrintTypes.h
+│   │   ├── PrintConfig.h
+│   │   ├── PrintTask.h
+│   │   ├── BatchTask.h
+│   │   └── PrintState.h
+│   │
+│   ├── worker/
+│   │   ├── PrintWorker.h
+│   │   └── PrintQueue.h
+│   │
+│   ├── render/
+│   │   ├── IRenderer.h
+│   │   ├── ImageRenderer.h
+│   │   ├── PdfRenderer.h
+│   │   └── TextRenderer.h
+│   │
+│   ├── config/
+│   │   ├── ConfigModel.h
+│   │   ├── ConfigParser.h
+│   │   └── ConfigWriter.h
+│   │
+│   ├── platform/
+│   │   ├── WinPrinter.h
+│   │   ├── WinSpooler.h
+│   │   └── WinUtils.h
+│   │
+│   ├── ui/
+│   │   ├── BaseWindow.h
+│   │   │
+│   │   ├── ReviewWindow.h
+│   │   ├── PrintingWindow.h
+│   │   ├── AdvancedWindow.h
+│   │   │
+│   │   ├── controls/
+│   │   │   ├── FileListView.h
+│   │   │   ├── PrinterCombo.h
+│   │   │   └── RangeInput.h
+│   │
+│   └── app/
+│       ├── App.h
+│       └── CommandLine.h
+│
+├── src/
+│   ├── core/
+│   │   ├── PrintTypes.cpp
+│   │   ├── PrintConfig.cpp
+│   │   ├── PrintTask.cpp
+│   │   ├── BatchTask.cpp
+│   │   └── PrintState.cpp
+│   │
+│   ├── worker/
+│   │   ├── PrintWorker.cpp
+│   │   └── PrintQueue.cpp
+│   │
+│   ├── render/
+│   │   ├── ImageRenderer.cpp
+│   │   ├── PdfRenderer.cpp
+│   │   └── TextRenderer.cpp
+│   │
+│   ├── config/
+│   │   ├── ConfigParser.cpp
+│   │   └── ConfigWriter.cpp
+│   │
+│   ├── platform/
+│   │   ├── WinPrinter.cpp
+│   │   ├── WinSpooler.cpp
+│   │   └── WinUtils.cpp
+│   │
+│   ├── ui/
+│   │   ├── BaseWindow.cpp
+│   │   │
+│   │   ├── ReviewWindow.cpp
+│   │   ├── PrintingWindow.cpp
+│   │   ├── AdvancedWindow.cpp
+│   │   │
+│   │   └── controls/
+│   │       ├── FileListView.cpp
+│   │       ├── PrinterCombo.cpp
+│   │       └── RangeInput.cpp
+│   │
+│   ├── app/
+│   │   ├── App.cpp
+│   │   └── CommandLine.cpp
+│   │   
+│   └── main.cpp
+│
+└── assets/
+    └── icons/

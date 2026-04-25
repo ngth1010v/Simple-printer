@@ -1,0 +1,85 @@
+# =========================
+# Build folders
+# =========================
+build/
+bin/
+out/
+dist/
+cmake-build-*/
+
+# =========================
+# CMake
+# =========================
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# =========================
+# Object files
+# =========================
+*.o
+*.obj
+*.lo
+*.slo
+
+# =========================
+# Libraries
+# =========================
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+
+# =========================
+# Executables
+# =========================
+*.exe
+*.out
+*.app
+
+# =========================
+# Debug / temp
+# =========================
+*.log
+*.tmp
+*.temp
+
+# =========================
+# VSCode
+# =========================
+.vscode/
+!.vscode/settings.json   # giữ nếu bạn muốn share config
+
+# =========================
+# Visual Studio
+# =========================
+.vs/
+*.vcxproj.user
+*.suo
+
+# =========================
+# MSYS2 / MinGW
+# =========================
+*.dll.a
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Assets (optional)
+# =========================
+# Nếu bạn có folder test lớn:
+# assets/temp/
+# assets/cache/
+
+# =========================
+# Logs / runtime data
+# =========================
+logs/
+*.log
