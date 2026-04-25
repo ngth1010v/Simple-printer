@@ -1,6 +1,6 @@
 #include "PrintingWindow.h"
 
-#define ID_BTN_STOP     1001
+#define ID_BTN_PAUSE     1001
 #define ID_BTN_CONTINUE 1002
 #define ID_BTN_CANCEL   1003
 
@@ -60,9 +60,9 @@ void PrintingWindow::SetPrintProcessColor(const std::string& c) {
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
-void PrintingWindow::SetAllowStop(bool allow) {
-    m_allowStop = allow;
-    if (m_btnStop) EnableWindow(m_btnStop, allow);
+void PrintingWindow::SetAllowPause(bool allow) {
+    m_allowPause = allow;
+    if (m_btnPause) EnableWindow(m_btnPause, allow);
 }
 
 void PrintingWindow::SetAllowContinue(bool allow) {
@@ -76,16 +76,16 @@ void PrintingWindow::SetNotification(const std::wstring& s) {
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
-void PrintingWindow::OnStop(std::function<void()> cb) { m_cbStop = cb; }
+void PrintingWindow::OnPause(std::function<void()> cb) { m_cbPause = cb; }
 void PrintingWindow::OnContinue(std::function<void()> cb) { m_cbContinue = cb; }
 void PrintingWindow::OnCancel(std::function<void()> cb) { m_cbCancel = cb; }
 
 // ================= INTERNAL =================
 
 COLORREF PrintingWindow::ParseColor(const std::string& c) {
-    if (c == "red") return RGB(255,0,0);
-    if (c == "green") return RGB(0,255,0);
-    if (c == "yellow") return RGB(255,255,0);
+    if (c == "red") return RGB(200,0,0);
+    if (c == "green") return RGB(0,200,0);
+    if (c == "yellow") return RGB(200,200,0);
     return RGB(200,200,200);
 }
 
@@ -99,7 +99,7 @@ void PrintingWindow::OnCreate() {
 
     int btnW = (rc.right - MARGIN * 2 - BTN_GAP) / 2;
 
-    // ===== FONT (ClearType + nhỏ gọn) =====
+    // ===== FONT =====
     m_font = CreateFont(
         -12, 0, 0, 0,
         FW_NORMAL,
@@ -111,16 +111,27 @@ void PrintingWindow::OnCreate() {
         DEFAULT_PITCH,
         L"Segoe UI"
     );
+    m_fontSmall = CreateFont(
+        -11, 0, 0, 0,   // nhỏ hơn -12
+        FW_NORMAL,
+        FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS,
+        CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY,
+        DEFAULT_PITCH,
+        L"Segoe UI"
+    );
 
     // ===== BUTTONS =====
-    m_btnStop = CreateWindowEx(0, L"BUTTON", L"Stop",
+    m_btnPause = CreateWindowEx(0, L"BUTTON", L"Pause",
         WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
         MARGIN,
         rc.bottom - MARGIN - BTN_GAP - BTN_H * 2,
         btnW,
         BTN_H,
         GetHwnd(),
-        (HMENU)ID_BTN_STOP,
+        (HMENU)ID_BTN_PAUSE,
         GetModuleHandle(nullptr),
         nullptr);
 
@@ -147,20 +158,20 @@ void PrintingWindow::OnCreate() {
         nullptr);
 
     // apply font cho control (để đồng bộ UI)
-    SendMessage(m_btnStop, WM_SETFONT, (WPARAM)m_font, TRUE);
+    SendMessage(m_btnPause, WM_SETFONT, (WPARAM)m_font, TRUE);
     SendMessage(m_btnContinue, WM_SETFONT, (WPARAM)m_font, TRUE);
     SendMessage(m_btnCancel, WM_SETFONT, (WPARAM)m_font, TRUE);
     SendMessage(m_lblNotification, WM_SETFONT, (WPARAM)m_font, TRUE);
 
     // ===== APPLY STATE =====
-    EnableWindow(m_btnStop, m_allowStop);
+    EnableWindow(m_btnPause, m_allowPause);
     EnableWindow(m_btnContinue, m_allowContinue);
 }
 
 void PrintingWindow::OnCommand(WPARAM wParam) {
     switch (LOWORD(wParam)) {
-    case ID_BTN_STOP:
-        if (m_allowStop && m_cbStop) m_cbStop();
+    case ID_BTN_PAUSE:
+        if (m_allowPause && m_cbPause) m_cbPause();
         break;
     case ID_BTN_CONTINUE:
         if (m_allowContinue && m_cbContinue) m_cbContinue();
@@ -228,10 +239,17 @@ void PrintingWindow::OnPaint() {
 
     TextOut(memDC, x, y, m_resLabel.c_str(), m_resLabel.length());
 
-    std::wstring rtxt = L"(" + std::to_wstring(m_resCurrent) + L"/" + std::to_wstring(m_resTarget) + L")";
-    GetTextExtentPoint32(memDC, rtxt.c_str(), rtxt.length(), &sz);
+    {
+        HFONT oldFont2 = (HFONT)SelectObject(memDC, m_fontSmall);
 
-    TextOut(memDC, panel.right - 10 - sz.cx, y, rtxt.c_str(), rtxt.length());
+        std::wstring rtxt = std::to_wstring(m_resCurrent) + L"/" + std::to_wstring(m_resTarget);
+        GetTextExtentPoint32(memDC, rtxt.c_str(), rtxt.length(), &sz);
+
+        TextOut(memDC, panel.right - 10 - sz.cx, y + 2, rtxt.c_str(), rtxt.length());
+
+        SelectObject(memDC, oldFont2);        
+    }
+
 
     // progress background (không viền)
     y += labelToBar;
@@ -254,10 +272,17 @@ void PrintingWindow::OnPaint() {
 
     TextOut(memDC, x, y, m_printLabel.c_str(), m_printLabel.length());
 
-    std::wstring ptxt = L"(" + std::to_wstring(m_printCurrent) + L"/" + std::to_wstring(m_printTarget) + L")";
-    GetTextExtentPoint32(memDC, ptxt.c_str(), ptxt.length(), &sz);
+    {
+        HFONT oldFont2 = (HFONT)SelectObject(memDC, m_fontSmall);
 
-    TextOut(memDC, panel.right - 10 - sz.cx, y, ptxt.c_str(), ptxt.length());
+        std::wstring ptxt = std::to_wstring(m_printCurrent) + L"/" + std::to_wstring(m_printTarget);
+        GetTextExtentPoint32(memDC, ptxt.c_str(), ptxt.length(), &sz);
+
+        TextOut(memDC, panel.right - 10 - sz.cx, y + 2, ptxt.c_str(), ptxt.length());
+
+        SelectObject(memDC, oldFont2);        
+    }
+
 
     y += labelToBar;
 
@@ -313,6 +338,7 @@ LRESULT PrintingWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
     case WM_DESTROY:
         if (m_font) DeleteObject(m_font);
+        if (m_fontSmall) DeleteObject(m_fontSmall);
         PostQuitMessage(0);
         return 0;
 

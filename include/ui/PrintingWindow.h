@@ -16,11 +16,11 @@ public:
     void SetPrintProcessLabel(const std::wstring& content);
     void SetPrintProcessColor(const std::string& color);
 
-    void SetAllowStop(bool allow = true);
+    void SetAllowPause(bool allow = true);
     void SetAllowContinue(bool allow = true);
     void SetNotification(const std::wstring& content = L"");
 
-    void OnStop(std::function<void()> cb);
+    void OnPause(std::function<void()> cb);
     void OnContinue(std::function<void()> cb);
     void OnCancel(std::function<void()> cb);
 
@@ -28,11 +28,13 @@ protected:
     LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) override;
 
 private:
-    HWND m_btnStop = nullptr;
+    HWND m_btnPause = nullptr;
     HWND m_btnContinue = nullptr;
     HWND m_btnCancel = nullptr;
     HWND m_lblNotification = nullptr;
+
     HFONT m_font = nullptr;
+    HFONT m_fontSmall = nullptr;
 
     int m_resTarget = 0;
     int m_resCurrent = 0;
@@ -47,10 +49,10 @@ private:
     COLORREF m_resColor = RGB(255,255,0);
     COLORREF m_printColor = RGB(0,255,0);
 
-    bool m_allowStop = true;
+    bool m_allowPause = true;
     bool m_allowContinue = true;
 
-    std::function<void()> m_cbStop;
+    std::function<void()> m_cbPause;
     std::function<void()> m_cbContinue;
     std::function<void()> m_cbCancel;
 

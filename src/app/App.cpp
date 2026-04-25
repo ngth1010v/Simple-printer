@@ -34,19 +34,19 @@ int App::Run() {
 
         win.SetNotification(L"Wait for input...");
 
-        win.SetAllowStop(true);
+        win.SetAllowPause(true);
         win.SetAllowContinue(false);
 
         // ===== CALLBACK =====
-        win.OnStop([&]() {
-            win.SetNotification(L"Stopped...");
-            win.SetAllowStop(false);
+        win.OnPause([&]() {
+            win.SetNotification(L"Pauseped...");
+            win.SetAllowPause(false);
             win.SetAllowContinue(true);
         });
 
         win.OnContinue([&]() {
             win.SetNotification(L"Continue...");
-            win.SetAllowStop(true);
+            win.SetAllowPause(true);
             win.SetAllowContinue(false);
         });
 
