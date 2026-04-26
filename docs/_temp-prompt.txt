@@ -3,24 +3,52 @@
 
 
 # WINDOW LAYOUT:
-|---------------------------------------------|
-| Rendering resources...              (12/20) |
-| ==========================                  | <= chỗ này là thanh process
-|                                             |
-| Printing...                          (3/20) |
-| =======                                     | <= chỗ này là thanh process
-|                                             |
-| Wait for flipt...                           | <= Notification
-| |-------------------| |-------------------| |
-| |       Stop        | |     Continue      | |
-| |-------------------| |-------------------| |
-| |-----------------------------------------| |
-| |                 Cancle                  | |
-| |-----------------------------------------| |
-|---------------------------------------------|
+|---------------------------------------------------------------------------------------------------------|
+| |-------------------------------------------------------------| | |-----------------------------------| |
+| |                                                             | | | Test.docx                     1-3 | | // Filename.ext + range(editable)
+|                                                                 | | Test.docx                    1-10 | | 
+|                                                                 | | Test1.docx                      1 | | 
+|                                                                 | | Test1.docx                   5-10 | | 
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | | 
+|                                                                 | |                                   | |
+|                                                                 | |                                   | | 
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |                                   | |
+|                                                                 | |-----------------------------------| |
+|                                                                 | |----------------| |----------------| |
+|                                                                 | |       Up       | |      Down      | |
+|                                                                 | |----------------| |----------------| |
+|                                                                 | |----------------| |----------------| |
+|                                                                 | |     Remove     | |       Add      | |
+|                                                                 | |----------------| |----------------| |
+|                                                                 |                                       |
+|                                                                 |---------------------------------------|
+|                                                                 |                                       |
+|                                                                 | |----------------| |----------------| |
+|                                                                 | |     Cancle     | |     Print      | |
+|                                                                 | |----------------| |----------------| |
+|---------------------------------------------------------------------------------------------------------|
 
 
-# PUBLIC FUNSTIONS (add thêm):
+# FUNSTIONS (các hàm tính năng):
+
+
+
 - SetResourceProcess(int target, int current)
 - SetResourceProcessLabel(string content)
 - SetResourceProcessColor(string color)
@@ -282,3 +310,350 @@ LRESULT PrintingWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
     return BaseWindow::HandleMessage(msg, wParam, lParam);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hello, World!</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      
+      body{
+        padding: 30px;
+        background: #223;
+        font-size: 12px;
+        font-family: Segoe UI;
+      }
+      .window{
+        width: 450px;
+        height: 562px;
+        display: flex;
+        background: #eee;
+        padding: 5px;
+        box-sizing: border-box;
+        gap: 5px;
+      }
+      
+      .section {
+        width: 100%;
+        padding: 6px 10px 10px 10px;
+        box-sizing: border-box;
+        border: 1px solid #999;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        background: #fff;
+      }
+      
+      .row {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;      
+      }
+      
+      .columnContainer {
+        width: 100%;
+        display: flex;
+        gap: 5px;
+      }
+      .rowContainer {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      
+      .label {
+        
+      }
+      
+      .input {
+        width: 100%;
+        border: 1px solid #999;
+        border-radius: 3px;
+        box-sizing: border-box;
+      }
+      
+      .image {
+        width: 100%;
+        height: 50px;
+        background: #ccf;
+      }
+      
+      .info {
+        width: 100%;
+        border: 1px solid #999;
+        border-radius: 3px;
+        box-sizing: border-box;        
+      }
+      
+      .controlContainer {
+        display: flex;
+        width: 100%;
+        gap: 3px;
+      }
+      .controlBtn {
+        width: 50%;
+        border: 1px solid #999;
+        border-radius: 3px;
+        box-sizing: border-box;          
+        display: flex;
+        padding: 3px;
+        background: #fff;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .fileControlContainer{
+        width: 100%;
+        display: flex;
+        gap: 2px;        
+      }
+      
+      .fileControlBtn{
+        width: 50%;
+        display: flex;
+        justify-content: center;
+        border: 1px solid #999;
+        border-radius: 3px;
+        font-weight: bold;
+      }
+      
+      .fileListview {
+        width: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      
+      .fileRow {
+        display: flex;
+        width: 100%;
+        background: #f2f2f2;
+        border-left: 2px solid #5c5;
+        justify-content: space-between;
+        padding: 2px 3px;
+        box-sizing: border-box;
+      }
+      
+      .configPanel{
+        width: 55%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;        
+      }
+      
+      .filePanel {
+        width: 45%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;           
+      }
+    </style>
+  </head>
+  <body>
+      <div class="window">
+        <div class="configPanel"> 
+          <div class="section section1">
+            <div class="row">
+              <div class="label"> Printer </div>
+              <div class="input"> Canon LBP 3018 </div>
+            </div>
+            <div class="row">
+              <div class="label"> Copies </div>
+              <div class="input"> 2 </div>
+            </div>
+          </div>
+          <div class="section section2">
+            <div class="row">
+              <div class="label"> Print mode </div>
+              <div class="input"> Manual Duplex (Flip On Short Edge) </div>
+              <div class="image"></div>
+            </div>
+            <div class="row">
+              <div class="label"> Paper </div>
+              <div class="input"> A4 </div>
+            </div>
+            <div class="row">
+              <div class="label"> Layout </div>
+              <div class="input"> 1 Page Per Sheet </div>
+            </div>            
+            <div class="row">
+              <div class="label"> Pages to Print </div>
+              <div class="input"> Print All Pages</div>
+            </div>            
+            <div class="row">
+              <div class="label"> Orientation </div>
+              <div class="input"> Portrait </div>
+            </div>
+            <div class="row">
+              <div class="label"> Collate </div>
+              <div class="input"> Collated (1,2,3 | 1,2,3 | 1,2,3) </div>
+            </div>
+          </div>
+          <div class="section section3">
+            <div class="row">
+              <div class="label"> Margin </div>
+              <div class="input"> Default </div>
+            </div>            
+            <div class="columnContainer">
+              <div class="rowContainer">
+                <div class="row">
+                  <div class="label"> Top </div>
+                  <div class="input"> 1" </div>
+                </div>
+                <div class="row">
+                  <div class="label"> Bottom </div>
+                  <div class="input"> 1" </div>
+                </div>              
+              </div>
+              <div class="rowContainer">
+                <div class="row">
+                  <div class="label"> Left </div>
+                  <div class="input"> 1" </div>
+                </div>
+                <div class="row">
+                  <div class="label"> Right </div>
+                  <div class="input"> 1" </div>
+                </div>              
+              </div>              
+            </div>
+          </div>
+        </div>
+        <div class="filePanel"> 
+          <div class="section section4">
+            <div class="row">
+              <div class="label"> Total Files </div>
+              <div class="input"> 2</div>
+            </div>               
+            <div class="row">
+              <div class="label"> Pages To Print </div>
+              <div class="input"> 10 </div>
+            </div>               
+            <div class="row">
+              <div class="label"> Sheets Required </div>
+              <div class="input"> 5 </div>
+            </div>               
+          </div>
+          <div class="section" style="flex: 1;">
+            <div class="label"> Selected Files </div>
+            <div class="fileListview">
+              <div class="fileRow">
+                <div class="fileName">Test1.docx</div>
+                <div class="range"> 1-10</div>
+              </div>
+              <div class="fileRow">
+                <div class="fileName">Test2.docx</div>
+                <div class="range"> 1</div>
+              </div>
+              <div class="fileRow">
+                <div class="fileName">Test3.docx</div>
+                <div class="range"> 5-20</div>
+              </div>
+              <div class="fileRow">
+                <div class="fileName">Test4.docx</div>
+                <div class="range"> 1-20</div>
+              </div>
+            </div>
+            <div class="fileControlContainer">
+                <div class="fileControlBtn"> ↑ </div>                
+                <div class="fileControlBtn"> ↓ </div>                
+                <div class="fileControlBtn"> - </div>                
+                <div class="fileControlBtn"> + </div>                
+            </div>
+          </div>
+          <div class="controlContainer">
+            <div class="controlBtn"> Cancle </div>
+            <div class="controlBtn" style="background: #cfc"> Print </div>
+          </div>
+        </div>
+      </div>
+  </body>
+</html>
