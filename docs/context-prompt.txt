@@ -35,16 +35,17 @@ Simple-printer/
 │   │   └── WinUtils.h
 │   │
 │   ├── ui/
-│   │   ├── BaseWindow.h
+│   │   ├── BaseWindow.h (done)
 │   │   │
-│   │   ├── ReviewWindow.h
-│   │   ├── PrintingWindow.h
-│   │   ├── AdvancedWindow.h
+│   │   ├── HomeWindow.h
+│   │   ├── PrintingWindow.h (done)
 │   │   │
-│   │   ├── controls/
-│   │   │   ├── FileListView.h
-│   │   │   ├── PrinterCombo.h
-│   │   │   └── RangeInput.h
+│   │   └── components/
+│   │       ├── BasicConfigSection.h
+│   │       ├── AdvangeConfigSection.h
+│   │       ├── MarginConfigSection.h
+│   │       ├── InfoSection.h
+│   │       └── FileListSection.h
 │   │
 │   └── app/
 │       ├── App.h (done)
@@ -77,16 +78,17 @@ Simple-printer/
 │   │   └── WinUtils.cpp
 │   │
 │   ├── ui/
-│   │   ├── BaseWindow.cpp
+│   │   ├── BaseWindow.cpp (done)
 │   │   │
-│   │   ├── ReviewWindow.cpp
-│   │   ├── PrintingWindow.cpp
-│   │   ├── AdvancedWindow.cpp
+│   │   ├── PrintingWindow.cpp (done)
+│   │   ├── HomeWindow.cpp
 │   │   │
-│   │   └── controls/
-│   │       ├── FileListView.cpp
-│   │       ├── PrinterCombo.cpp
-│   │       └── RangeInput.cpp
+│   │   └── components/
+│   │       ├── BasicConfigSection.cpp
+│   │       ├── AdvangeConfigSection.cpp
+│   │       ├── MarginConfigSection.cpp
+│   │       ├── InfoSection.cpp
+│   │       └── FileListSection.cpp
 │   │
 │   ├── app/
 │   │   ├── App.cpp (wait for update)
@@ -96,3 +98,74 @@ Simple-printer/
 │
 └── assets/
     └── icons/
+
+
+# CONFIG.INI:
+## FORM
+[Basic]
+priner=Canon LBP 3018
++ có thể rỗng
+
+[Advance]
+printMode=Manual Duplex (Flip On Short Edge)
++ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
+++ "Simplex"
+++ "Duplex"
+++ "Manual Duplex (Flip On Long Edge)"
+++ "Manual Duplex (Flip On Short Edge)"
+
+paper=A4
++ khi có printer sẽ update các size theo support của printer 
+
+layout=1 Page Per Sheet
++ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
+++ "1 Page Per Sheet"
+++ "2 Page Per Sheet"
+++ "4 Page Per Sheet"
+++ "6 Page Per Sheet"
+++ "8 Page Per Sheet"
+
+pagesToPrint=Print All Pages
++ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
+++ "Print All Pages"
+++ "Only Print Odd Pages"
+++ "Only Print Even Pages"
+
+orientation=Portrait
++ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
+++ "Auto"
+++ "Protrait"
+++ "Landscape"
+
+collate=Collated (1,2,3 | 1,2,3 | 1,2,3)
++ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
+++ "Collated (1,2,3 | 1,2,3 | 1,2,3)"
+++ "Uncollated (1,1,1 | 2,2,2 | 3,3,3)"
+
+[Margin]
+top=1
+bottom=1
+left=1
+right=1
++ tất cả tính theo inch
+
+
+## EXAMPLE:
+[Basic]
+priner=Canon LBP 3018
+
+[Advance]
+printMode=Manual Duplex (Flip On Short Edge)
+paper=A4
+layout=1 Page Per Sheet
+pagesToPrint=Print All Pages
+orientation=Portrait
+collate=Collated (1,2,3 | 1,2,3 | 1,2,3)
+
+[Margin]
+top=1
+bottom=1
+left=1
+right=1
+
+
