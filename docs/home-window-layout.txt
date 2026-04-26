@@ -1,3 +1,28 @@
+# RULE:
+- QUAN TRỌNG: TẤT CẢ CÁC VỊ TRÍ ELEMENT, BAO GỒM SECTION-WRAPPER, LABEL, INPUT, INFO, BUTTON, IMAGE, ... PHẢI ĐƯỢC DEFINE TRONG FILE HomeComponentMap.h (có thể lấy móc theo top/left/bottom/right tùy vào elemant cụ thể)
+- window có thể được kéo dãn ra nhưng có min: minHeight = 541px, minWidth = 450px
+- Vị trí / size tương đối của từng section:
++ Basis-section:
+++ size: cố định
+++ pos: cách window-top-left 1 khoảng margin = 5
++ Advance-section:
+++ size: cố định
+++ pos: cách window-left và basis-section 1 khoảng margin = 5
++ Margin-section:
+++ size: cố định
+++ pos: cách window-left và Advance-section 1 khoảng margin = 5
++ Info-section:
+++ size: có height cố định, width có thể dãn ra để scale theo window
+++ pos: cách window-top và Basic-section 1 khoảng margin = 5
++ File-section:
+++ size: có height, width có thể dãn ra để scale theo window
+++ pos: cách Info-section và advance-section 1 khoảng margin = 5
++ Control-section:
+++ size: có height cố định, width có thể dãn ra để scale theo window
+++ pos: cách window-bottom-right 1 khoảng margin = 5
+ 
+
+# LAYOUT:
 <!DOCTYPE html>
 <html>
   <head>
@@ -147,7 +172,7 @@
   <body>
       <div class="window">
         <div class="configPanel"> 
-          <div class="section section1">
+          <div class="section basic-section">
             <div class="row">
               <div class="label"> Printer </div>
               <div class="input"> Canon LBP 3018 </div>
@@ -157,7 +182,7 @@
               <div class="input"> 2 </div>
             </div>
           </div>
-          <div class="section section2">
+          <div class="section advance-section">
             <div class="row">
               <div class="label"> Print mode </div>
               <div class="input"> Manual Duplex (Flip On Short Edge) </div>
@@ -184,7 +209,7 @@
               <div class="input"> Collated (1,2,3 | 1,2,3 | 1,2,3) </div>
             </div>
           </div>
-          <div class="section section3">
+          <div class="section margin-section">
             <div class="columnContainer">
               <div class="rowContainer">
                 <div class="row">
@@ -210,7 +235,7 @@
           </div>
         </div>
         <div class="filePanel"> 
-          <div class="section section4">
+          <div class="section info-section">
             <div class="row">
               <div class="label"> Total Files </div>
               <div class="input"> 2</div>
@@ -224,7 +249,7 @@
               <div class="input"> 5 </div>
             </div>               
           </div>
-          <div class="section" style="flex: 1;">
+          <div class="section files-section" style="flex: 1;">
             <div class="label"> Selected Files </div>
             <div class="fileListview">
               <div class="fileRow">
@@ -251,7 +276,7 @@
                 <div class="fileControlBtn"> + </div>                
             </div>
           </div>
-          <div class="controlContainer">
+          <div class="controlContainer control-section">
             <div class="controlBtn"> Cancle </div>
             <div class="controlBtn" style="background: #cfc"> Print </div>
           </div>

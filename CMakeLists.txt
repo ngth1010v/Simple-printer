@@ -16,6 +16,7 @@ option(USE_WINDOWS_SUBSYSTEM "Build as Windows GUI app" ON)
 file(GLOB SOURCES
     "src/*.cpp"
     "src/ui/*.cpp"
+    "src/ui/components/*.cpp"
     "src/app/*.cpp"
 )
 
@@ -42,6 +43,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     include
     include/app
     include/ui
+    include/ui/components
     resource
 )
 
@@ -61,6 +63,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     gdiplus
     shell32
     msimg32
+    comctl32
 )
 
 # =========================

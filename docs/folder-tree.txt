@@ -34,6 +34,7 @@ Simple-printer/
 │   │   ├── PrintingWindow.h (done)
 │   │   │
 │   │   └── components/
+│   │       ├── HomeComponentMap.h
 │   │       ├── BasicConfigSection.h
 │   │       ├── AdvangeConfigSection.h
 │   │       ├── MarginConfigSection.h

@@ -41,6 +41,7 @@ Simple-printer/
 │   │   ├── PrintingWindow.h (done)
 │   │   │
 │   │   └── components/
+│   │       ├── HomeComponentMap.h
 │   │       ├── BasicConfigSection.h
 │   │       ├── AdvangeConfigSection.h
 │   │       ├── MarginConfigSection.h
@@ -134,8 +135,8 @@ pagesToPrint=Print All Pages
 orientation=Portrait
 + là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
 ++ "Auto"
-++ "Protrait"
-++ "Landscape"
+++ "Alway Portrait"
+++ "Alway Landscape"
 
 collate=Collated (1,2,3 | 1,2,3 | 1,2,3)
 + là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
@@ -167,5 +168,7 @@ top=1
 bottom=1
 left=1
 right=1
+
+
 
 
