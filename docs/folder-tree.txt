@@ -30,13 +30,13 @@ Simple-printer/
 │   ├── ui/
 │   │   ├── BaseWindow.h (done)
 │   │   │
-│   │   ├── HomeWindow.h
+│   │   ├── HomeWindow.h (wait for update)
 │   │   ├── PrintingWindow.h (done)
 │   │   │
 │   │   └── components/
-│   │       ├── HomeComponentMap.h
-│   │       ├── BasicConfigSection.h
-│   │       ├── AdvangeConfigSection.h
+│   │       ├── HomeComponentMap.h (wait for update)
+│   │       ├── BasicConfigSection.h (done)
+│   │       ├── AdvangeConfigSection.h (done)
 │   │       ├── MarginConfigSection.h
 │   │       ├── InfoSection.h
 │   │       └── FileListSection.h
@@ -75,11 +75,11 @@ Simple-printer/
 │   │   ├── BaseWindow.cpp (done)
 │   │   │
 │   │   ├── PrintingWindow.cpp (done)
-│   │   ├── HomeWindow.cpp
+│   │   ├── HomeWindow.cpp (wait for update)
 │   │   │
 │   │   └── components/
-│   │       ├── BasicConfigSection.cpp
-│   │       ├── AdvangeConfigSection.cpp
+│   │       ├── BasicConfigSection.cpp (done)
+│   │       ├── AdvangeConfigSection.cpp (done)
 │   │       ├── MarginConfigSection.cpp
 │   │       ├── InfoSection.cpp
 │   │       └── FileListSection.cpp

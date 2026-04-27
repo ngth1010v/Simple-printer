@@ -2,6 +2,7 @@
 
 #include "BaseWindow.h"
 #include "BasicConfigSection.h"
+#include "AdvanceConfigSection.h"
 
 class HomeWindow : public BaseWindow {
 public:
@@ -13,6 +14,7 @@ protected:
 private:
     HFONT m_font = nullptr;
     ui::home::BasicConfigSection m_basic;
+    ui::home::AdvanceConfigSection m_adv;
 
 private:
     void OnCreate();

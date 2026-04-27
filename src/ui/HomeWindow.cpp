@@ -2,6 +2,7 @@
 #include <commctrl.h>
 #include "HomeWindow.h"
 #include "ui/components/HomeComponentMap.h"
+#include "AdvanceConfigSection.h" // <<< ADD
 
 using namespace ui::home;
 
@@ -37,6 +38,7 @@ void HomeWindow::OnCreate() {
         L"Segoe UI"
     );
 
+    // ===== BASIC (existing) =====
     m_basic.Create(GetHwnd(), m_font);
 
     m_basic.SetPrinterOptions({
@@ -52,16 +54,84 @@ void HomeWindow::OnCreate() {
     m_basic.OnCopiesChange([](const std::string& v) {
         OutputDebugStringA(("Copies: " + v + "\n").c_str());
     });
+
+    // ===== ADVANCE (ADD) =====
+    m_adv.Create(GetHwnd(), m_font);
+
+    // Print Mode
+    m_adv.SetPrintModeOptions({
+        "Simplex",
+        "Duplex",
+        "Manual Duplex (Flip On Long Edge)",
+        "Manual Duplex (Flip On Short Edge)"
+    });
+    m_adv.SetPrintModeValue("Manual Duplex (Flip On Short Edge)");
+    m_adv.OnPrintModeChange([](const std::string& v) {
+        OutputDebugStringA(("PrintMode: " + v + "\n").c_str());
+    });
+
+    // image demo (bạn chỉnh path lại nếu cần)
+    m_adv.SetPrintModeImage("./assets/PrintMode/flip-short-edge.bmp");
+
+    // Paper
+    m_adv.SetPaperOptions({
+        "A4",
+        "A5",
+        "Letter"
+    });
+    m_adv.SetPaperValue("A4");
+    m_adv.OnPaperChange([](const std::string& v) {
+        OutputDebugStringA(("Paper: " + v + "\n").c_str());
+    });
+
+    // Scale
+    m_adv.SetScaleOptions({
+        "No Scale",
+        "Fit to page (keep aspect ratio)",
+        "Fill page (ignore aspect ratio)"
+    });
+    m_adv.SetScaleValue("Fit to page (keep aspect ratio)");
+    m_adv.OnScaleChange([](const std::string& v) {
+        OutputDebugStringA(("Scale: " + v + "\n").c_str());
+    });
+
+    // Orientation
+    m_adv.SetOrientationOptions({
+        "Auto",
+        "Alway Portrait",
+        "Alway Landscape"
+    });
+    m_adv.SetOrientationValue("Auto");
+    m_adv.OnOrientationChange([](const std::string& v) {
+        OutputDebugStringA(("Orientation: " + v + "\n").c_str());
+    });
+
+    // Collate
+    m_adv.SetCollateOptions({
+        "Collated (1,2,3 | 1,2,3 | 1,2,3)",
+        "Uncollated (1,1,1 | 2,2,2 | 3,3,3)"
+    });
+    m_adv.SetCollateValue("Collated (1,2,3 | 1,2,3 | 1,2,3)");
+    m_adv.OnCollateChange([](const std::string& v) {
+        OutputDebugStringA(("Collate: " + v + "\n").c_str());
+    });
 }
 
 void HomeWindow::OnCommand(WPARAM wParam) {
     m_basic.HandleCommand(wParam);
+
+    // ===== ADD =====
+    m_adv.HandleCommand(wParam);
 }
 
 void HomeWindow::OnSize() {
     RECT rc;
     GetClientRect(GetHwnd(), &rc);
+
     m_basic.Resize(rc.right);
+
+    // ===== ADD =====
+    m_adv.Resize(rc.right);
 }
 
 void HomeWindow::OnPaint() {
@@ -79,7 +149,11 @@ void HomeWindow::OnPaint() {
     FillRect(mem, &rc, bg);
     DeleteObject(bg);
 
+    // ===== existing =====
     m_basic.OnPaint(mem);
+
+    // ===== ADD =====
+    m_adv.OnPaint(mem);
 
     BitBlt(hdc, 0, 0, rc.right, rc.bottom, mem, 0, 0, SRCCOPY);
 
@@ -101,7 +175,24 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         return 0;
 
     case WM_DRAWITEM:
-        m_basic.HandleDrawItem(reinterpret_cast<const DRAWITEMSTRUCT*>(lParam));
+    {
+        const DRAWITEMSTRUCT* dis = reinterpret_cast<const DRAWITEMSTRUCT*>(lParam);
+
+        // Basic xử lý printer button
+        if (dis->CtlID == 2001) { // ID_BTN_PRINTER
+            m_basic.HandleDrawItem(dis);
+            return TRUE;
+        }
+
+        // Advance xử lý các button của nó
+        if (dis->CtlID >= 4101 && dis->CtlID <= 4105) {
+            m_adv.HandleDrawItem(dis);
+            return TRUE;
+        }
+
+        return FALSE;
+    }
+
         return TRUE;
 
     case WM_SIZE:

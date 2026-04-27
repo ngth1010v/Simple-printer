@@ -20,14 +20,6 @@ scale=Fit to page (keep aspect ratio)
 ++ "Fit to page (keep aspect ratio)"
 ++ "Fill page (ignore aspect ratio)"
 
-layout=1 Page Per Sheet
-+ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
-++ "1 Page Per Sheet"
-++ "2 Page Per Sheet"
-++ "4 Page Per Sheet"
-++ "6 Page Per Sheet"
-++ "8 Page Per Sheet"
-
 orientation=Portrait
 + là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
 ++ "Auto"
@@ -56,7 +48,6 @@ priner=Canon LBP 3018
 printMode=Manual Duplex (Flip On Short Edge)
 paper=A4
 scale=Fit to page (keep aspect ratio)
-layout=1 Page Per Sheet
 orientation=Portrait
 collate=Collated (1,2,3 | 1,2,3 | 1,2,3)
 
