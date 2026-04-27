@@ -1,23 +1,11 @@
 # TASK:
-- dựa vào HomeComponentMap.h và lấy ví dụ từ BasicConfigSection, hãy code cho tôi full 2 file MarginConfigSection.h / .cpp với yêu cầu như dưới
-- sau khi code, hãy chỉ tôi áp dụng vào HomeWindow
+- dựa vào HomeComponentMap.h và lấy ví dụ từ BasicConfigSection, hãy code cho tôi full 2 file InfoConfigSection.h / .cpp với yêu cầu như dưới
+- sau khi code, code lại luôn giúp tôi full file HomeWindow.cpp để áp dụng
 
 # EXPORT FUNCTION:
-- void SetMarginTopOptions(const std::vector<std::string>& options);
-- void SetMarginTopValue  (const std::string& value);
-- void OnMarginTopChange  (std::function<void(const std::string&)> cb);
-
-- void SetMarginBottomOptions(const std::vector<std::string>& options);
-- void SetMarginBottomValue  (const std::string& value);
-- void OnMarginBottomChange  (std::function<void(const std::string&)> cb);
-
-- void SetMarginLeftOptions(const std::vector<std::string>& options);
-- void SetMarginLeftValue  (const std::string& value);
-- void OnMarginLeftChange  (std::function<void(const std::string&)> cb);
-
-- void SetMarginRightOptions(const std::vector<std::string>& options);
-- void SetMarginRightValue  (const std::string& value);
-- void OnMarginRightChange  (std::function<void(const std::string&)> cb);
+- void SetTotalFilesValue (const std::string& value);
+- void SetPagesToPrintValue (const std::string& value);
+- void SetSheetsRequiredValue (const std::string& value);
 
 
 # INPUT:
@@ -28,15 +16,17 @@
 - HomeWindow.cpp
 
 # OUTPUT:
-- MarginConfigSection.h (full)
-- MarginConfigSection.cpp (full)
+- InfoConfigSection.h (full)
+- InfoConfigSection.cpp (full)
+- HomeWindow.cpp (full)
+- HomeWindow.h (chỉ cần chỉ tôi thêm include ..., không cần code lại hết)
 
 # RULE:
 - code full 2 file .h và .cpp
-- default của cả 4 value là "1\"" (1 inch)
-- Input width lấy từ MARGIN_INPUT_W
+- code này CHỈ HIỂN THỊ, KHÔNG CẦN INPUT nhung vẫn GIỮ BORDER giống input
+- default của cả 3 value là "1"
+- Input width lấy từ CALC_INPUT_W
 - giữ style input,label của Basic (bo góc, vẽ border = OnPaint, ...)
-- mỗi input có đủ setOption/setvalue/onchange/...
 
 # NOTE:
 - nếu có thắc mắc, hãy hỏi tôi trước khi code
@@ -52,7 +42,7 @@ namespace Layout {
 
     // ===== WINDOW =====
     constexpr int MIN_WIDTH             = 470;
-    constexpr int MIN_HEIGHT            = 538;
+    constexpr int MIN_HEIGHT            = 515;
 
     constexpr int MARGIN                = 5;
     constexpr int SECTION_MARGIN        = 10;
@@ -71,6 +61,8 @@ namespace Layout {
         constexpr int Y = MARGIN;
         constexpr int W = 250;
         constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 2 - ROW_GAP;
+
+        constexpr int INPUT_W = W - 2 * SECTION_MARGIN;
 
         // Printer
         constexpr int PRINTER_LABEL_X = SECTION_MARGIN;
@@ -93,6 +85,9 @@ namespace Layout {
         constexpr int Y = BasicSection::Y + BasicSection::H + SECTION_GAP;
         constexpr int W = 250;
         constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 5 - ROW_GAP + IMAGE_H + INPUT_GAP;
+        
+        constexpr int INPUT_W = W - 2 * SECTION_MARGIN;
+
 
         // PrintMode
         constexpr int PRINT_MODE_LABEL_X = SECTION_MARGIN;
@@ -170,14 +165,44 @@ namespace Layout {
 
         constexpr int MARGIN_RIGHT_INPUT_X = SECTION_MARGIN + MARGIN_INPUT_W + ROW_GAP;
         constexpr int MARGIN_RIGHT_INPUT_Y = MARGIN_RIGHT_LABEL_Y + LABEL_H + INPUT_GAP;
+    }
 
+    // ===== INFO SECTION =====
+    namespace InfoSection {
+        constexpr int X = BasicSection::X + BasicSection::W + SECTION_GAP;
+        constexpr int Y = MARGIN;
+        inline    int CALC_W (int windowW) {return windowW - 2 * MARGIN - BasicSection::W - SECTION_GAP;};
+        constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 3 - ROW_GAP;
+        
+        inline    int CALC_INPUT_W (int windowW) {return CALC_W(windowW) - 2 * SECTION_MARGIN;};
+
+        // Total files
+        constexpr int TOTAL_FILES_LABEL_X = SECTION_MARGIN;
+        constexpr int TOTAL_FILES_LABEL_Y = SECTION_MARGIN;
+
+        constexpr int TOTAL_FILES_INPUT_X = SECTION_MARGIN;
+        constexpr int TOTAL_FILES_INPUT_Y = TOTAL_FILES_LABEL_Y + LABEL_H + INPUT_GAP;
+
+        // Pages to print
+        constexpr int PAGES_TO_PRINT_LABEL_X = SECTION_MARGIN;
+        constexpr int PAGES_TO_PRINT_LABEL_Y = TOTAL_FILES_INPUT_Y + INPUT_H + ROW_GAP;
+
+        constexpr int PAGES_TO_PRINT_INPUT_X = SECTION_MARGIN;
+        constexpr int PAGES_TO_PRINT_INPUT_Y = PAGES_TO_PRINT_LABEL_Y + LABEL_H + INPUT_GAP;
+
+        // Sheets required
+        constexpr int SHEETS_REQUIRED_LABEL_X = SECTION_MARGIN;
+        constexpr int SHEETS_REQUIRED_LABEL_Y = PAGES_TO_PRINT_INPUT_Y + INPUT_H + ROW_GAP;
+
+        constexpr int SHEETS_REQUIRED_INPUT_X = SECTION_MARGIN;
+        constexpr int SHEETS_REQUIRED_INPUT_Y = SHEETS_REQUIRED_LABEL_Y + LABEL_H + INPUT_GAP;
     }
 
 } // namespace Layout
 namespace Style {
     
     // General
-    constexpr COLORREF WINDOW_BG                = RGB(220,220,220);
+    constexpr COLORREF WINDOW_BG                = RGB(230,230,230);
     
 
     // Section
@@ -210,6 +235,8 @@ namespace Style {
 }
 } // namespace HomeWindow
 }
+
+
 
 ### BasicConfigSection.h:
 #pragma once
@@ -392,7 +419,7 @@ void BasicConfigSection::Create(HWND parent, HFONT font) {
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
         X,
         Y,
-        W - 20 - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
+        INPUT_W - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         ui::home::Layout::INPUT_H - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         parent,
         (HMENU)ID_BTN_PRINTER,
@@ -407,7 +434,7 @@ void BasicConfigSection::Create(HWND parent, HFONT font) {
         WS_CHILD | WS_VISIBLE | ES_NUMBER | WS_TABSTOP,
         X,
         Y,
-        W - 20 - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
+        INPUT_W - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         ui::home::Layout::INPUT_H - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         parent,
         (HMENU)ID_EDIT_COPIES,
@@ -434,13 +461,11 @@ void BasicConfigSection::Resize(int parentWidth) {
 
     using namespace Layout::BasicSection;
 
-    int w = W;
-
     MoveWindow(
         m_btnPrinter,
         X + PRINTER_INPUT_X + ui::home::Layout::INPUT_BORDER_OFFSET,
         Y + PRINTER_INPUT_Y + ui::home::Layout::INPUT_BORDER_OFFSET,
-        w - 20 - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
+        INPUT_W - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         ui::home::Layout::INPUT_H - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         TRUE
     );
@@ -448,7 +473,7 @@ void BasicConfigSection::Resize(int parentWidth) {
         m_editCopies,
         X + COPIES_INPUT_X + ui::home::Layout::INPUT_BORDER_OFFSET,
         Y + COPIES_INPUT_Y + ui::home::Layout::INPUT_BORDER_OFFSET,
-        w - 20 - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
+        INPUT_W - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         ui::home::Layout::INPUT_H - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         TRUE
     );
@@ -676,12 +701,13 @@ void BasicConfigSection::OnPaint(HDC hdc) {
 
 
 
-### HomeWindow.h (HomeWindow sẽ là bên dùng):
+### HomeWindow.h:
 #pragma once
 
 #include "BaseWindow.h"
 #include "BasicConfigSection.h"
 #include "AdvanceConfigSection.h"
+#include "MarginConfigSection.h"
 
 class HomeWindow : public BaseWindow {
 public:
@@ -694,6 +720,7 @@ private:
     HFONT m_font = nullptr;
     ui::home::BasicConfigSection m_basic;
     ui::home::AdvanceConfigSection m_adv;
+    ui::home::MarginConfigSection m_margin;
 
 private:
     void OnCreate();
@@ -709,534 +736,8 @@ private:
 #include <commctrl.h>
 #include "HomeWindow.h"
 #include "ui/components/HomeComponentMap.h"
-#include "AdvanceConfigSection.h" // <<< ADD
-
-using namespace ui::home;
-
-bool HomeWindow::CreateWindowInstance() {
-    return Create(
-        L"HomeWindowClass",
-        L"Simple Printer",
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_SIZEBOX,
-        0,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        Layout::MIN_WIDTH,
-        Layout::MIN_HEIGHT
-    );
-}
-
-void HomeWindow::OnCreate() {
-    SetWindowLongPtr(
-        GetHwnd(),
-        GWL_STYLE,
-        GetWindowLongPtr(GetHwnd(), GWL_STYLE) | WS_CLIPCHILDREN | WS_CLIPSIBLINGS
-    );
-
-    m_font = CreateFont(
-        -12, 0, 0, 0,
-        FW_NORMAL,
-        FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET,
-        OUT_DEFAULT_PRECIS,
-        CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY,
-        DEFAULT_PITCH,
-        L"Segoe UI"
-    );
-
-    // ===== BASIC (existing) =====
-    m_basic.Create(GetHwnd(), m_font);
-
-    m_basic.SetPrinterOptions({
-        "Canon LBP 3018",
-        "HP LaserJet",
-        "Microsoft Print to PDF"
-    });
-
-    m_basic.OnPrinterChange([](const std::string& v) {
-        OutputDebugStringA(("Printer: " + v + "\n").c_str());
-    });
-
-    m_basic.OnCopiesChange([](const std::string& v) {
-        OutputDebugStringA(("Copies: " + v + "\n").c_str());
-    });
-
-    // ===== ADVANCE (ADD) =====
-    m_adv.Create(GetHwnd(), m_font);
-
-    // Print Mode
-    m_adv.SetPrintModeOptions({
-        "Simplex",
-        "Duplex",
-        "Manual Duplex (Flip On Long Edge)",
-        "Manual Duplex (Flip On Short Edge)"
-    });
-    m_adv.SetPrintModeValue("Manual Duplex (Flip On Short Edge)");
-    m_adv.OnPrintModeChange([](const std::string& v) {
-        OutputDebugStringA(("PrintMode: " + v + "\n").c_str());
-    });
-
-    // image demo (bạn chỉnh path lại nếu cần)
-    m_adv.SetPrintModeImage("./assets/PrintMode/flip-short-edge.bmp");
-
-    // Paper
-    m_adv.SetPaperOptions({
-        "A4",
-        "A5",
-        "Letter"
-    });
-    m_adv.SetPaperValue("A4");
-    m_adv.OnPaperChange([](const std::string& v) {
-        OutputDebugStringA(("Paper: " + v + "\n").c_str());
-    });
-
-    // Scale
-    m_adv.SetScaleOptions({
-        "No Scale",
-        "Fit to page (keep aspect ratio)",
-        "Fill page (ignore aspect ratio)"
-    });
-    m_adv.SetScaleValue("Fit to page (keep aspect ratio)");
-    m_adv.OnScaleChange([](const std::string& v) {
-        OutputDebugStringA(("Scale: " + v + "\n").c_str());
-    });
-
-    // Orientation
-    m_adv.SetOrientationOptions({
-        "Auto",
-        "Alway Portrait",
-        "Alway Landscape"
-    });
-    m_adv.SetOrientationValue("Auto");
-    m_adv.OnOrientationChange([](const std::string& v) {
-        OutputDebugStringA(("Orientation: " + v + "\n").c_str());
-    });
-
-    // Collate
-    m_adv.SetCollateOptions({
-        "Collated (1,2,3 | 1,2,3 | 1,2,3)",
-        "Uncollated (1,1,1 | 2,2,2 | 3,3,3)"
-    });
-    m_adv.SetCollateValue("Collated (1,2,3 | 1,2,3 | 1,2,3)");
-    m_adv.OnCollateChange([](const std::string& v) {
-        OutputDebugStringA(("Collate: " + v + "\n").c_str());
-    });
-}
-
-void HomeWindow::OnCommand(WPARAM wParam) {
-    m_basic.HandleCommand(wParam);
-
-    // ===== ADD =====
-    m_adv.HandleCommand(wParam);
-}
-
-void HomeWindow::OnSize() {
-    RECT rc;
-    GetClientRect(GetHwnd(), &rc);
-
-    m_basic.Resize(rc.right);
-
-    // ===== ADD =====
-    m_adv.Resize(rc.right);
-}
-
-void HomeWindow::OnPaint() {
-    PAINTSTRUCT ps;
-    HDC hdc = BeginPaint(GetHwnd(), &ps);
-
-    RECT rc;
-    GetClientRect(GetHwnd(), &rc);
-
-    HDC mem = CreateCompatibleDC(hdc);
-    HBITMAP bmp = CreateCompatibleBitmap(hdc, rc.right, rc.bottom);
-    HBITMAP oldBmp = (HBITMAP)SelectObject(mem, bmp);
-
-    HBRUSH bg = CreateSolidBrush(Style::WINDOW_BG);
-    FillRect(mem, &rc, bg);
-    DeleteObject(bg);
-
-    // ===== existing =====
-    m_basic.OnPaint(mem);
-
-    // ===== ADD =====
-    m_adv.OnPaint(mem);
-
-    BitBlt(hdc, 0, 0, rc.right, rc.bottom, mem, 0, 0, SRCCOPY);
-
-    SelectObject(mem, oldBmp);
-    DeleteObject(bmp);
-    DeleteDC(mem);
-
-    EndPaint(GetHwnd(), &ps);
-}
-
-LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch (msg) {
-    case WM_CREATE:
-        OnCreate();
-        return 0;
-
-    case WM_COMMAND:
-        OnCommand(wParam);
-        return 0;
-
-    case WM_DRAWITEM:
-    {
-        const DRAWITEMSTRUCT* dis = reinterpret_cast<const DRAWITEMSTRUCT*>(lParam);
-
-        // Basic xử lý printer button
-        if (dis->CtlID == 2001) { // ID_BTN_PRINTER
-            m_basic.HandleDrawItem(dis);
-            return TRUE;
-        }
-
-        // Advance xử lý các button của nó
-        if (dis->CtlID >= 4101 && dis->CtlID <= 4105) {
-            m_adv.HandleDrawItem(dis);
-            return TRUE;
-        }
-
-        return FALSE;
-    }
-
-        return TRUE;
-
-    case WM_SIZE:
-        OnSize();
-        return 0;
-
-    case WM_GETMINMAXINFO:
-    {
-        MINMAXINFO* mmi = (MINMAXINFO*)lParam;
-        mmi->ptMinTrackSize.x = Layout::MIN_WIDTH;
-        mmi->ptMinTrackSize.y = Layout::MIN_HEIGHT;
-        return 0;
-    }
-
-    case WM_ERASEBKGND:
-    {
-        HDC hdc = (HDC)wParam;
-        RECT rc;
-        GetClientRect(GetHwnd(), &rc);
-
-        HBRUSH br = CreateSolidBrush(Style::WINDOW_BG);
-        FillRect(hdc, &rc, br);
-        DeleteObject(br);
-        return 1;
-    }
-
-    case WM_PAINT:
-        OnPaint();
-        return 0;
-
-    case WM_DESTROY:
-        if (m_font) {
-            DeleteObject(m_font);
-            m_font = nullptr;
-        }
-        PostQuitMessage(0);
-        return 0;
-    }
-
-    return BaseWindow::HandleMessage(msg, wParam, lParam);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-vẫn bị bug cũ, hãy xem xét kĩ và code lại full cho tôi 2 file MarginConfigSection.cpp và HomeWindow.cpp:
-
-# MarginConfigSection.cpp:
+#include "AdvanceConfigSection.h"
 #include "MarginConfigSection.h"
-#include "HomeComponentMap.h"
-
-#define ID_EDIT_TOP     5001
-#define ID_EDIT_BOTTOM  5002
-#define ID_EDIT_LEFT    5003
-#define ID_EDIT_RIGHT   5004
-
-using namespace ui::home;
-
-namespace {
-
-    RECT GetControlRectInParent(HWND parent, HWND child) {
-        RECT rc{};
-        GetWindowRect(child, &rc);
-        MapWindowPoints(nullptr, parent, reinterpret_cast<POINT*>(&rc), 2);
-        return rc;
-    }
-
-    void DrawRoundedFrame(HDC hdc, const RECT& rc, COLORREF color, int radius) {
-        HPEN pen = CreatePen(PS_SOLID, 1, color);
-        HPEN oldPen = (HPEN)SelectObject(hdc, pen);
-        HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
-
-        RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, radius, radius);
-
-        SelectObject(hdc, oldPen);
-        SelectObject(hdc, oldBrush);
-        DeleteObject(pen);
-    }
-
-    void DrawInputChrome(HDC hdc, HWND parent, HWND hwnd, bool focused) {
-        RECT rc = GetControlRectInParent(parent, hwnd);
-
-        rc.left   -= Layout::INPUT_BORDER_OFFSET;
-        rc.top    -= Layout::INPUT_BORDER_OFFSET;
-        rc.right  += Layout::INPUT_BORDER_OFFSET;
-        rc.bottom += Layout::INPUT_BORDER_OFFSET;
-
-        DrawRoundedFrame(hdc, rc,
-            focused ? Style::INPUT_BORDER_FOCUS : Style::INPUT_BORDER,
-            Style::INPUT_RADIUS
-        );
-    }
-}
-
-MarginConfigSection::MarginConfigSection() {}
-
-std::wstring MarginConfigSection::ToWide(const std::string& s) const {
-    if (s.empty()) return L"";
-    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
-    std::wstring ws(len - 1, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, ws.data(), len);
-    return ws;
-}
-
-std::string MarginConfigSection::ToNarrow(const std::wstring& ws) const {
-    if (ws.empty()) return "";
-    int len = WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    std::string s(len - 1, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), -1, s.data(), len, nullptr, nullptr);
-    return s;
-}
-
-void MarginConfigSection::RemoveEditBorder(HWND hwnd) {
-    LONG_PTR ex = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    ex &= ~WS_EX_CLIENTEDGE;
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, ex);
-
-    SetWindowPos(hwnd, nullptr, 0,0,0,0,
-        SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
-}
-
-void MarginConfigSection::Create(HWND parent, HFONT font) {
-    m_parent = parent;
-    m_font = font;
-
-    using namespace Layout::MarginSection;
-
-    auto createEdit = [&](int id) {
-        return CreateWindowEx(
-            0, L"EDIT", L"1\"",
-            WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-            0,0,0,0,
-            parent, (HMENU)id,
-            GetModuleHandle(nullptr), nullptr
-        );
-    };
-
-    m_editTop = createEdit(ID_EDIT_TOP);
-    m_editBottom = createEdit(ID_EDIT_BOTTOM);
-    m_editLeft = createEdit(ID_EDIT_LEFT);
-    m_editRight = createEdit(ID_EDIT_RIGHT);
-
-    SendMessage(m_editTop, WM_SETFONT, (WPARAM)m_font, TRUE);
-    SendMessage(m_editBottom, WM_SETFONT, (WPARAM)m_font, TRUE);
-    SendMessage(m_editLeft, WM_SETFONT, (WPARAM)m_font, TRUE);
-    SendMessage(m_editRight, WM_SETFONT, (WPARAM)m_font, TRUE);
-
-    RemoveEditBorder(m_editTop);
-    RemoveEditBorder(m_editBottom);
-    RemoveEditBorder(m_editLeft);
-    RemoveEditBorder(m_editRight);
-}
-
-void MarginConfigSection::Resize(int) {
-    using namespace Layout::MarginSection;
-
-    int w = MARGIN_INPUT_W;
-    int h = Layout::INPUT_H - 2 * Layout::INPUT_BORDER_OFFSET;
-
-    MoveWindow(m_editTop,
-        X + MARGIN_TOP_INPUT_X + Layout::INPUT_BORDER_OFFSET,
-        Y + MARGIN_TOP_INPUT_Y + Layout::INPUT_BORDER_OFFSET,
-        w - 2 * Layout::INPUT_BORDER_OFFSET,
-        h, TRUE);
-
-    MoveWindow(m_editBottom,
-        X + MARGIN_BOTTOM_INPUT_X + Layout::INPUT_BORDER_OFFSET,
-        Y + MARGIN_BOTTOM_INPUT_Y + Layout::INPUT_BORDER_OFFSET,
-        w - 2 * Layout::INPUT_BORDER_OFFSET,
-        h, TRUE);
-
-    MoveWindow(m_editLeft,
-        X + MARGIN_LEFT_INPUT_X + Layout::INPUT_BORDER_OFFSET,
-        Y + MARGIN_LEFT_INPUT_Y + Layout::INPUT_BORDER_OFFSET,
-        w - 2 * Layout::INPUT_BORDER_OFFSET,
-        h, TRUE);
-
-    MoveWindow(m_editRight,
-        X + MARGIN_RIGHT_INPUT_X + Layout::INPUT_BORDER_OFFSET,
-        Y + MARGIN_RIGHT_INPUT_Y + Layout::INPUT_BORDER_OFFSET,
-        w - 2 * Layout::INPUT_BORDER_OFFSET,
-        h, TRUE);
-}
-
-// ===== SET VALUE =====
-void MarginConfigSection::SetMarginTopValue(const std::string& v) { SetWindowText(m_editTop, ToWide(v).c_str()); }
-void MarginConfigSection::SetMarginBottomValue(const std::string& v) { SetWindowText(m_editBottom, ToWide(v).c_str()); }
-void MarginConfigSection::SetMarginLeftValue(const std::string& v) { SetWindowText(m_editLeft, ToWide(v).c_str()); }
-void MarginConfigSection::SetMarginRightValue(const std::string& v) { SetWindowText(m_editRight, ToWide(v).c_str()); }
-
-void MarginConfigSection::OnMarginTopChange(std::function<void(const std::string&)> cb) { m_cbTop = cb; }
-void MarginConfigSection::OnMarginBottomChange(std::function<void(const std::string&)> cb) { m_cbBottom = cb; }
-void MarginConfigSection::OnMarginLeftChange(std::function<void(const std::string&)> cb) { m_cbLeft = cb; }
-void MarginConfigSection::OnMarginRightChange(std::function<void(const std::string&)> cb) { m_cbRight = cb; }
-
-std::string MarginConfigSection::GetEditText(HWND hwnd) {
-    wchar_t buf[64]{};
-    GetWindowText(hwnd, buf, 64);
-    return ToNarrow(buf);
-}
-
-void MarginConfigSection::HandleCommand(WPARAM wParam) {
-    int id = LOWORD(wParam);
-    int code = HIWORD(wParam);
-
-    if (code == EN_CHANGE) {
-        if (id == ID_EDIT_TOP && m_cbTop) m_cbTop(GetEditText(m_editTop));
-        if (id == ID_EDIT_BOTTOM && m_cbBottom) m_cbBottom(GetEditText(m_editBottom));
-        if (id == ID_EDIT_LEFT && m_cbLeft) m_cbLeft(GetEditText(m_editLeft));
-        if (id == ID_EDIT_RIGHT && m_cbRight) m_cbRight(GetEditText(m_editRight));
-
-        InvalidateRect(m_parent, nullptr, FALSE);
-    }
-}
-
-void MarginConfigSection::OnPaint(HDC hdc) {
-    using namespace Layout::MarginSection;
-
-    RECT sec = { X, Y, X + W, Y + H };
-
-    HBRUSH bg = CreateSolidBrush(Style::SECTION_BG);
-    FillRect(hdc, &sec, bg);
-    DeleteObject(bg);
-
-    HPEN pen = CreatePen(PS_SOLID, 1, Style::SECTION_BORDER);
-    HPEN oldPen = (HPEN)SelectObject(hdc, pen);
-    HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
-    Rectangle(hdc, sec.left, sec.top, sec.right, sec.bottom);
-    SelectObject(hdc, oldBrush);
-    SelectObject(hdc, oldPen);
-    DeleteObject(pen);
-
-    SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, Style::LABEL);
-    HFONT oldFont = (HFONT)SelectObject(hdc, m_font);
-
-    RECT rcTop = {
-        X + MARGIN_TOP_LABEL_X,
-        Y + MARGIN_TOP_LABEL_Y,
-        X + MARGIN_TOP_LABEL_X + MARGIN_INPUT_W,
-        Y + MARGIN_TOP_LABEL_Y + Layout::LABEL_H
-    };
-    DrawText(hdc, L"Top", -1, &rcTop, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-    RECT rcBottom = {
-        X + MARGIN_BOTTOM_LABEL_X,
-        Y + MARGIN_BOTTOM_LABEL_Y,
-        X + MARGIN_BOTTOM_LABEL_X + MARGIN_INPUT_W,
-        Y + MARGIN_BOTTOM_LABEL_Y + Layout::LABEL_H
-    };
-    DrawText(hdc, L"Bottom", -1, &rcBottom, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-    RECT rcLeft = {
-        X + MARGIN_LEFT_LABEL_X,
-        Y + MARGIN_LEFT_LABEL_Y,
-        X + MARGIN_LEFT_LABEL_X + MARGIN_INPUT_W,
-        Y + MARGIN_LEFT_LABEL_Y + Layout::LABEL_H
-    };
-    DrawText(hdc, L"Left", -1, &rcLeft, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-    RECT rcRight = {
-        X + MARGIN_RIGHT_LABEL_X,
-        Y + MARGIN_RIGHT_LABEL_Y,
-        X + MARGIN_RIGHT_LABEL_X + MARGIN_INPUT_W,
-        Y + MARGIN_RIGHT_LABEL_Y + Layout::LABEL_H
-    };
-    DrawText(hdc, L"Right", -1, &rcRight, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-    DrawInputChrome(hdc, m_parent, m_editTop, GetFocus() == m_editTop);
-    DrawInputChrome(hdc, m_parent, m_editBottom, GetFocus() == m_editBottom);
-    DrawInputChrome(hdc, m_parent, m_editLeft, GetFocus() == m_editLeft);
-    DrawInputChrome(hdc, m_parent, m_editRight, GetFocus() == m_editRight);
-
-    SelectObject(hdc, oldFont);
-}
-
-
-
-
-# HomeWindow.cpp:
-#include <windows.h>
-#include <commctrl.h>
-#include "HomeWindow.h"
-#include "ui/components/HomeComponentMap.h"
-#include "AdvanceConfigSection.h" // <<< ADD
 
 using namespace ui::home;
 
@@ -1272,7 +773,7 @@ void HomeWindow::OnCreate() {
         L"Segoe UI"
     );
 
-    // ===== BASIC (existing) =====
+    // ===== BASIC =====
     m_basic.Create(GetHwnd(), m_font);
 
     m_basic.SetPrinterOptions({
@@ -1289,10 +790,9 @@ void HomeWindow::OnCreate() {
         OutputDebugStringA(("Copies: " + v + "\n").c_str());
     });
 
-    // ===== ADVANCE (ADD) =====
+    // ===== ADVANCE =====
     m_adv.Create(GetHwnd(), m_font);
-    
-    // Print Mode
+
     m_adv.SetPrintModeOptions({
         "Simplex",
         "Duplex",
@@ -1303,11 +803,9 @@ void HomeWindow::OnCreate() {
     m_adv.OnPrintModeChange([](const std::string& v) {
         OutputDebugStringA(("PrintMode: " + v + "\n").c_str());
     });
-    
-    // image demo (bạn chỉnh path lại nếu cần)
+
     m_adv.SetPrintModeImage("./assets/PrintMode/flip-short-edge.bmp");
-    
-    // Paper
+
     m_adv.SetPaperOptions({
         "A4",
         "A5",
@@ -1317,8 +815,7 @@ void HomeWindow::OnCreate() {
     m_adv.OnPaperChange([](const std::string& v) {
         OutputDebugStringA(("Paper: " + v + "\n").c_str());
     });
-    
-    // Scale
+
     m_adv.SetScaleOptions({
         "No Scale",
         "Fit to page (keep aspect ratio)",
@@ -1328,8 +825,7 @@ void HomeWindow::OnCreate() {
     m_adv.OnScaleChange([](const std::string& v) {
         OutputDebugStringA(("Scale: " + v + "\n").c_str());
     });
-    
-    // Orientation
+
     m_adv.SetOrientationOptions({
         "Auto",
         "Alway Portrait",
@@ -1339,8 +835,7 @@ void HomeWindow::OnCreate() {
     m_adv.OnOrientationChange([](const std::string& v) {
         OutputDebugStringA(("Orientation: " + v + "\n").c_str());
     });
-    
-    // Collate
+
     m_adv.SetCollateOptions({
         "Collated (1,2,3 | 1,2,3 | 1,2,3)",
         "Uncollated (1,1,1 | 2,2,2 | 3,3,3)"
@@ -1350,13 +845,21 @@ void HomeWindow::OnCreate() {
         OutputDebugStringA(("Collate: " + v + "\n").c_str());
     });
 
-    // ===== MARGIN (ADD) =====
+    // ===== MARGIN =====
     m_margin.Create(GetHwnd(), m_font);
 
-    m_margin.OnMarginTopChange([](auto v){ OutputDebugStringA(("Top: " + v + "\n").c_str()); });
-    m_margin.OnMarginBottomChange([](auto v){ OutputDebugStringA(("Bottom: " + v + "\n").c_str()); });
-    m_margin.OnMarginLeftChange([](auto v){ OutputDebugStringA(("Left: " + v + "\n").c_str()); });
-    m_margin.OnMarginRightChange([](auto v){ OutputDebugStringA(("Right: " + v + "\n").c_str()); });
+    m_margin.OnMarginTopChange([](const std::string& v) {
+        OutputDebugStringA(("Top: " + v + "\n").c_str());
+    });
+    m_margin.OnMarginBottomChange([](const std::string& v) {
+        OutputDebugStringA(("Bottom: " + v + "\n").c_str());
+    });
+    m_margin.OnMarginLeftChange([](const std::string& v) {
+        OutputDebugStringA(("Left: " + v + "\n").c_str());
+    });
+    m_margin.OnMarginRightChange([](const std::string& v) {
+        OutputDebugStringA(("Right: " + v + "\n").c_str());
+    });
 }
 
 void HomeWindow::OnCommand(WPARAM wParam) {
@@ -1366,19 +869,21 @@ void HomeWindow::OnCommand(WPARAM wParam) {
 }
 
 void HomeWindow::OnSize() {
-    RECT rc;
+    RECT rc{};
     GetClientRect(GetHwnd(), &rc);
 
     m_basic.Resize(rc.right);
     m_adv.Resize(rc.right);
     m_margin.Resize(rc.right);
+
+    InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
 void HomeWindow::OnPaint() {
-    PAINTSTRUCT ps;
+    PAINTSTRUCT ps{};
     HDC hdc = BeginPaint(GetHwnd(), &ps);
 
-    RECT rc;
+    RECT rc{};
     GetClientRect(GetHwnd(), &rc);
 
     HDC mem = CreateCompatibleDC(hdc);
@@ -1389,11 +894,10 @@ void HomeWindow::OnPaint() {
     FillRect(mem, &rc, bg);
     DeleteObject(bg);
 
-    // ===== existing =====
+    // Vẽ tất cả section lên mem DC trước
     m_basic.OnPaint(mem);
-
-    // ===== ADD =====
     m_adv.OnPaint(mem);
+    m_margin.OnPaint(mem);
 
     BitBlt(hdc, 0, 0, rc.right, rc.bottom, mem, 0, 0, SRCCOPY);
 
@@ -1402,8 +906,6 @@ void HomeWindow::OnPaint() {
     DeleteDC(mem);
 
     EndPaint(GetHwnd(), &ps);
-
-    m_margin.OnPaint(mem);
 }
 
 LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -1421,13 +923,11 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     {
         const DRAWITEMSTRUCT* dis = reinterpret_cast<const DRAWITEMSTRUCT*>(lParam);
 
-        // Basic xử lý printer button
-        if (dis->CtlID == 2001) { // ID_BTN_PRINTER
+        if (dis->CtlID == 2001) {
             m_basic.HandleDrawItem(dis);
             return TRUE;
         }
 
-        // Advance xử lý các button của nó
         if (dis->CtlID >= 4101 && dis->CtlID <= 4105) {
             m_adv.HandleDrawItem(dis);
             return TRUE;
@@ -1435,6 +935,7 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         return FALSE;
     }
+
     case WM_CTLCOLOREDIT:
     {
         HDC hdc = (HDC)wParam;
@@ -1442,10 +943,8 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         SetTextColor(hdc, Style::INPUT_TEXT);
 
         static HBRUSH brush = CreateSolidBrush(Style::INPUT_BG);
-        return (INT_PTR)brush;
+        return (LRESULT)brush;
     }
-
-        return TRUE;
 
     case WM_SIZE:
         OnSize();
@@ -1462,7 +961,7 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_ERASEBKGND:
     {
         HDC hdc = (HDC)wParam;
-        RECT rc;
+        RECT rc{};
         GetClientRect(GetHwnd(), &rc);
 
         HBRUSH br = CreateSolidBrush(Style::WINDOW_BG);
@@ -1486,6 +985,36 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
     return BaseWindow::HandleMessage(msg, wParam, lParam);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -26,6 +26,8 @@ namespace Layout {
         constexpr int W = 250;
         constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 2 - ROW_GAP;
 
+        constexpr int INPUT_W = W - 2 * SECTION_MARGIN;
+
         // Printer
         constexpr int PRINTER_LABEL_X = SECTION_MARGIN;
         constexpr int PRINTER_LABEL_Y = SECTION_MARGIN;
@@ -47,6 +49,9 @@ namespace Layout {
         constexpr int Y = BasicSection::Y + BasicSection::H + SECTION_GAP;
         constexpr int W = 250;
         constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 5 - ROW_GAP + IMAGE_H + INPUT_GAP;
+        
+        constexpr int INPUT_W = W - 2 * SECTION_MARGIN;
+
 
         // PrintMode
         constexpr int PRINT_MODE_LABEL_X = SECTION_MARGIN;
@@ -124,7 +129,37 @@ namespace Layout {
 
         constexpr int MARGIN_RIGHT_INPUT_X = SECTION_MARGIN + MARGIN_INPUT_W + ROW_GAP;
         constexpr int MARGIN_RIGHT_INPUT_Y = MARGIN_RIGHT_LABEL_Y + LABEL_H + INPUT_GAP;
+    }
 
+    // ===== INFO SECTION =====
+    namespace InfoSection {
+        constexpr int X = BasicSection::X + BasicSection::W + SECTION_GAP;
+        constexpr int Y = MARGIN;
+        inline    int CALC_W (int windowW) {return windowW - 2 * MARGIN - BasicSection::W - SECTION_GAP;};
+        constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 3 - ROW_GAP;
+        
+        inline    int CALC_INPUT_W (int windowW) {return CALC_W(windowW) - 2 * SECTION_MARGIN;};
+
+        // Total files
+        constexpr int TOTAL_FILES_LABEL_X = SECTION_MARGIN;
+        constexpr int TOTAL_FILES_LABEL_Y = SECTION_MARGIN;
+
+        constexpr int TOTAL_FILES_INPUT_X = SECTION_MARGIN;
+        constexpr int TOTAL_FILES_INPUT_Y = TOTAL_FILES_LABEL_Y + LABEL_H + INPUT_GAP;
+
+        // Pages to print
+        constexpr int PAGES_TO_PRINT_LABEL_X = SECTION_MARGIN;
+        constexpr int PAGES_TO_PRINT_LABEL_Y = TOTAL_FILES_INPUT_Y + INPUT_H + ROW_GAP;
+
+        constexpr int PAGES_TO_PRINT_INPUT_X = SECTION_MARGIN;
+        constexpr int PAGES_TO_PRINT_INPUT_Y = PAGES_TO_PRINT_LABEL_Y + LABEL_H + INPUT_GAP;
+
+        // Sheets required
+        constexpr int SHEETS_REQUIRED_LABEL_X = SECTION_MARGIN;
+        constexpr int SHEETS_REQUIRED_LABEL_Y = PAGES_TO_PRINT_INPUT_Y + INPUT_H + ROW_GAP;
+
+        constexpr int SHEETS_REQUIRED_INPUT_X = SECTION_MARGIN;
+        constexpr int SHEETS_REQUIRED_INPUT_Y = SHEETS_REQUIRED_LABEL_Y + LABEL_H + INPUT_GAP;
     }
 
 } // namespace Layout

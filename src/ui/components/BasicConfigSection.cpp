@@ -118,7 +118,7 @@ void BasicConfigSection::Create(HWND parent, HFONT font) {
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
         X,
         Y,
-        W - 20 - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
+        INPUT_W - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         ui::home::Layout::INPUT_H - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         parent,
         (HMENU)ID_BTN_PRINTER,
@@ -133,7 +133,7 @@ void BasicConfigSection::Create(HWND parent, HFONT font) {
         WS_CHILD | WS_VISIBLE | ES_NUMBER | WS_TABSTOP,
         X,
         Y,
-        W - 20 - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
+        INPUT_W - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         ui::home::Layout::INPUT_H - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         parent,
         (HMENU)ID_EDIT_COPIES,
@@ -160,13 +160,11 @@ void BasicConfigSection::Resize(int parentWidth) {
 
     using namespace Layout::BasicSection;
 
-    int w = W;
-
     MoveWindow(
         m_btnPrinter,
         X + PRINTER_INPUT_X + ui::home::Layout::INPUT_BORDER_OFFSET,
         Y + PRINTER_INPUT_Y + ui::home::Layout::INPUT_BORDER_OFFSET,
-        w - 20 - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
+        INPUT_W - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         ui::home::Layout::INPUT_H - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         TRUE
     );
@@ -174,7 +172,7 @@ void BasicConfigSection::Resize(int parentWidth) {
         m_editCopies,
         X + COPIES_INPUT_X + ui::home::Layout::INPUT_BORDER_OFFSET,
         Y + COPIES_INPUT_Y + ui::home::Layout::INPUT_BORDER_OFFSET,
-        w - 20 - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
+        INPUT_W - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         ui::home::Layout::INPUT_H - 2 * ui::home::Layout::INPUT_BORDER_OFFSET,
         TRUE
     );

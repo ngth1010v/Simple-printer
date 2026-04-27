@@ -126,6 +126,15 @@ void HomeWindow::OnCreate() {
     m_margin.OnMarginRightChange([](const std::string& v) {
         OutputDebugStringA(("Right: " + v + "\n").c_str());
     });
+
+    // ===== INFO =====
+    m_info.Create(GetHwnd(), m_font);
+
+    // default
+    m_info.SetTotalFilesValue("1");
+    m_info.SetPagesToPrintValue("1");
+    m_info.SetSheetsRequiredValue("1");
+
 }
 
 void HomeWindow::OnCommand(WPARAM wParam) {
@@ -141,6 +150,7 @@ void HomeWindow::OnSize() {
     m_basic.Resize(rc.right);
     m_adv.Resize(rc.right);
     m_margin.Resize(rc.right);
+    m_info.Resize(rc.right);
 
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
@@ -164,6 +174,7 @@ void HomeWindow::OnPaint() {
     m_basic.OnPaint(mem);
     m_adv.OnPaint(mem);
     m_margin.OnPaint(mem);
+    m_info.OnPaint(mem);
 
     BitBlt(hdc, 0, 0, rc.right, rc.bottom, mem, 0, 0, SRCCOPY);
 

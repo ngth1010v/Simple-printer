@@ -149,7 +149,7 @@ void AdvanceConfigSection::Create(HWND parent, HFONT font) {
             WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
             x + Layout::INPUT_BORDER_OFFSET,
             y + Layout::INPUT_BORDER_OFFSET,
-            W - 20 - 2 * Layout::INPUT_BORDER_OFFSET,
+            INPUT_W - 2 * Layout::INPUT_BORDER_OFFSET,
             Layout::INPUT_H - 2 * Layout::INPUT_BORDER_OFFSET,
             parent,
             (HMENU)id,
@@ -187,7 +187,7 @@ void AdvanceConfigSection::Resize(int parentWidth) {
             hwnd,
             x + Layout::INPUT_BORDER_OFFSET,
             y + Layout::INPUT_BORDER_OFFSET,
-            W - 20 - 2 * Layout::INPUT_BORDER_OFFSET,
+            INPUT_W - 2 * Layout::INPUT_BORDER_OFFSET,
             Layout::INPUT_H - 2 * Layout::INPUT_BORDER_OFFSET,
             TRUE
         );
