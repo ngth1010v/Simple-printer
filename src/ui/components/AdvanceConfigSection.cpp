@@ -683,12 +683,6 @@ void AdvanceConfigSection::OnPaint(HDC hdc) {
             Y + PRINT_MODE_IMAGE_Y + Layout::IMAGE_H
         };
 
-        // giống input: có offset để border nằm ngoài 1 chút
-        // borderRc.left   -= Layout::INPUT_BORDER_OFFSET;
-        // borderRc.top    -= Layout::INPUT_BORDER_OFFSET;
-        // borderRc.right  += Layout::INPUT_BORDER_OFFSET;
-        // borderRc.bottom += Layout::INPUT_BORDER_OFFSET;
-
         DrawRoundedFrame(
             hdc,
             borderRc,

@@ -3,6 +3,7 @@
 #include "BaseWindow.h"
 #include "BasicConfigSection.h"
 #include "AdvanceConfigSection.h"
+#include "MarginConfigSection.h"
 
 class HomeWindow : public BaseWindow {
 public:
@@ -15,6 +16,7 @@ private:
     HFONT m_font = nullptr;
     ui::home::BasicConfigSection m_basic;
     ui::home::AdvanceConfigSection m_adv;
+    ui::home::MarginConfigSection m_margin;
 
 private:
     void OnCreate();

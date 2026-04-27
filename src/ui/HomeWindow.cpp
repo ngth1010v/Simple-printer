@@ -2,7 +2,8 @@
 #include <commctrl.h>
 #include "HomeWindow.h"
 #include "ui/components/HomeComponentMap.h"
-#include "AdvanceConfigSection.h" // <<< ADD
+#include "AdvanceConfigSection.h"
+#include "MarginConfigSection.h"
 
 using namespace ui::home;
 
@@ -38,7 +39,7 @@ void HomeWindow::OnCreate() {
         L"Segoe UI"
     );
 
-    // ===== BASIC (existing) =====
+    // ===== BASIC =====
     m_basic.Create(GetHwnd(), m_font);
 
     m_basic.SetPrinterOptions({
@@ -55,10 +56,9 @@ void HomeWindow::OnCreate() {
         OutputDebugStringA(("Copies: " + v + "\n").c_str());
     });
 
-    // ===== ADVANCE (ADD) =====
+    // ===== ADVANCE =====
     m_adv.Create(GetHwnd(), m_font);
 
-    // Print Mode
     m_adv.SetPrintModeOptions({
         "Simplex",
         "Duplex",
@@ -70,10 +70,8 @@ void HomeWindow::OnCreate() {
         OutputDebugStringA(("PrintMode: " + v + "\n").c_str());
     });
 
-    // image demo (bạn chỉnh path lại nếu cần)
     m_adv.SetPrintModeImage("./assets/PrintMode/flip-short-edge.bmp");
 
-    // Paper
     m_adv.SetPaperOptions({
         "A4",
         "A5",
@@ -84,7 +82,6 @@ void HomeWindow::OnCreate() {
         OutputDebugStringA(("Paper: " + v + "\n").c_str());
     });
 
-    // Scale
     m_adv.SetScaleOptions({
         "No Scale",
         "Fit to page (keep aspect ratio)",
@@ -95,7 +92,6 @@ void HomeWindow::OnCreate() {
         OutputDebugStringA(("Scale: " + v + "\n").c_str());
     });
 
-    // Orientation
     m_adv.SetOrientationOptions({
         "Auto",
         "Alway Portrait",
@@ -106,7 +102,6 @@ void HomeWindow::OnCreate() {
         OutputDebugStringA(("Orientation: " + v + "\n").c_str());
     });
 
-    // Collate
     m_adv.SetCollateOptions({
         "Collated (1,2,3 | 1,2,3 | 1,2,3)",
         "Uncollated (1,1,1 | 2,2,2 | 3,3,3)"
@@ -115,30 +110,46 @@ void HomeWindow::OnCreate() {
     m_adv.OnCollateChange([](const std::string& v) {
         OutputDebugStringA(("Collate: " + v + "\n").c_str());
     });
+
+    // ===== MARGIN =====
+    m_margin.Create(GetHwnd(), m_font);
+
+    m_margin.OnMarginTopChange([](const std::string& v) {
+        OutputDebugStringA(("Top: " + v + "\n").c_str());
+    });
+    m_margin.OnMarginBottomChange([](const std::string& v) {
+        OutputDebugStringA(("Bottom: " + v + "\n").c_str());
+    });
+    m_margin.OnMarginLeftChange([](const std::string& v) {
+        OutputDebugStringA(("Left: " + v + "\n").c_str());
+    });
+    m_margin.OnMarginRightChange([](const std::string& v) {
+        OutputDebugStringA(("Right: " + v + "\n").c_str());
+    });
 }
 
 void HomeWindow::OnCommand(WPARAM wParam) {
     m_basic.HandleCommand(wParam);
-
-    // ===== ADD =====
     m_adv.HandleCommand(wParam);
+    m_margin.HandleCommand(wParam);
 }
 
 void HomeWindow::OnSize() {
-    RECT rc;
+    RECT rc{};
     GetClientRect(GetHwnd(), &rc);
 
     m_basic.Resize(rc.right);
-
-    // ===== ADD =====
     m_adv.Resize(rc.right);
+    m_margin.Resize(rc.right);
+
+    InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
 void HomeWindow::OnPaint() {
-    PAINTSTRUCT ps;
+    PAINTSTRUCT ps{};
     HDC hdc = BeginPaint(GetHwnd(), &ps);
 
-    RECT rc;
+    RECT rc{};
     GetClientRect(GetHwnd(), &rc);
 
     HDC mem = CreateCompatibleDC(hdc);
@@ -149,11 +160,10 @@ void HomeWindow::OnPaint() {
     FillRect(mem, &rc, bg);
     DeleteObject(bg);
 
-    // ===== existing =====
+    // Vẽ tất cả section lên mem DC trước
     m_basic.OnPaint(mem);
-
-    // ===== ADD =====
     m_adv.OnPaint(mem);
+    m_margin.OnPaint(mem);
 
     BitBlt(hdc, 0, 0, rc.right, rc.bottom, mem, 0, 0, SRCCOPY);
 
@@ -172,19 +182,18 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
     case WM_COMMAND:
         OnCommand(wParam);
+        InvalidateRect(GetHwnd(), nullptr, FALSE);
         return 0;
 
     case WM_DRAWITEM:
     {
         const DRAWITEMSTRUCT* dis = reinterpret_cast<const DRAWITEMSTRUCT*>(lParam);
 
-        // Basic xử lý printer button
-        if (dis->CtlID == 2001) { // ID_BTN_PRINTER
+        if (dis->CtlID == 2001) {
             m_basic.HandleDrawItem(dis);
             return TRUE;
         }
 
-        // Advance xử lý các button của nó
         if (dis->CtlID >= 4101 && dis->CtlID <= 4105) {
             m_adv.HandleDrawItem(dis);
             return TRUE;
@@ -193,7 +202,15 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         return FALSE;
     }
 
-        return TRUE;
+    case WM_CTLCOLOREDIT:
+    {
+        HDC hdc = (HDC)wParam;
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, Style::INPUT_TEXT);
+
+        static HBRUSH brush = CreateSolidBrush(Style::INPUT_BG);
+        return (LRESULT)brush;
+    }
 
     case WM_SIZE:
         OnSize();
@@ -210,7 +227,7 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_ERASEBKGND:
     {
         HDC hdc = (HDC)wParam;
-        RECT rc;
+        RECT rc{};
         GetClientRect(GetHwnd(), &rc);
 
         HBRUSH br = CreateSolidBrush(Style::WINDOW_BG);
