@@ -193,12 +193,12 @@
               <div class="input"> A4 </div>
             </div>
             <div class="row">
+              <div class="label"> Scale </div>
+              <div class="input"> No Scale</div>
+            </div>             
+            <div class="row">
               <div class="label"> Layout </div>
               <div class="input"> 1 Page Per Sheet </div>
-            </div>            
-            <div class="row">
-              <div class="label"> Pages to Print </div>
-              <div class="input"> Print All Pages</div>
             </div>            
             <div class="row">
               <div class="label"> Orientation </div>

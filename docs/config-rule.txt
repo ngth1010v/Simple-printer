@@ -14,6 +14,12 @@ printMode=Manual Duplex (Flip On Short Edge)
 paper=A4
 + khi có printer sẽ update các size theo support của printer 
 
+scale=Fit to page (keep aspect ratio)
++ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
+++ "No Scale"
+++ "Fit to page (keep aspect ratio)"
+++ "Fill page (ignore aspect ratio)"
+
 layout=1 Page Per Sheet
 + là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
 ++ "1 Page Per Sheet"
@@ -21,12 +27,6 @@ layout=1 Page Per Sheet
 ++ "4 Page Per Sheet"
 ++ "6 Page Per Sheet"
 ++ "8 Page Per Sheet"
-
-pagesToPrint=Print All Pages
-+ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
-++ "Print All Pages"
-++ "Only Print Odd Pages"
-++ "Only Print Even Pages"
 
 orientation=Portrait
 + là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
@@ -55,8 +55,8 @@ priner=Canon LBP 3018
 [Advance]
 printMode=Manual Duplex (Flip On Short Edge)
 paper=A4
+scale=Fit to page (keep aspect ratio)
 layout=1 Page Per Sheet
-pagesToPrint=Print All Pages
 orientation=Portrait
 collate=Collated (1,2,3 | 1,2,3 | 1,2,3)
 
