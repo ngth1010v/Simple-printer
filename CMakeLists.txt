@@ -64,6 +64,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     shell32
     msimg32
     comctl32
+    uxtheme   
 )
 
 # =========================

@@ -13,10 +13,8 @@ public:
     BasicConfigSection();
 
     void Create(HWND parent, HFONT font);
-
     void Resize(int parentWidth);
 
-    // ===== API =====
     void SetPrinterOptions(const std::vector<std::string>& options);
     void SetPrinterValue(const std::string& value);
     void OnPrinterChange(std::function<void(const std::string&)> cb);
@@ -25,26 +23,32 @@ public:
     void OnCopiesChange(std::function<void(const std::string&)> cb);
 
     void HandleCommand(WPARAM wParam);
+    void HandleDrawItem(const DRAWITEMSTRUCT* dis);
     void OnPaint(HDC hdc);
-    void SetStyleApplier(std::function<void(HWND)> fn);
+
+    HWND GetPrinterHWND() const { return m_btnPrinter; }
+    HWND GetCopiesHWND() const { return m_editCopies; }
 
 private:
     HWND m_parent = nullptr;
-    std::function<void(HWND)> m_applyStyle;
+    HFONT m_font = nullptr;
 
-    HWND m_lblPrinter = nullptr;
-    HWND m_cbPrinter  = nullptr;
-
-    HWND m_lblCopies  = nullptr;
+    // printer field is now a custom owner-draw button, not a native combobox
+    HWND m_btnPrinter = nullptr;
     HWND m_editCopies = nullptr;
 
-    HFONT m_font = nullptr;
+    std::vector<std::wstring> m_printerOptions;
+    int m_printerSelection = -1;
 
     std::function<void(const std::string&)> m_cbPrinterChange;
     std::function<void(const std::string&)> m_cbCopiesChange;
 
 private:
-    std::string GetComboText(HWND hwnd);
+    void ShowPrinterPopup();
+    std::wstring ToWide(const std::string& s) const;
+    std::string ToNarrow(const std::wstring& ws) const;
+
+    std::string GetSelectedPrinterText() const;
     std::string GetEditText(HWND hwnd);
 };
 
