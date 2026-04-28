@@ -185,6 +185,20 @@ void HomeWindow::OnCreate() {
             "green",
             "10",
             "10"
+        },
+        {
+            "C:/Docs/Test4.docx",
+            "Test4.docx",
+            "green",
+            "10",
+            "10"
+        },
+        {
+            "C:/Docs/Test4.docx",
+            "Test4.docx",
+            "green",
+            "10",
+            "10"
         }
     });
 

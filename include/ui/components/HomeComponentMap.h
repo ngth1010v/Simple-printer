@@ -231,7 +231,7 @@ namespace Layout {
 
         // File list vieww
         namespace FileListView {
-            constexpr int X = FilesSection::X;
+            constexpr int X = FilesSection::X + SECTION_MARGIN;
             constexpr int Y = FilesSection::Y + SECTION_MARGIN + LABEL_H + INPUT_GAP;
             inline    int CALC_W (int windowW) {return FilesSection::CALC_W(windowW) - 2 * SECTION_MARGIN;}
             inline    int CALC_H (int windowH) {return FilesSection::CALC_H(windowH) - 2 * SECTION_MARGIN - INPUT_H - LABEL_H - 2 * INPUT_GAP;}
