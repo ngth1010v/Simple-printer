@@ -8,6 +8,9 @@ using namespace ui::home;
 
 namespace {
 
+    constexpr DWORD kButtonStyle =
+        WS_CHILD | WS_VISIBLE | BS_OWNERDRAW | WS_CLIPSIBLINGS;
+
     COLORREF InputTextColor(BOOL disabled) {
         return disabled ? Style::INPUT_TEXT_DISABLED : Style::INPUT_TEXT;
     }
@@ -62,6 +65,19 @@ namespace {
             Style::INPUT_RADIUS
         );
     }
+
+    void MoveButton(HWND hwnd, int x, int y, int w, int h) {
+        if (!hwnd) return;
+        SetWindowPos(
+            hwnd,
+            nullptr,
+            x,
+            y,
+            w,
+            h,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOOWNERZORDER
+        );
+    }
 }
 
 ControlBlock::ControlBlock() {}
@@ -72,7 +88,7 @@ void ControlBlock::Create(HWND parent, HFONT font) {
 
     m_btnPrint = CreateWindowEx(
         0, L"BUTTON", L"",
-        WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        kButtonStyle,
         0, 0, 0, 0,
         parent,
         (HMENU)ID_BTN_PRINT,
@@ -82,7 +98,7 @@ void ControlBlock::Create(HWND parent, HFONT font) {
 
     m_btnCancel = CreateWindowEx(
         0, L"BUTTON", L"",
-        WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
+        kButtonStyle,
         0, 0, 0, 0,
         parent,
         (HMENU)ID_BTN_CANCEL,
@@ -97,23 +113,43 @@ void ControlBlock::Create(HWND parent, HFONT font) {
 void ControlBlock::Resize(int parentW, int parentH) {
     using namespace Layout::ControlBlock;
 
-    MoveWindow(
-        m_btnPrint,
-        CALC_PRINT_INPUT_X(parentW) + Layout::INPUT_BORDER_OFFSET,
-        CALC_PRINT_INPUT_Y(parentH) + Layout::INPUT_BORDER_OFFSET,
-        INPUT_W                     - 2 * Layout::INPUT_BORDER_OFFSET,
-        CONTROL_INPUT_H             - 2 * Layout::INPUT_BORDER_OFFSET,
-        TRUE
-    );
+    const int btnW = INPUT_W - 2 * Layout::INPUT_BORDER_OFFSET;
+    const int btnH = CONTROL_INPUT_H - 2 * Layout::INPUT_BORDER_OFFSET;
 
-    MoveWindow(
-        m_btnCancel,
-        CALC_CANCEL_INPUT_X(parentW) + Layout::INPUT_BORDER_OFFSET,
-        CALC_CANCEL_INPUT_Y(parentH) + Layout::INPUT_BORDER_OFFSET,
-        INPUT_W                     - 2 * Layout::INPUT_BORDER_OFFSET,
-        CONTROL_INPUT_H              - 2 * Layout::INPUT_BORDER_OFFSET,
-        TRUE
-    );
+    const int printX = CALC_PRINT_INPUT_X(parentW) + Layout::INPUT_BORDER_OFFSET;
+    const int printY = CALC_PRINT_INPUT_Y(parentH) + Layout::INPUT_BORDER_OFFSET;
+
+    const int cancelX = CALC_CANCEL_INPUT_X(parentW) + Layout::INPUT_BORDER_OFFSET;
+    const int cancelY = CALC_CANCEL_INPUT_Y(parentH) + Layout::INPUT_BORDER_OFFSET;
+
+    HDWP hdwp = BeginDeferWindowPos(2);
+    if (hdwp) {
+        hdwp = DeferWindowPos(
+            hdwp, m_btnPrint, nullptr,
+            printX, printY, btnW, btnH,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOOWNERZORDER
+        );
+
+        hdwp = DeferWindowPos(
+            hdwp, m_btnCancel, nullptr,
+            cancelX, cancelY, btnW, btnH,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOOWNERZORDER
+        );
+
+        EndDeferWindowPos(hdwp);
+    } else {
+        MoveButton(m_btnPrint,  printX,  printY,  btnW, btnH);
+        MoveButton(m_btnCancel, cancelX, cancelY, btnW, btnH);
+    }
+
+    if (m_parent) {
+        RedrawWindow(
+            m_parent,
+            nullptr,
+            nullptr,
+            RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN | RDW_UPDATENOW
+        );
+    }
 }
 
 void ControlBlock::HandleCommand(WPARAM wParam) {
