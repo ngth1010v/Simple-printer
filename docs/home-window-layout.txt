@@ -38,7 +38,7 @@
       }
       .window{
         width: 450px;
-        height: 541px;
+        height: 498px;
         display: flex;
         background: #eee;
         padding: 5px;
@@ -67,12 +67,12 @@
       .columnContainer {
         width: 100%;
         display: flex;
+        flex-direction: column;
         gap: 5px;
       }
       .rowContainer {
         width: 100%;
         display: flex;
-        flex-direction: column;
         gap: 5px;
       }
       
@@ -144,12 +144,32 @@
       
       .fileRow {
         display: flex;
+        flex-direction: column;
         width: 100%;
-        background: #f2f2f2;
-        border-left: 2px solid #5c5;
+        background: rgb(230,250,230);
+        border-left: 2px solid rgb(100, 210, 100);
         justify-content: space-between;
-        padding: 2px 3px;
+        padding: 5px;
         box-sizing: border-box;
+        gap: 1px;
+      }
+      .fileRow.red{
+        background: rgb(250,230,230);
+        border-left: 2px solid rgb(210, 100, 100);
+      }
+      
+      .rangeBlock {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+        border: 1px solid #999;
+        border-radius: 3px;
+      }
+      
+      .rangeItem {
+        flex: 1;
+        display: flex;
+        justify-content: center;
       }
       
       .configPanel{
@@ -196,10 +216,6 @@
               <div class="label"> Scale </div>
               <div class="input"> No Scale</div>
             </div>             
-            <div class="row">
-              <div class="label"> Layout </div>
-              <div class="input"> 1 Page Per Sheet </div>
-            </div>            
             <div class="row">
               <div class="label"> Orientation </div>
               <div class="input"> Portrait </div>
@@ -254,19 +270,35 @@
             <div class="fileListview">
               <div class="fileRow">
                 <div class="fileName">Test1.docx</div>
-                <div class="range"> 1-10</div>
+                <div class="rangeBlock">
+                  <div class="rangeItem">1</div>
+                  -
+                  <div class="rangeItem">10</div>
+                </div>
               </div>
               <div class="fileRow">
                 <div class="fileName">Test2.docx</div>
-                <div class="range"> 1</div>
+                <div class="rangeBlock">
+                  <div class="rangeItem">1</div>
+                  -
+                  <div class="rangeItem">1</div>
+                </div>
               </div>
-              <div class="fileRow">
+              <div class="fileRow red">
                 <div class="fileName">Test3.docx</div>
-                <div class="range"> 5-20</div>
+                <div class="rangeBlock">
+                  <div class="rangeItem">5</div>
+                  -
+                  <div class="rangeItem">20</div>
+                </div>
               </div>
               <div class="fileRow">
                 <div class="fileName">Test4.docx</div>
-                <div class="range"> 1-20</div>
+                <div class="rangeBlock">
+                  <div class="rangeItem">10</div>
+                  -
+                  <div class="rangeItem">10</div>
+                </div>
               </div>
             </div>
             <div class="fileControlContainer">
