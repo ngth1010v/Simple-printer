@@ -185,24 +185,136 @@ namespace Layout {
         inline    int CALC_CANCEL_LABEL_Y (int windowH) {return CALC_CANCEL_INPUT_Y(windowH) + (INPUT_W - CANCEL_LABEL_W) / 2;}
     }
 
+    // ===== FILES SECTION =====
+    namespace FilesSection {
+        constexpr int X = InfoSection::X;
+        constexpr int Y = InfoSection::Y + InfoSection::H + SECTION_GAP;
+        inline    int CALC_W (int windowW) {return windowW - 2 * MARGIN - BasicSection::W - SECTION_GAP;}
+        inline    int CALC_H (int windowH) {return windowH - 2 * MARGIN - InfoSection::H - ControlBlock::CONTROL_INPUT_H - 2 * SECTION_GAP;}
+        
+        
+        constexpr int CONTROL_LABEL_W = 6;
+        inline    int CALC_CONTROL_INPUT_W (int windowW) {return (CALC_W(windowW) - 2 * SECTION_MARGIN - 3 * INPUT_GAP) / 4;}
+
+        // Label
+        constexpr int LABEL_X = SECTION_MARGIN;
+        constexpr int LABEL_Y = SECTION_MARGIN;
+
+        // Control Up
+        inline    int CALC_CONTROL_UP_INPUT_X (int windowW) {return SECTION_MARGIN;}
+        inline    int CALC_CONTROL_UP_INPUT_Y (int windowH) {return CALC_H(windowH) - SECTION_MARGIN - INPUT_H;}
+
+        inline    int CALC_CONTROL_UP_LABEL_X (int windowW) {return CALC_CONTROL_UP_INPUT_X(windowW) + (CALC_CONTROL_INPUT_W(windowW) - CONTROL_LABEL_W) / 2;}
+        inline    int CALC_CONTROL_UP_LABEL_Y (int windowH) {return CALC_CONTROL_UP_INPUT_Y(windowH) + (INPUT_H - LABEL_H) / 2;}
+
+        // Control Down
+        inline    int CALC_CONTROL_DOWN_INPUT_X (int windowW) {return SECTION_MARGIN + CALC_CONTROL_INPUT_W(windowW) + INPUT_GAP;}
+        inline    int CALC_CONTROL_DOWN_INPUT_Y (int windowH) {return CALC_H(windowH) - SECTION_MARGIN - INPUT_H;}
+
+        inline    int CALC_CONTROL_DOWN_LABEL_X (int windowW) {return CALC_CONTROL_DOWN_INPUT_X(windowW) + (CALC_CONTROL_INPUT_W(windowW) - CONTROL_LABEL_W) / 2;}
+        inline    int CALC_CONTROL_DOWN_LABEL_Y (int windowH) {return CALC_CONTROL_DOWN_INPUT_Y(windowH) + (INPUT_H - LABEL_H) / 2;}
+
+        // Control Remove
+        inline    int CALC_CONTROL_REMOVE_INPUT_X (int windowW) {return SECTION_MARGIN + (CALC_CONTROL_INPUT_W(windowW) + INPUT_GAP) * 2;}
+        inline    int CALC_CONTROL_REMOVE_INPUT_Y (int windowH) {return CALC_H(windowH) - SECTION_MARGIN - INPUT_H;}
+
+        inline    int CALC_CONTROL_REMOVE_LABEL_X (int windowW) {return CALC_CONTROL_REMOVE_INPUT_X(windowW) + (CALC_CONTROL_INPUT_W(windowW) - CONTROL_LABEL_W) / 2;}
+        inline    int CALC_CONTROL_REMOVE_LABEL_Y (int windowH) {return CALC_CONTROL_REMOVE_INPUT_Y(windowH) + (INPUT_H - LABEL_H) / 2;}
+
+        // Control Add
+        inline    int CALC_CONTROL_ADD_INPUT_X (int windowW) {return SECTION_MARGIN + (CALC_CONTROL_INPUT_W(windowW) + INPUT_GAP) * 3;}
+        inline    int CALC_CONTROL_ADD_INPUT_Y (int windowH) {return CALC_H(windowH) - SECTION_MARGIN - INPUT_H;}
+
+        inline    int CALC_CONTROL_ADD_LABEL_X (int windowW) {return CALC_CONTROL_ADD_INPUT_X(windowW) + (CALC_CONTROL_INPUT_W(windowW) - CONTROL_LABEL_W) / 2;}
+        inline    int CALC_CONTROL_ADD_LABEL_Y (int windowH) {return CALC_CONTROL_ADD_INPUT_Y(windowH) + (INPUT_H - LABEL_H) / 2;}
+
+
+        // File list vieww
+        namespace FileListView {
+            constexpr int X = FilesSection::X;
+            constexpr int Y = FilesSection::Y + SECTION_MARGIN + LABEL_H + INPUT_GAP;
+            inline    int CALC_W (int windowW) {return FilesSection::CALC_W(windowW) - 2 * SECTION_MARGIN;}
+            inline    int CALC_H (int windowH) {return FilesSection::CALC_H(windowH) - 2 * SECTION_MARGIN - INPUT_H - LABEL_H - 2 * INPUT_GAP;}
+            
+            
+            // Row
+            constexpr int ROW_GAP    = 3; 
+            constexpr int ROW_MARGIN = 5; 
+            constexpr int ROW_H      = 2 * ROW_MARGIN + LABEL_H + INPUT_GAP + INPUT_H; 
+            inline    int CALC_ROW_W (int windowW) {return CALC_W(windowW);} 
+            
+            constexpr int ROW_X = 0; 
+            inline    int CALC_ROW_Y (int index) {return (ROW_H + ROW_GAP) * index;} 
+            
+
+            // Status
+            constexpr int STATUS_W = 2; 
+            constexpr int STATUS_H = ROW_H; 
+
+            constexpr int STATUS_X = 0; 
+            inline    int CALC_STATUS_Y (int index) {return CALC_ROW_Y(index);} 
+            
+
+            // Label
+            inline    int CALC_LABEL_MAX_W (int windowW) {return CALC_ROW_W(windowW) - STATUS_W - 2 * ROW_MARGIN;}
+
+            constexpr int LABEL_X = ROW_MARGIN + STATUS_W; 
+            inline    int CALC_LABEL_Y (int index) {return CALC_ROW_Y(index) + ROW_MARGIN;}
+
+
+            // NOTE: InputWrapper, InputDiver, FromInput, ToInput dều có H = INPUT_H
+            // Input wrapper
+            inline    int CALC_INPUT_WRAPPER_W (int windowW) {return CALC_ROW_W(windowW) - STATUS_W - 2 * ROW_MARGIN;}
+
+            constexpr int INPUT_WRAPPER_X = ROW_MARGIN + STATUS_W; 
+            inline    int CALC_INPUT_WRAPPER_Y (int index) {return CALC_ROW_Y(index) + LABEL_H + INPUT_GAP;} 
+
+
+            // Input diver (dấu '-' ở giữa 2 input)
+            constexpr int INPUT_DIVER_W = 6;
+
+            inline    int CALC_INPUT_DIVER_X (int windowW) {return INPUT_WRAPPER_X + (CALC_INPUT_WRAPPER_W(windowW) - INPUT_DIVER_W) / 2;}
+            inline    int CALC_INPUT_DIVER_Y (int index) {return CALC_INPUT_WRAPPER_Y(index);} 
+
+
+            // 'From' input 
+            inline    int CALC_FROM_INPUT_W (int windowW) {return (CALC_INPUT_WRAPPER_W(windowW) - INPUT_DIVER_W) / 2;}
+
+            constexpr int FROM_INPUT_X = INPUT_WRAPPER_X;
+            inline    int CALC_FROM_INPUT_Y (int index) {return CALC_INPUT_WRAPPER_Y(index);} 
+
+
+            // 'To' input 
+            inline    int CALC_TO_INPUT_W (int windowW) {return (CALC_INPUT_WRAPPER_W(windowW) - INPUT_DIVER_W) / 2;}
+
+            inline    int CALC_TO_INPUT_X (int windowW) {return INPUT_WRAPPER_X + CALC_FROM_INPUT_W(windowW) + INPUT_DIVER_W;}
+            inline    int CALC_TO_INPUT_Y (int index) {return CALC_INPUT_WRAPPER_Y(index);} 
+
+            
+        }
+
+    }
+    
+
+
 } // namespace Layout
 namespace Style {
     
     // General
-    constexpr COLORREF WINDOW_BG                = RGB(230,230,230);
+    constexpr COLORREF WINDOW_BG = RGB(230,230,230);
     
 
     // Section
-    constexpr COLORREF SECTION_BG               = RGB(255,255,255);
-    constexpr COLORREF SECTION_BORDER           = RGB(150,150,150);
+    constexpr COLORREF SECTION_BG       = RGB(255,255,255);
+    constexpr COLORREF SECTION_BORDER   = RGB(150,150,150);
     
 
     // Label
-    constexpr COLORREF LABEL                    = RGB(0,0,0);
+    constexpr COLORREF LABEL = RGB(0,0,0);
     
 
     // Input
-    constexpr int INPUT_RADIUS = 6;
+    constexpr int INPUT_RADIUS                  = 6;
 
     constexpr COLORREF INPUT_TEXT               = RGB(0,0,0);
     constexpr COLORREF INPUT_TEXT_HOVER         = RGB(0,0,0);
@@ -221,7 +333,17 @@ namespace Style {
 
 
     // Control
-    constexpr COLORREF PRINT_CONTROL_BG         = RGB(200,255,200);
+    constexpr COLORREF PRINT_CONTROL_BG = RGB(200,255,200);
+    
+    // File list view
+    constexpr COLORREF FILE_LIST_VIEW_SELECTED_ROW_BORDER   = RGB(50,50,50);
+
+    constexpr COLORREF FILE_LIST_VIEW_GREEN_STATUS          = RGB(100,210,100);
+    constexpr COLORREF FILE_LIST_VIEW_GREEN_BG              = RGB(230,250,230);
+    
+    constexpr COLORREF FILE_LIST_VIEW_RED_STATUS            = RGB(210,100,100);
+    constexpr COLORREF FILE_LIST_VIEW_RED_BG                = RGB(250,230,230);
+    
     
 }
 } // namespace HomeWindow

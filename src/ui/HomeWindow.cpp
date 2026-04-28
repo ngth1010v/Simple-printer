@@ -154,6 +154,60 @@ void HomeWindow::OnCreate() {
         OutputDebugStringA("Cancel clicked\n");
     });
 
+    // ===== FILE LIST =====
+    m_files.Create(GetHwnd(), m_font);
+
+    m_files.Set({
+        {
+            "C:/Docs/Test1.docx",
+            "Test11111111111111111111111111111111111111111111111111111111111111.docx",
+            "green",
+            "1",
+            "10"
+        },
+        {
+            "C:/Docs/Test2.docx",
+            "Test2.docx",
+            "green",
+            "1",
+            "1"
+        },
+        {
+            "C:/Docs/Test3.docx",
+            "Test3.docx",
+            "red",
+            "5",
+            "20"
+        },
+        {
+            "C:/Docs/Test4.docx",
+            "Test4.docx",
+            "green",
+            "10",
+            "10"
+        }
+    });
+
+    m_files.OnChangeRange([](const std::string& path, const std::string& fromRange, const std::string& toRange) {
+        OutputDebugStringA(("ChangeRange: " + path + " | " + fromRange + " -> " + toRange + "\n").c_str());
+    });
+
+    m_files.OnMoveUp([](const std::string& path) {
+        OutputDebugStringA(("MoveUp: " + path + "\n").c_str());
+    });
+
+    m_files.OnMoveDown([](const std::string& path) {
+        OutputDebugStringA(("MoveDown: " + path + "\n").c_str());
+    });
+
+    m_files.OnRemove([](const std::string& path) {
+        OutputDebugStringA(("Remove: " + path + "\n").c_str());
+    });
+
+    m_files.OnAdd([](const std::string& path) {
+        OutputDebugStringA(("Add: " + path + "\n").c_str());
+    });
+
 }
 
 void HomeWindow::OnCommand(WPARAM wParam) {
@@ -172,6 +226,7 @@ void HomeWindow::OnSize() {
     m_margin.Resize(rc.right);
     m_info.Resize(rc.right);
     m_control.Resize(rc.right, rc.bottom);
+    m_files.Resize(rc.right, rc.bottom);
 
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }

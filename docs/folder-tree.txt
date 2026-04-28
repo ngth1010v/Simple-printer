@@ -37,9 +37,9 @@ Simple-printer/
 │   │       ├── HomeComponentMap.h (wait for update)
 │   │       ├── BasicConfigSection.h (done)
 │   │       ├── AdvangeConfigSection.h (done)
-│   │       ├── MarginConfigSection.h
-│   │       ├── InfoSection.h
-│   │       └── FileListSection.h
+│   │       ├── MarginConfigSection.h (done)
+│   │       ├── InfoSection.h (done)
+│   │       └── FileListView.h (done)
 │   │
 │   └── app/
 │       ├── App.h (done)
@@ -80,9 +80,9 @@ Simple-printer/
 │   │   └── components/
 │   │       ├── BasicConfigSection.cpp (done)
 │   │       ├── AdvangeConfigSection.cpp (done)
-│   │       ├── MarginConfigSection.cpp
-│   │       ├── InfoSection.cpp
-│   │       └── FileListSection.cpp
+│   │       ├── MarginConfigSection.cpp  (done)
+│   │       ├── InfoSection.cpp (done)
+│   │       └── FileListView.cpp (done)
 │   │
 │   ├── app/
 │   │   ├── App.cpp (wait for update)

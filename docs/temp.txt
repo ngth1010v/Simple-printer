@@ -1,39 +1,67 @@
 # TASK:
-- dựa vào HomeComponentMap.h và lấy ví dụ từ BasicConfigSection, hãy code cho tôi full 2 file ControlBlock.h / .cpp với yêu cầu như dưới
-- sau khi code, code lại luôn giúp tôi full file HomeWindow.cpp để áp dụng
+- dựa vào HomeComponentMap.h và lấy ví dụ từ BasicConfigSection + tham khảo từ html, hãy code cho tôi full 2 file FileListView.h / .cpp với yêu cầu như dưới
+- sau khi code, chỉ tôi chỉnh lại HomeWindow.cpp/.h để áp dụng
+
+
+# EXPORT STRUCT:
+struct FileData {
+    string path,
+    string name,
+    string statusColor,
+    string fromRange,
+    string toRange,
+}
+
 
 # EXPORT FUNCTION:
-- void SetTotalFilesValue (const std::string& value);
-- void SetPagesToPrintValue (const std::string& value);
-- void SetSheetsRequiredValue (const std::string& value);
+- void Set (vector<FileData>)
+- void OnChangeRange(void callback nhận tham số (string path, string fromRange, string toRange)); 
+- void OnMoveUp(void callback nhận tham số (string path)); 
+- void OnMoveDown(void callback nhận tham số (string path));
+- void OnRemove(void callback nhận tham số (string path));
+- void OnAdd(void callback nhận tham số (string path));
+
+
+# MAIN IDEA:
+- phần fileList chính sẽ được custom build (dùng CreateWindowEx + WS_VSCROLL + handle...)
+- luôn chỉ nhận cả vector FileData, khi Set thì reset lại
+- render theo kiểu window, không tính toán / load hết mà tính sẵn ROW_Y + offset, nếu trong Window (hoặc vùng lân cận) thì mới load
+- để 1 DEFINE trên dầu cpp để quyết định load ngoài window trong khoảng nào, default = 300px
+- selected sẽ active khi ấn vào 1 row và thoát nếu: click row khác, click ra ngoài
+- không cần thật sự dùng input edit thật cho tất cả row, chỉ khi row selected thì mới load input thật, còn lại ưu tiên vẽ trong OnPaint 
+- khi có change -> gọi cb, không đổi data
+- các onChange chỉ gọi cb khi user: nhập -> thoát focus (click chỗ khác, enter) -> newValue != oldValue -> gọi cb
+
+# UI NOTE:
+- row được selected sẽ được vẽ 1 border 1px bên ngoài row với color như trong HomeComponentMap
+- phần label của mỗi row chỉ hiện name, không hiện path
+- nếu name dài hơn LABEL_W -> cắt thành ...
+- chỉ có wrapper input là được vẽ border, 2 input bên trong không cần
+- input bên trong được tự căn giữa (không cần handle overflow vì giá trị không quá lớn)
+- giữ style input,label của Basic (bo góc, vẽ border = OnPaint, ...)
 
 
 # INPUT:
 - HomeComponentMap.h
+- .html
 - BasicConfigSection.h
 - BasicConfigSection.cpp
 - HomeWindow.h (HomeWindow sẽ là bên dùng)
 - HomeWindow.cpp
 
 # OUTPUT:
-- InfoConfigSection.h (full)
-- InfoConfigSection.cpp (full)
-- HomeWindow.cpp (full)
-- HomeWindow.h (chỉ cần chỉ tôi thêm include ..., không cần code lại hết)
+- FileListView.h (full)
+- FileListView.cpp (full)
 
 # RULE:
 - code full 2 file .h và .cpp
-- code này CHỈ HIỂN THỊ, KHÔNG CẦN INPUT nhung vẫn GIỮ BORDER giống input
-- default của cả 3 value là "1"
-- Input width lấy từ CALC_INPUT_W
-- giữ style input,label của Basic (bo góc, vẽ border = OnPaint, ...)
 
 # NOTE:
 - nếu có thắc mắc, hãy hỏi tôi trước khi code
 
 
 # CODE - INFO:
-### HomeComponentMap.h:
+### HomeComponentMap.h (đã cắt 1 số chỗ không cần):
 #pragma once
 
 namespace ui {
@@ -42,7 +70,7 @@ namespace Layout {
 
     // ===== WINDOW =====
     constexpr int MIN_WIDTH             = 470;
-    constexpr int MIN_HEIGHT            = 515;
+    constexpr int MIN_HEIGHT            = 477;
 
     constexpr int MARGIN                = 5;
     constexpr int SECTION_MARGIN        = 10;
@@ -79,143 +107,137 @@ namespace Layout {
         constexpr int COPIES_INPUT_Y = SECTION_MARGIN + LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP + LABEL_H + INPUT_GAP;
     }
 
-    // ===== ADVANCE SECTION =====
-    namespace AdvaceSection {
-        constexpr int X = MARGIN;
-        constexpr int Y = BasicSection::Y + BasicSection::H + SECTION_GAP;
-        constexpr int W = 250;
-        constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 5 - ROW_GAP + IMAGE_H + INPUT_GAP;
+
+    // ===== FILES SECTION =====
+    namespace FilesSection {
+        constexpr int X = InfoSection::X;
+        constexpr int Y = InfoSection::Y + InfoSection::H + SECTION_GAP;
+        inline    int CALC_W (int windowW) {return windowW - 2 * MARGIN - BasicSection::W - SECTION_GAP;}
+        inline    int CALC_H (int windowH) {return windowH - 2 * MARGIN - InfoSection::H - ControlBlock::CONTROL_INPUT_H - 2 * SECTION_GAP;}
         
-        constexpr int INPUT_W = W - 2 * SECTION_MARGIN;
-
-
-        // PrintMode
-        constexpr int PRINT_MODE_LABEL_X = SECTION_MARGIN;
-        constexpr int PRINT_MODE_LABEL_Y = SECTION_MARGIN;
-
-        constexpr int PRINT_MODE_INPUT_X = SECTION_MARGIN;
-        constexpr int PRINT_MODE_INPUT_Y = PRINT_MODE_LABEL_Y + LABEL_H + INPUT_GAP;
-
-        constexpr int PRINT_MODE_IMAGE_X = SECTION_MARGIN;
-        constexpr int PRINT_MODE_IMAGE_Y = PRINT_MODE_INPUT_Y + INPUT_H + INPUT_GAP;
-
-        // Paper
-        constexpr int PAPER_LABEL_X = SECTION_MARGIN;
-        constexpr int PAPER_LABEL_Y = PRINT_MODE_IMAGE_Y + IMAGE_H + ROW_GAP;
-
-        constexpr int PAPER_INPUT_X = SECTION_MARGIN;
-        constexpr int PAPER_INPUT_Y = PAPER_LABEL_Y + LABEL_H + INPUT_GAP;
-
-        // Scale
-        constexpr int SCALE_LABEL_X = SECTION_MARGIN;
-        constexpr int SCALE_LABEL_Y = PAPER_INPUT_Y + INPUT_H + ROW_GAP;
-
-        constexpr int SCALE_INPUT_X = SECTION_MARGIN;
-        constexpr int SCALE_INPUT_Y = SCALE_LABEL_Y + LABEL_H + INPUT_GAP;
-
-        // Orientation
-        constexpr int ORIENTATION_LABEL_X = SECTION_MARGIN;
-        constexpr int ORIENTATION_LABEL_Y = SCALE_INPUT_Y + INPUT_H + ROW_GAP;
-
-        constexpr int ORIENTATION_INPUT_X = SECTION_MARGIN;
-        constexpr int ORIENTATION_INPUT_Y = ORIENTATION_LABEL_Y + LABEL_H + INPUT_GAP;
-
-        // Collate
-        constexpr int COLLATE_LABEL_X = SECTION_MARGIN;
-        constexpr int COLLATE_LABEL_Y = ORIENTATION_INPUT_Y + INPUT_H + ROW_GAP;
-
-        constexpr int COLLATE_INPUT_X = SECTION_MARGIN;
-        constexpr int COLLATE_INPUT_Y = COLLATE_LABEL_Y + LABEL_H + INPUT_GAP;
-    }
-
-    // ===== MARGIN SECTION =====
-    namespace MarginSection {
-        constexpr int X = MARGIN;
-        constexpr int Y = AdvaceSection::Y + AdvaceSection::H + SECTION_GAP;
-        constexpr int W = 250;
-        constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 2 - ROW_GAP;
-
-
-        constexpr int MARGIN_INPUT_W = (250 - 2 * SECTION_MARGIN - ROW_GAP) / 2;
-
-        // Margin top
-        constexpr int MARGIN_TOP_LABEL_X = SECTION_MARGIN;
-        constexpr int MARGIN_TOP_LABEL_Y = SECTION_MARGIN;
-
-        constexpr int MARGIN_TOP_INPUT_X = SECTION_MARGIN;
-        constexpr int MARGIN_TOP_INPUT_Y = MARGIN_TOP_LABEL_Y + LABEL_H + INPUT_GAP;
-
-        // Margin bottom
-        constexpr int MARGIN_BOTTOM_LABEL_X = SECTION_MARGIN + MARGIN_INPUT_W + ROW_GAP;
-        constexpr int MARGIN_BOTTOM_LABEL_Y = SECTION_MARGIN;
-
-        constexpr int MARGIN_BOTTOM_INPUT_X = SECTION_MARGIN + MARGIN_INPUT_W + ROW_GAP;
-        constexpr int MARGIN_BOTTOM_INPUT_Y = MARGIN_BOTTOM_LABEL_Y + LABEL_H + INPUT_GAP;
-
-        // Margin left
-        constexpr int MARGIN_LEFT_LABEL_X = SECTION_MARGIN;
-        constexpr int MARGIN_LEFT_LABEL_Y = MARGIN_TOP_INPUT_Y + INPUT_H + ROW_GAP;
-
-        constexpr int MARGIN_LEFT_INPUT_X = SECTION_MARGIN;
-        constexpr int MARGIN_LEFT_INPUT_Y = MARGIN_LEFT_LABEL_Y + LABEL_H + INPUT_GAP;
-
-        // Margin right
-        constexpr int MARGIN_RIGHT_LABEL_X = SECTION_MARGIN + MARGIN_INPUT_W + ROW_GAP;
-        constexpr int MARGIN_RIGHT_LABEL_Y = MARGIN_TOP_INPUT_Y + INPUT_H + ROW_GAP;
-
-        constexpr int MARGIN_RIGHT_INPUT_X = SECTION_MARGIN + MARGIN_INPUT_W + ROW_GAP;
-        constexpr int MARGIN_RIGHT_INPUT_Y = MARGIN_RIGHT_LABEL_Y + LABEL_H + INPUT_GAP;
-    }
-
-    // ===== INFO SECTION =====
-    namespace InfoSection {
-        constexpr int X = BasicSection::X + BasicSection::W + SECTION_GAP;
-        constexpr int Y = MARGIN;
-        inline    int CALC_W (int windowW) {return windowW - 2 * MARGIN - BasicSection::W - SECTION_GAP;};
-        constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 3 - ROW_GAP;
         
-        inline    int CALC_INPUT_W (int windowW) {return CALC_W(windowW) - 2 * SECTION_MARGIN;};
+        constexpr int CONTROL_LABEL_W = 6;
+        inline    int CALC_CONTROL_INPUT_W (int windowW) {return (CALC_W(windowW) - 2 * SECTION_MARGIN - 3 * INPUT_GAP) / 4;}
 
-        // Total files
-        constexpr int TOTAL_FILES_LABEL_X = SECTION_MARGIN;
-        constexpr int TOTAL_FILES_LABEL_Y = SECTION_MARGIN;
+        // Label
+        constexpr int LABEL_X = SECTION_MARGIN;
+        constexpr int LABEL_Y = SECTION_MARGIN;
 
-        constexpr int TOTAL_FILES_INPUT_X = SECTION_MARGIN;
-        constexpr int TOTAL_FILES_INPUT_Y = TOTAL_FILES_LABEL_Y + LABEL_H + INPUT_GAP;
+        // Control Up
+        inline    int CALC_CONTROL_UP_INPUT_X (int windowW) {return SECTION_MARGIN;}
+        inline    int CALC_CONTROL_UP_INPUT_Y (int windowH) {return CALC_H(windowH) - SECTION_MARGIN - INPUT_H;}
 
-        // Pages to print
-        constexpr int PAGES_TO_PRINT_LABEL_X = SECTION_MARGIN;
-        constexpr int PAGES_TO_PRINT_LABEL_Y = TOTAL_FILES_INPUT_Y + INPUT_H + ROW_GAP;
+        inline    int CALC_CONTROL_UP_LABEL_X (int windowW) {return CALC_CONTROL_UP_INPUT_X(windowW) + (CALC_CONTROL_INPUT_W(windowW) - CONTROL_LABEL_W) / 2;}
+        inline    int CALC_CONTROL_UP_LABEL_Y (int windowH) {return CALC_CONTROL_UP_INPUT_Y(windowH) + (INPUT_H - LABEL_H) / 2;}
 
-        constexpr int PAGES_TO_PRINT_INPUT_X = SECTION_MARGIN;
-        constexpr int PAGES_TO_PRINT_INPUT_Y = PAGES_TO_PRINT_LABEL_Y + LABEL_H + INPUT_GAP;
+        // Control Down
+        inline    int CALC_CONTROL_DOWN_INPUT_X (int windowW) {return SECTION_MARGIN + CALC_CONTROL_INPUT_W(windowW) + INPUT_GAP;}
+        inline    int CALC_CONTROL_DOWN_INPUT_Y (int windowH) {return CALC_H(windowH) - SECTION_MARGIN - INPUT_H;}
 
-        // Sheets required
-        constexpr int SHEETS_REQUIRED_LABEL_X = SECTION_MARGIN;
-        constexpr int SHEETS_REQUIRED_LABEL_Y = PAGES_TO_PRINT_INPUT_Y + INPUT_H + ROW_GAP;
+        inline    int CALC_CONTROL_DOWN_LABEL_X (int windowW) {return CALC_CONTROL_DOWN_INPUT_X(windowW) + (CALC_CONTROL_INPUT_W(windowW) - CONTROL_LABEL_W) / 2;}
+        inline    int CALC_CONTROL_DOWN_LABEL_Y (int windowH) {return CALC_CONTROL_DOWN_INPUT_Y(windowH) + (INPUT_H - LABEL_H) / 2;}
 
-        constexpr int SHEETS_REQUIRED_INPUT_X = SECTION_MARGIN;
-        constexpr int SHEETS_REQUIRED_INPUT_Y = SHEETS_REQUIRED_LABEL_Y + LABEL_H + INPUT_GAP;
+        // Control Remove
+        inline    int CALC_CONTROL_REMOVE_INPUT_X (int windowW) {return SECTION_MARGIN + (CALC_CONTROL_INPUT_W(windowW) + INPUT_GAP) * 2;}
+        inline    int CALC_CONTROL_REMOVE_INPUT_Y (int windowH) {return CALC_H(windowH) - SECTION_MARGIN - INPUT_H;}
+
+        inline    int CALC_CONTROL_REMOVE_LABEL_X (int windowW) {return CALC_CONTROL_REMOVE_INPUT_X(windowW) + (CALC_CONTROL_INPUT_W(windowW) - CONTROL_LABEL_W) / 2;}
+        inline    int CALC_CONTROL_REMOVE_LABEL_Y (int windowH) {return CALC_CONTROL_REMOVE_INPUT_Y(windowH) + (INPUT_H - LABEL_H) / 2;}
+
+        // Control Add
+        inline    int CALC_CONTROL_ADD_INPUT_X (int windowW) {return SECTION_MARGIN + (CALC_CONTROL_INPUT_W(windowW) + INPUT_GAP) * 3;}
+        inline    int CALC_CONTROL_ADD_INPUT_Y (int windowH) {return CALC_H(windowH) - SECTION_MARGIN - INPUT_H;}
+
+        inline    int CALC_CONTROL_ADD_LABEL_X (int windowW) {return CALC_CONTROL_ADD_INPUT_X(windowW) + (CALC_CONTROL_INPUT_W(windowW) - CONTROL_LABEL_W) / 2;}
+        inline    int CALC_CONTROL_ADD_LABEL_Y (int windowH) {return CALC_CONTROL_ADD_INPUT_Y(windowH) + (INPUT_H - LABEL_H) / 2;}
+
+
+        // File list vieww
+        namespace FileListView {
+            constexpr int X = FilesSection::X;
+            constexpr int Y = FilesSection::Y + SECTION_MARGIN + LABEL_H + INPUT_GAP;
+            inline    int CALC_W (int windowW) {return FilesSection::CALC_W(windowW) - 2 * SECTION_MARGIN;}
+            inline    int CALC_H (int windowH) {return FilesSection::CALC_H(windowH) - 2 * SECTION_MARGIN - INPUT_H - LABEL_H - 2 * INPUT_GAP;}
+            
+            
+            // Row
+            constexpr int ROW_GAP    = 3; 
+            constexpr int ROW_MARGIN = 5; 
+            constexpr int ROW_H      = 2 * ROW_MARGIN + LABEL_H + INPUT_GAP + INPUT_H; 
+            inline    int CALC_ROW_W (int windowW) {return CALC_W(windowW);} 
+            
+            constexpr int ROW_X = 0; 
+            inline    int CALC_ROW_Y (int index) {return (ROW_H + ROW_GAP) * index;} 
+            
+
+            // Status
+            constexpr int STATUS_W = 2; 
+            constexpr int STATUS_H = ROW_H; 
+
+            constexpr int STATUS_X = 0; 
+            inline    int CALC_STATUS_Y (int index) {return CALC_ROW_Y(index);} 
+            
+
+            // Label
+            inline    int CALC_LABEL_MAX_W (int windowW) {return CALC_ROW_W(windowW) - STATUS_W - 2 * ROW_MARGIN;}
+
+            constexpr int LABEL_X = ROW_MARGIN + STATUS_W; 
+            inline    int CALC_LABEL_Y (int index) {return CALC_ROW_Y(index) + ROW_MARGIN;}
+
+
+            // NOTE: InputWrapper, InputDiver, FromInput, ToInput dều có H = INPUT_H
+            // Input wrapper
+            inline    int CALC_INPUT_WRAPPER_W (int windowW) {return CALC_ROW_W(windowW) - STATUS_W - 2 * ROW_MARGIN;}
+
+            constexpr int INPUT_WRAPPER_X = ROW_MARGIN + STATUS_W; 
+            inline    int CALC_INPUT_WRAPPER_Y (int index) {return CALC_ROW_Y(index) + LABEL_H + INPUT_GAP;} 
+
+
+            // Input diver (dấu '-' ở giữa 2 input)
+            constexpr int INPUT_DIVER_W = 6;
+
+            inline    int CALC_INPUT_DIVER_X (int windowW) {return INPUT_WRAPPER_X + (CALC_INPUT_WRAPPER_W(windowW) - INPUT_DIVER_W) / 2;}
+            inline    int CALC_INPUT_DIVER_Y (int index) {return CALC_INPUT_WRAPPER_Y(index);} 
+
+
+            // 'From' input 
+            inline    int CALC_FROM_INPUT_W (int windowW) {return (CALC_INPUT_WRAPPER_W(windowW) - INPUT_DIVER_W) / 2;}
+
+            constexpr int FROM_INPUT_X = INPUT_WRAPPER_X;
+            inline    int CALC_FROM_INPUT_Y (int index) {return CALC_INPUT_WRAPPER_Y(index);} 
+
+
+            // 'To' input 
+            inline    int CALC_TO_INPUT_W (int windowW) {return (CALC_INPUT_WRAPPER_W(windowW) - INPUT_DIVER_W) / 2;}
+
+            inline    int CALC_TO_INPUT_X (int windowW) {return INPUT_WRAPPER_X + CALC_FROM_INPUT_W(windowW) + INPUT_DIVER_W;}
+            inline    int CALC_TO_INPUT_Y (int index) {return CALC_INPUT_WRAPPER_Y(index);} 
+
+            
+        }
+
     }
+    
+
 
 } // namespace Layout
 namespace Style {
     
     // General
-    constexpr COLORREF WINDOW_BG                = RGB(230,230,230);
+    constexpr COLORREF WINDOW_BG = RGB(230,230,230);
     
 
     // Section
-    constexpr COLORREF SECTION_BG               = RGB(255,255,255);
-    constexpr COLORREF SECTION_BORDER           = RGB(150,150,150);
+    constexpr COLORREF SECTION_BG       = RGB(255,255,255);
+    constexpr COLORREF SECTION_BORDER   = RGB(150,150,150);
     
 
     // Label
-    constexpr COLORREF LABEL                    = RGB(0,0,0);
+    constexpr COLORREF LABEL = RGB(0,0,0);
     
 
     // Input
-    constexpr int INPUT_RADIUS = 6;
+    constexpr int INPUT_RADIUS                  = 6;
 
     constexpr COLORREF INPUT_TEXT               = RGB(0,0,0);
     constexpr COLORREF INPUT_TEXT_HOVER         = RGB(0,0,0);
@@ -231,10 +253,323 @@ namespace Style {
     constexpr COLORREF INPUT_BORDER_HOVER       = RGB(180,180,180);
     constexpr COLORREF INPUT_BORDER_FOCUS       = RGB(180,180,180);
     constexpr COLORREF INPUT_BORDER_DISABLED    = RGB(220,220,220);
+
+
+    // Control
+    constexpr COLORREF PRINT_CONTROL_BG = RGB(200,255,200);
+    
+    // File list view
+    constexpr COLORREF FILE_LIST_VIEW_SELECTED_ROW_BORDER   = RGB(50,50,50);
+
+    constexpr COLORREF FILE_LIST_VIEW_GREEN_STATUS          = RGB(100,210,100);
+    constexpr COLORREF FILE_LIST_VIEW_GREEN_BG              = RGB(230,250,230);
+    
+    constexpr COLORREF FILE_LIST_VIEW_RED_STATUS            = RGB(210,100,100);
+    constexpr COLORREF FILE_LIST_VIEW_RED_BG                = RGB(250,230,230);
+    
     
 }
 } // namespace HomeWindow
 }
+
+
+
+
+### .html:
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hello, World!</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      
+      body{
+        padding: 30px;
+        background: #223;
+        font-size: 12px;
+        font-family: Segoe UI;
+      }
+      .window{
+        width: 450px;
+        height: 498px;
+        display: flex;
+        background: #eee;
+        padding: 5px;
+        box-sizing: border-box;
+        gap: 5px;
+      }
+      
+      .section {
+        width: 100%;
+        padding: 6px 10px 10px 10px;
+        box-sizing: border-box;
+        border: 1px solid #999;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        background: #fff;
+      }
+      
+      .row {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;      
+      }
+      
+      .columnContainer {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .rowContainer {
+        width: 100%;
+        display: flex;
+        gap: 5px;
+      }
+      
+      .label {
+        
+      }
+      
+      .input {
+        width: 100%;
+        border: 1px solid #999;
+        border-radius: 3px;
+        box-sizing: border-box;
+        padding: 1px 3px;
+      }
+      
+      .image {
+        width: 100%;
+        height: 50px;
+        background: #ccf;
+      }
+      
+      .info {
+        width: 100%;
+        padding: 1px 3px;
+        border: 1px solid #999;
+        border-radius: 3px;
+        box-sizing: border-box;        
+      }
+      
+      .controlContainer {
+        display: flex;
+        width: 100%;
+        gap: 3px;
+      }
+      .controlBtn {
+        width: 50%;
+        border: 1px solid #999;
+        border-radius: 3px;
+        box-sizing: border-box;          
+        display: flex;
+        padding: 3px;
+        background: #fff;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .fileControlContainer{
+        width: 100%;
+        display: flex;
+        gap: 2px;        
+      }
+      
+      .fileControlBtn{
+        width: 50%;
+        display: flex;
+        justify-content: center;
+        border: 1px solid #999;
+        border-radius: 3px;
+        font-weight: bold;
+      }
+      
+      .fileListview {
+        width: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      
+      .fileRow {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        background: rgb(230,250,230);
+        border-left: 2px solid rgb(100, 210, 100);
+        justify-content: space-between;
+        padding: 5px;
+        box-sizing: border-box;
+        gap: 1px;
+      }
+      .fileRow.red{
+        background: rgb(250,230,230);
+        border-left: 2px solid rgb(210, 100, 100);
+      }
+      
+      .rangeBlock {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+        border: 1px solid #999;
+        border-radius: 3px;
+      }
+      
+      .rangeItem {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+      }
+      
+      .configPanel{
+        width: 55%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;        
+      }
+      
+      .filePanel {
+        width: 45%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;           
+      }
+    </style>
+  </head>
+  <body>
+      <div class="window">
+        <div class="configPanel"> 
+          <div class="section basic-section">
+            <div class="row">
+              <div class="label"> Printer </div>
+              <div class="input"> Canon LBP 3018 </div>
+            </div>
+            <div class="row">
+              <div class="label"> Copies </div>
+              <div class="input"> 2 </div>
+            </div>
+          </div>
+          <div class="section advance-section">
+            <div class="row">
+              <div class="label"> Print mode </div>
+              <div class="input"> Manual Duplex (Flip On Short Edge) </div>
+              <div class="image"></div>
+            </div>
+            <div class="row">
+              <div class="label"> Paper </div>
+              <div class="input"> A4 </div>
+            </div>
+            <div class="row">
+              <div class="label"> Scale </div>
+              <div class="input"> No Scale</div>
+            </div>             
+            <div class="row">
+              <div class="label"> Orientation </div>
+              <div class="input"> Portrait </div>
+            </div>
+            <div class="row">
+              <div class="label"> Collate </div>
+              <div class="input"> Collated (1,2,3 | 1,2,3 | 1,2,3) </div>
+            </div>
+          </div>
+          <div class="section margin-section">
+            <div class="columnContainer">
+              <div class="rowContainer">
+                <div class="row">
+                  <div class="label"> Margin Top </div>
+                  <div class="input"> 1" </div>
+                </div>
+                <div class="row">
+                  <div class="label">Margin  Bottom </div>
+                  <div class="input"> 1" </div>
+                </div>              
+              </div>
+              <div class="rowContainer">
+                <div class="row">
+                  <div class="label"> Margin Left </div>
+                  <div class="input"> 1" </div>
+                </div>
+                <div class="row">
+                  <div class="label"> Margin Right </div>
+                  <div class="input"> 1" </div>
+                </div>              
+              </div>              
+            </div>
+          </div>
+        </div>
+        <div class="filePanel"> 
+          <div class="section info-section">
+            <div class="row">
+              <div class="label"> Total Files </div>
+              <div class="input"> 2</div>
+            </div>               
+            <div class="row">
+              <div class="label"> Pages To Print </div>
+              <div class="input"> 10 </div>
+            </div>               
+            <div class="row">
+              <div class="label"> Sheets Required </div>
+              <div class="input"> 5 </div>
+            </div>               
+          </div>
+          <div class="section files-section" style="flex: 1;">
+            <div class="label"> Selected Files </div>
+            <div class="fileListview">
+              <div class="fileRow">
+                <div class="fileName">Test1.docx</div>
+                <div class="rangeBlock">
+                  <div class="rangeItem">1</div>
+                  -
+                  <div class="rangeItem">10</div>
+                </div>
+              </div>
+              <div class="fileRow">
+                <div class="fileName">Test2.docx</div>
+                <div class="rangeBlock">
+                  <div class="rangeItem">1</div>
+                  -
+                  <div class="rangeItem">1</div>
+                </div>
+              </div>
+              <div class="fileRow red">
+                <div class="fileName">Test3.docx</div>
+                <div class="rangeBlock">
+                  <div class="rangeItem">5</div>
+                  -
+                  <div class="rangeItem">20</div>
+                </div>
+              </div>
+              <div class="fileRow">
+                <div class="fileName">Test4.docx</div>
+                <div class="rangeBlock">
+                  <div class="rangeItem">10</div>
+                  -
+                  <div class="rangeItem">10</div>
+                </div>
+              </div>
+            </div>
+            <div class="fileControlContainer">
+                <div class="fileControlBtn"> ↑ </div>                
+                <div class="fileControlBtn"> ↓ </div>                
+                <div class="fileControlBtn"> - </div>                
+                <div class="fileControlBtn"> + </div>                
+            </div>
+          </div>
+          <div class="controlContainer control-section">
+            <div class="controlBtn"> Cancle </div>
+            <div class="controlBtn" style="background: #cfc"> Print </div>
+          </div>
+        </div>
+      </div>
+  </body>
+</html>
+
 
 
 
@@ -295,6 +630,7 @@ private:
 
 }
 }
+
 
 
 
@@ -701,13 +1037,16 @@ void BasicConfigSection::OnPaint(HDC hdc) {
 
 
 
-### HomeWindow.h:
+
+### HomeWindow.h (HomeWindow sẽ là bên dùng):
 #pragma once
 
 #include "BaseWindow.h"
 #include "BasicConfigSection.h"
 #include "AdvanceConfigSection.h"
 #include "MarginConfigSection.h"
+#include "InfoConfigSection.h"
+#include "ControlBlock.h"
 
 class HomeWindow : public BaseWindow {
 public:
@@ -721,6 +1060,8 @@ private:
     ui::home::BasicConfigSection m_basic;
     ui::home::AdvanceConfigSection m_adv;
     ui::home::MarginConfigSection m_margin;
+    ui::home::InfoConfigSection m_info;
+    ui::home::ControlBlock m_control;
 
 private:
     void OnCreate();
@@ -728,6 +1069,7 @@ private:
     void OnSize();
     void OnPaint();
 };
+
 
 
 
@@ -742,6 +1084,14 @@ private:
 using namespace ui::home;
 
 bool HomeWindow::CreateWindowInstance() {
+    RECT rc = { 0, 0, Layout::MIN_WIDTH, Layout::MIN_HEIGHT };
+
+    AdjustWindowRect(
+        &rc,
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_SIZEBOX,
+        FALSE
+    );
+
     return Create(
         L"HomeWindowClass",
         L"Simple Printer",
@@ -749,8 +1099,8 @@ bool HomeWindow::CreateWindowInstance() {
         0,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        Layout::MIN_WIDTH,
-        Layout::MIN_HEIGHT
+        rc.right - rc.left,
+        rc.bottom - rc.top
     );
 }
 
@@ -860,12 +1210,33 @@ void HomeWindow::OnCreate() {
     m_margin.OnMarginRightChange([](const std::string& v) {
         OutputDebugStringA(("Right: " + v + "\n").c_str());
     });
+
+    // ===== INFO =====
+    m_info.Create(GetHwnd(), m_font);
+
+    // default
+    m_info.SetTotalFilesValue("1");
+    m_info.SetPagesToPrintValue("1");
+    m_info.SetSheetsRequiredValue("1");
+
+    // ===== CONTROL =====
+    m_control.Create(GetHwnd(), m_font);
+
+    m_control.OnPrint([]() {
+        OutputDebugStringA("Print clicked\n");
+    });
+
+    m_control.OnCancel([]() {
+        OutputDebugStringA("Cancel clicked\n");
+    });
+
 }
 
 void HomeWindow::OnCommand(WPARAM wParam) {
     m_basic.HandleCommand(wParam);
     m_adv.HandleCommand(wParam);
     m_margin.HandleCommand(wParam);
+    m_control.HandleCommand(wParam);
 }
 
 void HomeWindow::OnSize() {
@@ -875,6 +1246,8 @@ void HomeWindow::OnSize() {
     m_basic.Resize(rc.right);
     m_adv.Resize(rc.right);
     m_margin.Resize(rc.right);
+    m_info.Resize(rc.right);
+    m_control.Resize(rc.right, rc.bottom);
 
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
@@ -898,6 +1271,8 @@ void HomeWindow::OnPaint() {
     m_basic.OnPaint(mem);
     m_adv.OnPaint(mem);
     m_margin.OnPaint(mem);
+    m_info.OnPaint(mem);
+    m_control.OnPaint(mem);
 
     BitBlt(hdc, 0, 0, rc.right, rc.bottom, mem, 0, 0, SRCCOPY);
 
@@ -933,6 +1308,11 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return TRUE;
         }
 
+        if (dis->CtlID == 5001 || dis->CtlID == 5002) {
+            m_control.HandleDrawItem(dis);
+            return TRUE;
+        }
+
         return FALSE;
     }
 
@@ -953,8 +1333,18 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_GETMINMAXINFO:
     {
         MINMAXINFO* mmi = (MINMAXINFO*)lParam;
-        mmi->ptMinTrackSize.x = Layout::MIN_WIDTH;
-        mmi->ptMinTrackSize.y = Layout::MIN_HEIGHT;
+
+        RECT rc = { 0, 0, Layout::MIN_WIDTH, Layout::MIN_HEIGHT };
+
+        AdjustWindowRect(
+            &rc,
+            GetWindowLong(GetHwnd(), GWL_STYLE),
+            FALSE
+        );
+
+        mmi->ptMinTrackSize.x = rc.right - rc.left;
+        mmi->ptMinTrackSize.y = rc.bottom - rc.top;
+
         return 0;
     }
 
@@ -985,36 +1375,6 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
     return BaseWindow::HandleMessage(msg, wParam, lParam);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
