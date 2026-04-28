@@ -319,12 +319,12 @@ namespace Style {
     constexpr COLORREF INPUT_TEXT               = RGB(0,0,0);
     constexpr COLORREF INPUT_TEXT_HOVER         = RGB(0,0,0);
     constexpr COLORREF INPUT_TEXT_FOCUS         = RGB(0,0,0);
-    constexpr COLORREF INPUT_TEXT_DISABLED      = RGB(100,100,100);
+    constexpr COLORREF INPUT_TEXT_DISABLED      = RGB(50,50,50);
 
     constexpr COLORREF INPUT_BG                 = RGB(255,255,255);
     constexpr COLORREF INPUT_BG_HOVER           = RGB(230,230,230);
     constexpr COLORREF INPUT_BG_FOCUS           = RGB(255,255,255);
-    constexpr COLORREF INPUT_BG_DISABLED        = RGB(200,200,200);
+    constexpr COLORREF INPUT_BG_DISABLED        = RGB(240,240,240);
     
     constexpr COLORREF INPUT_BORDER             = RGB(180,180,180);
     constexpr COLORREF INPUT_BORDER_HOVER       = RGB(180,180,180);

@@ -31,23 +31,11 @@ public:
     void OnRemove(std::function<void(const std::string& path)> cb);
     void OnAdd(std::function<void(const std::string& path)> cb);
 
-    // Static part: section background / border / title.
-    // Call this from HomeWindow::OnPaint(), like BasicConfigSection::OnPaint().
-    void OnPaintStatic(HDC hdc, int parentWidth, int parentHeight);
-
-    // Forward WM_COMMAND / WM_DRAWITEM from HomeWindow to here
-    // for the file control buttons that are sibling children of HomeWindow.
-    void HandleCommand(WPARAM wParam);
-    void HandleDrawItem(const DRAWITEMSTRUCT* dis);
-
     HWND GetHWND() const { return m_hwnd; }
-
-    void ClearSelectionPublic();
-    bool IsPointInside(int x, int y) const;
 
 private:
     HWND m_parent = nullptr;
-    HWND m_hwnd = nullptr;   // list child window only
+    HWND m_hwnd = nullptr;
     HFONT m_font = nullptr;
 
     std::vector<FileData> m_files;
@@ -56,14 +44,11 @@ private:
     int m_maxScrollY = 0;
     int m_selectedIndex = -1;
 
-    // Buttons are NOT inside the scrolling list window.
-    // They are sibling children of HomeWindow.
     HWND m_btnUp = nullptr;
     HWND m_btnDown = nullptr;
     HWND m_btnRemove = nullptr;
     HWND m_btnAdd = nullptr;
 
-    // Selected row edit boxes are children of the list window.
     HWND m_editFrom = nullptr;
     HWND m_editTo = nullptr;
 
@@ -85,6 +70,7 @@ private:
     void OnSizeInternal();
     void OnPaintInternal(HDC hdc);
     void OnCommandInternal(WPARAM wParam, LPARAM lParam);
+    void OnDrawItemInternal(const DRAWITEMSTRUCT* dis);
     void OnCtlColorEditInternal(HDC hdc, HWND hwnd);
     void OnLButtonDownInternal(int x, int y);
     void OnMouseWheelInternal(short delta);
@@ -102,11 +88,14 @@ private:
     void DestroySelectedEdits();
     void CommitSelectedEditsIfNeeded(bool forceCallback);
     void ScrollTo(int newScrollY);
-
+    int  GetListTop() const;
+    int  GetButtonsTop(int clientH) const;
+    int  GetListBottom(int clientH) const;
+    int  GetListViewportHeight(int clientH) const;
     int  GetRowStep() const;
-    int  GetListViewportHeight() const;
 
     int  HitTestRow(int x, int y) const;
+    bool HitTestButtonsArea(int x, int y) const;
 
     RECT GetClientRectSafe() const;
     RECT GetRowRect(int index) const;
@@ -120,9 +109,7 @@ private:
     std::string ToNarrow(const std::wstring& ws) const;
     std::string GetWindowTextUtf8(HWND hwnd) const;
 
-    static std::string ToLowerCopy(std::string s);
     static bool StartsWithNoCase(const std::string& s, const char* prefix);
-    static bool ParseRgbHex(const std::string& s, COLORREF& out);
     static COLORREF ParseColorString(const std::string& s, bool* ok = nullptr);
     static COLORREF BlendWithWhite(COLORREF c, int whitePercent);
     static void FillRectSolid(HDC hdc, const RECT& rc, COLORREF c);

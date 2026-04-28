@@ -21,10 +21,10 @@ public:
     );
 
     HWND GetHwnd() const;
-
+    
 protected:
     virtual LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
-
+    
 private:
     HWND m_hwnd;
 

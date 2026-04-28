@@ -2,11 +2,11 @@
 #include "HomeComponentMap.h"
 
 #include <commctrl.h>
-#include <windowsx.h>
 #include <algorithm>
 #include <cwchar>
+#include <vector>
 #include <cstring>
-#include <cctype>
+#include <windowsx.h>
 
 using namespace ui::home;
 
@@ -26,41 +26,73 @@ namespace {
 
     constexpr const wchar_t* FLV_CLASS_NAME = L"ui.home.FileListView";
 
-    int ClampInt(int v, int lo, int hi) {
-        return (v < lo) ? lo : (v > hi ? hi : v);
+    COLORREF Darken(COLORREF c, int amount) {
+        int r = std::max(0, (int)GetRValue(c) - amount);
+        int g = std::max(0, (int)GetGValue(c) - amount);
+        int b = std::max(0, (int)GetBValue(c) - amount);
+        return RGB(r, g, b);
+    }
+
+    std::string ToLowerCopy(std::string s) {
+        std::transform(s.begin(), s.end(), s.begin(), [](unsigned char ch) {
+            return (char)std::tolower(ch);
+        });
+        return s;
+    }
+
+    bool ParseHexByte(const std::string& s, int& value) {
+        if (s.size() != 2) return false;
+        int v = 0;
+        for (char ch : s) {
+            v <<= 4;
+            if (ch >= '0' && ch <= '9') v |= (ch - '0');
+            else if (ch >= 'a' && ch <= 'f') v |= (10 + ch - 'a');
+            else if (ch >= 'A' && ch <= 'F') v |= (10 + ch - 'A');
+            else return false;
+        }
+        value = v;
+        return true;
+    }
+
+    bool ParseRgbHex(const std::string& s, COLORREF& out) {
+        std::string t = s;
+        if (!t.empty() && t[0] == '#') t.erase(t.begin());
+        if (t.size() != 6) return false;
+
+        int r = 0, g = 0, b = 0;
+        if (!ParseHexByte(t.substr(0, 2), r)) return false;
+        if (!ParseHexByte(t.substr(2, 2), g)) return false;
+        if (!ParseHexByte(t.substr(4, 2), b)) return false;
+
+        out = RGB(r, g, b);
+        return true;
     }
 
     bool RectContains(const RECT& rc, int x, int y) {
         return x >= rc.left && x < rc.right && y >= rc.top && y < rc.bottom;
     }
 
+    int ClampInt(int v, int lo, int hi) {
+        return (v < lo) ? lo : (v > hi ? hi : v);
+    }
+
     std::wstring WidenSimple(const std::string& s) {
         if (s.empty()) return L"";
-
         int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
         if (len > 0) {
             std::wstring ws(len - 1, L'\0');
             MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, ws.data(), len);
             return ws;
         }
-
         return std::wstring(s.begin(), s.end());
     }
 }
 
 FileListView::FileListView() {}
 
-std::string FileListView::ToLowerCopy(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char ch) {
-        return (char)std::tolower(ch);
-    });
-    return s;
-}
-
 bool FileListView::StartsWithNoCase(const std::string& s, const char* prefix) {
     const size_t plen = std::strlen(prefix);
     if (s.size() < plen) return false;
-
     for (size_t i = 0; i < plen; ++i) {
         if (std::tolower((unsigned char)s[i]) != std::tolower((unsigned char)prefix[i])) {
             return false;
@@ -69,36 +101,9 @@ bool FileListView::StartsWithNoCase(const std::string& s, const char* prefix) {
     return true;
 }
 
-bool FileListView::ParseRgbHex(const std::string& s, COLORREF& out) {
-    std::string t = s;
-    if (!t.empty() && t[0] == '#') t.erase(t.begin());
-    if (t.size() != 6) return false;
-
-    auto hexVal = [](char ch, int& v) -> bool {
-        if (ch >= '0' && ch <= '9') { v = ch - '0'; return true; }
-        if (ch >= 'a' && ch <= 'f') { v = 10 + (ch - 'a'); return true; }
-        if (ch >= 'A' && ch <= 'F') { v = 10 + (ch - 'A'); return true; }
-        return false;
-    };
-
-    int r1 = 0, r2 = 0, g1 = 0, g2 = 0, b1 = 0, b2 = 0;
-    if (!hexVal(t[0], r1) || !hexVal(t[1], r2) ||
-        !hexVal(t[2], g1) || !hexVal(t[3], g2) ||
-        !hexVal(t[4], b1) || !hexVal(t[5], b2)) {
-        return false;
-    }
-
-    int r = (r1 << 4) | r2;
-    int g = (g1 << 4) | g2;
-    int b = (b1 << 4) | b2;
-
-    out = RGB(r, g, b);
-    return true;
-}
-
 COLORREF FileListView::ParseColorString(const std::string& s, bool* ok) {
     bool parsed = false;
-    COLORREF out = Style::FILE_LIST_VIEW_GREEN_STATUS;
+    COLORREF out = RGB(100, 210, 100);
 
     std::string t = ToLowerCopy(s);
 
@@ -133,7 +138,6 @@ COLORREF FileListView::BlendWithWhite(COLORREF c, int whitePercent) {
 }
 
 void FileListView::FillRectSolid(HDC hdc, const RECT& rc, COLORREF c) {
-    if (rc.right <= rc.left || rc.bottom <= rc.top) return;
     HBRUSH br = CreateSolidBrush(c);
     FillRect(hdc, &rc, br);
     DeleteObject(br);
@@ -143,13 +147,7 @@ void FileListView::DrawRoundedFrame(HDC hdc, const RECT& rc, COLORREF borderColo
     HPEN pen = CreatePen(PS_SOLID, 1, borderColor);
     HPEN oldPen = (HPEN)SelectObject(hdc, pen);
     HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
-
-    if (radius <= 0) {
-        Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
-    } else {
-        RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, radius, radius);
-    }
-
+    RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, radius, radius);
     SelectObject(hdc, oldBrush);
     SelectObject(hdc, oldPen);
     DeleteObject(pen);
@@ -179,21 +177,32 @@ RECT FileListView::GetClientRectSafe() const {
     return rc;
 }
 
+int FileListView::GetListTop() const {
+    return Layout::SECTION_MARGIN + Layout::LABEL_H + Layout::INPUT_GAP;
+}
+
+int FileListView::GetButtonsTop(int clientH) const {
+    return clientH - Layout::SECTION_MARGIN - Layout::INPUT_H;
+}
+
+int FileListView::GetListBottom(int clientH) const {
+    return GetButtonsTop(clientH) - Layout::INPUT_GAP;
+}
+
+int FileListView::GetListViewportHeight(int clientH) const {
+    return std::max(0, GetListBottom(clientH) - GetListTop());
+}
+
 int FileListView::GetRowStep() const {
     return Layout::FilesSection::FileListView::ROW_H + Layout::FilesSection::FileListView::ROW_GAP;
 }
 
-int FileListView::GetListViewportHeight() const {
-    RECT rc = GetClientRectSafe();
-    return std::max((long)0, rc.bottom);
-}
-
 RECT FileListView::GetRowRect(int index) const {
     RECT rcClient = GetClientRectSafe();
-    const int left = 0;
-    const int right = std::max((long)left, rcClient.right);
+    const int left = Layout::SECTION_MARGIN;
+    const int right = std::max((long)left, rcClient.right - Layout::SECTION_MARGIN);
 
-    const int rowTop = GetRowStep() * index - m_scrollY;
+    const int rowTop = GetListTop() + index * GetRowStep() - m_scrollY;
     RECT rc{ left, rowTop, right, rowTop + Layout::FilesSection::FileListView::ROW_H };
     return rc;
 }
@@ -253,14 +262,12 @@ std::wstring FileListView::ToWide(const std::string& s) const {
 
 std::string FileListView::ToNarrow(const std::wstring& ws) const {
     if (ws.empty()) return "";
-
     int len = WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), -1, nullptr, 0, nullptr, nullptr);
     if (len > 0) {
         std::string s(len - 1, '\0');
         WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), -1, s.data(), len, nullptr, nullptr);
         return s;
     }
-
     return std::string(ws.begin(), ws.end());
 }
 
@@ -270,26 +277,32 @@ std::string FileListView::GetWindowTextUtf8(HWND hwnd) const {
     return ToNarrow(buf);
 }
 
+bool FileListView::HitTestButtonsArea(int x, int y) const {
+    RECT rc = GetClientRectSafe();
+    const int buttonsTop = GetButtonsTop(rc.bottom);
+    return y >= buttonsTop && y < (buttonsTop + Layout::INPUT_H);
+}
+
 int FileListView::HitTestRow(int x, int y) const {
     if (m_files.empty()) return -1;
 
     RECT rcClient = GetClientRectSafe();
-    if (y < 0 || y >= rcClient.bottom) return -1;
+    const int listTop = GetListTop();
+    const int listBottom = GetListBottom(rcClient.bottom);
+    if (y < listTop || y >= listBottom) return -1;
 
     const int step = GetRowStep();
-    const int index = (y + m_scrollY) / step;
-
+    const int contentY = y + m_scrollY - listTop;
+    const int index = contentY / step;
     if (index < 0 || index >= (int)m_files.size()) return -1;
 
     const RECT row = GetRowRect(index);
     if (!RectContains(row, x, y)) return -1;
-
     return index;
 }
 
 void FileListView::UpdateButtonsState() {
     const BOOL hasSelection = (m_selectedIndex >= 0 && m_selectedIndex < (int)m_files.size()) ? TRUE : FALSE;
-
     if (m_btnUp)     EnableWindow(m_btnUp, hasSelection);
     if (m_btnDown)   EnableWindow(m_btnDown, hasSelection);
     if (m_btnRemove) EnableWindow(m_btnRemove, hasSelection);
@@ -300,13 +313,11 @@ void FileListView::UpdateScrollBar() {
     if (!m_hwnd) return;
 
     RECT rc = GetClientRectSafe();
-    const int viewportH = std::max((long)0, rc.bottom);
+    const int viewportH = GetListViewportHeight(rc.bottom);
 
     const int rowCount = (int)m_files.size();
-    const int contentH = std::max(0,
-        rowCount * Layout::FilesSection::FileListView::ROW_H +
-        std::max(0, rowCount - 1) * Layout::FilesSection::FileListView::ROW_GAP
-    );
+    const int contentH = std::max(0, rowCount * Layout::FilesSection::FileListView::ROW_H +
+                                     std::max(0, rowCount - 1) * Layout::FilesSection::FileListView::ROW_GAP);
 
     m_maxScrollY = std::max(0, contentH - viewportH);
     m_scrollY = ClampInt(m_scrollY, 0, m_maxScrollY);
@@ -319,13 +330,11 @@ void FileListView::UpdateScrollBar() {
     si.nPage = (UINT)std::max(0, viewportH);
     si.nPos = m_scrollY;
     SetScrollInfo(m_hwnd, SB_VERT, &si, TRUE);
-    SetScrollPos(m_hwnd, SB_VERT, m_scrollY, TRUE);
 }
 
 void FileListView::ScrollTo(int newScrollY) {
     const int old = m_scrollY;
     m_scrollY = ClampInt(newScrollY, 0, m_maxScrollY);
-
     if (m_scrollY != old) {
         SetScrollPos(m_hwnd, SB_VERT, m_scrollY, TRUE);
         UpdateSelectedEditLayout();
@@ -337,10 +346,10 @@ void FileListView::EnsureSelectionVisible() {
     if (m_selectedIndex < 0 || m_selectedIndex >= (int)m_files.size()) return;
 
     RECT rc = GetClientRectSafe();
-    const int top = 0;
-    const int bottom = rc.bottom;
+    const int top = GetListTop();
+    const int bottom = GetListBottom(rc.bottom);
 
-    const int rowTop = m_selectedIndex * GetRowStep() - m_scrollY;
+    const int rowTop = top + m_selectedIndex * GetRowStep() - m_scrollY;
     const int rowBottom = rowTop + Layout::FilesSection::FileListView::ROW_H;
 
     if (rowTop < top) {
@@ -399,8 +408,7 @@ void FileListView::CreateSelectedEdits() {
         LONG_PTR ex = GetWindowLongPtrW(m_editFrom, GWL_EXSTYLE);
         ex &= ~WS_EX_CLIENTEDGE;
         SetWindowLongPtrW(m_editFrom, GWL_EXSTYLE, ex);
-        SetWindowPos(m_editFrom, nullptr, 0, 0, 0, 0,
-            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        SetWindowPos(m_editFrom, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         SetWindowSubclass(m_editFrom, EditSubclassProc, 1, (DWORD_PTR)this);
     }
 
@@ -409,17 +417,12 @@ void FileListView::CreateSelectedEdits() {
         LONG_PTR ex = GetWindowLongPtrW(m_editTo, GWL_EXSTYLE);
         ex &= ~WS_EX_CLIENTEDGE;
         SetWindowLongPtrW(m_editTo, GWL_EXSTYLE, ex);
-        SetWindowPos(m_editTo, nullptr, 0, 0, 0, 0,
-            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        SetWindowPos(m_editTo, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         SetWindowSubclass(m_editTo, EditSubclassProc, 1, (DWORD_PTR)this);
     }
 
     UpdateSelectedEditLayout();
     UpdateButtonsState();
-
-    if (m_editFrom) {
-        SetFocus(m_editFrom);
-    }
 }
 
 void FileListView::DestroySelectedEdits() {
@@ -428,13 +431,11 @@ void FileListView::DestroySelectedEdits() {
         DestroyWindow(m_editFrom);
         m_editFrom = nullptr;
     }
-
     if (m_editTo) {
         RemoveWindowSubclass(m_editTo, EditSubclassProc, 1);
         DestroyWindow(m_editTo);
         m_editTo = nullptr;
     }
-
     m_editOriginalFrom.clear();
     m_editOriginalTo.clear();
 }
@@ -522,7 +523,14 @@ void FileListView::SelectRow(int index) {
     CreateSelectedEdits();
     EnsureSelectionVisible();
     InvalidateRect(m_hwnd, nullptr, TRUE);
+
+    if (m_editFrom) {
+        SetFocus(m_editFrom);
+    } else {
+        SetFocus(m_hwnd);
+    }
 }
+
 
 void FileListView::UpdateLayout() {
     if (!m_hwnd) return;
@@ -530,63 +538,29 @@ void FileListView::UpdateLayout() {
     RECT rc = GetClientRectSafe();
     const int clientW = rc.right;
     const int clientH = rc.bottom;
-    (void)clientH;
 
-    // Sibling buttons in HomeWindow area
-    const int btnY = Layout::FilesSection::CALC_CONTROL_UP_INPUT_Y(0) + 0; // placeholder, overwritten below
+    const int btnY = GetButtonsTop(clientH);
     const int btnW = std::max(0, (clientW - 2 * Layout::SECTION_MARGIN - 3 * Layout::INPUT_GAP) / 4);
 
-    // Buttons are positioned in parent (HomeWindow) coordinates.
-    const int parentW = clientW; // only used for layout formula
-    const int parentH = 0;       // not needed here but kept for readability
+    const int x0 = Layout::SECTION_MARGIN;
+    const int gap = Layout::INPUT_GAP;
 
-    (void)parentW;
-    (void)parentH;
-
-    // if (m_btnUp) {
-    //     MoveWindow(
-    //         m_btnUp,
-    //         Layout::FilesSection::CALC_CONTROL_UP_INPUT_X(GetClientRectSafe().right),
-    //         Layout::FilesSection::CALC_CONTROL_UP_INPUT_Y(GetClientRectSafe().bottom),
-    //         btnW,
-    //         Layout::INPUT_H,
-    //         TRUE
-    //     );
-    // }
-    // if (m_btnDown) {
-    //     MoveWindow(
-    //         m_btnDown,
-    //         Layout::FilesSection::CALC_CONTROL_DOWN_INPUT_X(GetClientRectSafe().right),
-    //         Layout::FilesSection::CALC_CONTROL_DOWN_INPUT_Y(GetClientRectSafe().bottom),
-    //         btnW,
-    //         Layout::INPUT_H,
-    //         TRUE
-    //     );
-    // }
-    // if (m_btnRemove) {
-    //     MoveWindow(
-    //         m_btnRemove,
-    //         Layout::FilesSection::CALC_CONTROL_REMOVE_INPUT_X(GetClientRectSafe().right),
-    //         Layout::FilesSection::CALC_CONTROL_REMOVE_INPUT_Y(GetClientRectSafe().bottom),
-    //         btnW,
-    //         Layout::INPUT_H,
-    //         TRUE
-    //     );
-    // }
-    // if (m_btnAdd) {
-    //     MoveWindow(
-    //         m_btnAdd,
-    //         Layout::FilesSection::CALC_CONTROL_ADD_INPUT_X(GetClientRectSafe().right),
-    //         Layout::FilesSection::CALC_CONTROL_ADD_INPUT_Y(GetClientRectSafe().bottom),
-    //         btnW,
-    //         Layout::INPUT_H,
-    //         TRUE
-    //     );
-    // }
+    if (m_btnUp) {
+        MoveWindow(m_btnUp, x0, btnY, btnW, Layout::INPUT_H, TRUE);
+    }
+    if (m_btnDown) {
+        MoveWindow(m_btnDown, x0 + btnW + gap, btnY, btnW, Layout::INPUT_H, TRUE);
+    }
+    if (m_btnRemove) {
+        MoveWindow(m_btnRemove, x0 + (btnW + gap) * 2, btnY, btnW, Layout::INPUT_H, TRUE);
+    }
+    if (m_btnAdd) {
+        MoveWindow(m_btnAdd, x0 + (btnW + gap) * 3, btnY, btnW, Layout::INPUT_H, TRUE);
+    }
 
     UpdateSelectedEditLayout();
     UpdateScrollBar();
-    // UpdateButtonsState();
+    UpdateButtonsState();
 }
 
 void FileListView::OnSizeInternal() {
@@ -607,6 +581,7 @@ void FileListView::OnLButtonDownInternal(int x, int y) {
         return;
     }
 
+    // Click on empty area => exit selection.
     ClearSelection();
     SetFocus(m_hwnd);
 }
@@ -626,10 +601,10 @@ void FileListView::OnVScrollInternal(WPARAM wParam) {
         ScrollTo(m_scrollY + GetRowStep() / 2);
         break;
     case SB_PAGEUP:
-        ScrollTo(m_scrollY - GetListViewportHeight());
+        ScrollTo(m_scrollY - GetListViewportHeight(GetClientRectSafe().bottom));
         break;
     case SB_PAGEDOWN:
-        ScrollTo(m_scrollY + GetListViewportHeight());
+        ScrollTo(m_scrollY + GetListViewportHeight(GetClientRectSafe().bottom));
         break;
     case SB_THUMBTRACK:
     case SB_THUMBPOSITION:
@@ -638,7 +613,7 @@ void FileListView::OnVScrollInternal(WPARAM wParam) {
         si.cbSize = sizeof(si);
         si.fMask = SIF_TRACKPOS;
         GetScrollInfo(m_hwnd, SB_VERT, &si);
-        ScrollTo((int)si.nTrackPos);
+        ScrollTo(si.nTrackPos);
         break;
     }
     case SB_TOP:
@@ -659,11 +634,45 @@ void FileListView::OnCommandInternal(WPARAM wParam, LPARAM lParam) {
 
     if ((id == ID_FLV_EDIT_FROM || id == ID_FLV_EDIT_TO) && hwndFrom) {
         if (code == EN_KILLFOCUS) {
+            // Commit whatever user typed.
             CommitSelectedEditsIfNeeded(false);
             return;
         }
 
-        // Don't mutate data on EN_CHANGE.
+        if (code == EN_CHANGE) {
+            // Only commit on blur / enter, no data mutation here.
+            return;
+        }
+    }
+
+    if (id == ID_FLV_BTN_UP && code == BN_CLICKED) {
+        if (m_selectedIndex >= 0 && m_selectedIndex < (int)m_files.size() && m_cbMoveUp) {
+            m_cbMoveUp(m_files[m_selectedIndex].path);
+        }
+        return;
+    }
+
+    if (id == ID_FLV_BTN_DOWN && code == BN_CLICKED) {
+        if (m_selectedIndex >= 0 && m_selectedIndex < (int)m_files.size() && m_cbMoveDown) {
+            m_cbMoveDown(m_files[m_selectedIndex].path);
+        }
+        return;
+    }
+
+    if (id == ID_FLV_BTN_REMOVE && code == BN_CLICKED) {
+        if (m_selectedIndex >= 0 && m_selectedIndex < (int)m_files.size() && m_cbRemove) {
+            m_cbRemove(m_files[m_selectedIndex].path);
+        }
+        return;
+    }
+
+    if (id == ID_FLV_BTN_ADD && code == BN_CLICKED) {
+        if (m_cbAdd) {
+            const std::string path = (m_selectedIndex >= 0 && m_selectedIndex < (int)m_files.size())
+                ? m_files[m_selectedIndex].path
+                : std::string{};
+            m_cbAdd(path);
+        }
         return;
     }
 }
@@ -702,27 +711,32 @@ void FileListView::DrawButton(HDC hdc, const DRAWITEMSTRUCT* dis, const wchar_t*
     SelectObject(hdc, oldFont);
 }
 
-void FileListView::OnPaintInternal(HDC hdc) {
-    RECT rcClient = GetClientRectSafe();
-    FillRectSolid(hdc, rcClient, Style::SECTION_BG);
+void FileListView::OnDrawItemInternal(const DRAWITEMSTRUCT* dis) {
+    if (!dis || dis->CtlType != ODT_BUTTON) return;
 
-    SetBkMode(hdc, TRANSPARENT);
-    HFONT oldFont = (HFONT)SelectObject(hdc, m_font);
-
-    // Only rows + scrollbar area are inside this child window.
-    const int viewportH = rcClient.bottom;
-
-    if (!m_files.empty()) {
-        const int step = GetRowStep();
-        int startIndex = std::max(0, (m_scrollY - LOAD_OUTSIDE_PX) / step);
-        int endIndex = std::min((int)m_files.size() - 1, (m_scrollY + viewportH + LOAD_OUTSIDE_PX) / step);
-
-        for (int i = startIndex; i <= endIndex; ++i) {
-            DrawRow(hdc, i, rcClient);
-        }
+    switch (dis->CtlID) {
+    case ID_FLV_BTN_UP:
+        DrawButton(dis->hDC, dis, L"↑", Style::INPUT_BG);
+        return;
+    case ID_FLV_BTN_DOWN:
+        DrawButton(dis->hDC, dis, L"↓", Style::INPUT_BG);
+        return;
+    case ID_FLV_BTN_REMOVE:
+        DrawButton(dis->hDC, dis, L"-", Style::INPUT_BG);
+        return;
+    case ID_FLV_BTN_ADD:
+        DrawButton(dis->hDC, dis, L"+", Style::INPUT_BG);
+        return;
+    default:
+        return;
     }
+}
 
-    SelectObject(hdc, oldFont);
+void FileListView::OnCtlColorEditInternal(HDC hdc, HWND hwnd) {
+    SetBkMode(hdc, TRANSPARENT);
+    SetTextColor(hdc, Style::INPUT_TEXT);
+    SetBkColor(hdc, Style::INPUT_BG);
+    (void)hwnd;
 }
 
 void FileListView::DrawRow(HDC hdc, int index, const RECT& clipRc) {
@@ -777,42 +791,59 @@ void FileListView::DrawRow(HDC hdc, int index, const RECT& clipRc) {
     RECT toRc = GetToRect(index);
     RECT divRc = GetDividerRect(index);
 
+    // Text centered in each half.
     DrawCenteredText(hdc, fromRc, WidenSimple(data.fromRange), Style::INPUT_TEXT, m_font);
     DrawCenteredText(hdc, toRc, WidenSimple(data.toRange), Style::INPUT_TEXT, m_font);
-    DrawCenteredText(hdc, divRc, L"-", Style::INPUT_TEXT, m_font);
+
+    RECT divTextRc = divRc;
+    DrawCenteredText(hdc, divTextRc, L"-", Style::INPUT_TEXT, m_font);
 }
 
-void FileListView::OnPaintStatic(HDC hdc, int parentWidth, int parentHeight) {
-    const int x = Layout::FilesSection::X;
-    const int y = Layout::FilesSection::Y;
-    const int w = Layout::FilesSection::CALC_W(parentWidth);
-    const int h = Layout::FilesSection::CALC_H(parentHeight);
+void FileListView::OnPaintInternal(HDC hdc) {
+    RECT rcClient = GetClientRectSafe();
+    FillRectSolid(hdc, rcClient, Style::SECTION_BG);
 
-    RECT sec{ x, y, x + std::max(0, w), y + std::max(0, h) };
-
-    HBRUSH bg = CreateSolidBrush(Style::SECTION_BG);
-    FillRect(hdc, &sec, bg);
-    DeleteObject(bg);
-
-    HPEN pen = CreatePen(PS_SOLID, 1, Style::SECTION_BORDER);
-    HPEN oldPen = (HPEN)SelectObject(hdc, pen);
-    HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
-    Rectangle(hdc, sec.left, sec.top, sec.right, sec.bottom);
-    SelectObject(hdc, oldBrush);
-    SelectObject(hdc, oldPen);
-    DeleteObject(pen);
+    // Outer border
+    RECT sec = rcClient;
+    if (sec.right > 0 && sec.bottom > 0) {
+        DrawRoundedFrame(hdc, sec, Style::SECTION_BORDER, 0);
+    }
 
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, Style::LABEL);
     HFONT oldFont = (HFONT)SelectObject(hdc, m_font);
 
+    // Title
     RECT titleRc{
-        x + Layout::FilesSection::LABEL_X,
-        y + Layout::FilesSection::LABEL_Y,
-        x + w - Layout::SECTION_MARGIN,
-        y + Layout::FilesSection::LABEL_Y + Layout::LABEL_H
+        Layout::SECTION_MARGIN,
+        Layout::SECTION_MARGIN,
+        rcClient.right - Layout::SECTION_MARGIN,
+        Layout::SECTION_MARGIN + Layout::LABEL_H
     };
     DrawTextW(hdc, L"Selected Files", -1, &titleRc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+
+    // Visible area
+    const int listTop = GetListTop();
+    const int listBottom = GetListBottom(rcClient.bottom);
+    RECT listClip{
+        Layout::SECTION_MARGIN,
+        listTop,
+        std::max((long)Layout::SECTION_MARGIN, rcClient.right - Layout::SECTION_MARGIN),
+        std::max(listTop, listBottom)
+    };
+
+    if (listClip.bottom > listClip.top) {
+        int step = GetRowStep();
+        int startY = std::max(0, m_scrollY - LOAD_OUTSIDE_PX);
+        int endY = m_scrollY + (listClip.bottom - listClip.top) + LOAD_OUTSIDE_PX;
+
+        int first = std::max(0, startY / step - 1);
+        int last = std::min((int)m_files.size() - 1, endY / step + 1);
+
+        for (int i = first; i <= last; ++i) {
+            DrawRow(hdc, i, listClip);
+        }
+    }
 
     SelectObject(hdc, oldFont);
 }
@@ -851,72 +882,12 @@ void FileListView::OnAdd(std::function<void(const std::string& path)> cb) {
     m_cbAdd = std::move(cb);
 }
 
-void FileListView::HandleCommand(WPARAM wParam) {
-    const int id = LOWORD(wParam);
-    const int code = HIWORD(wParam);
-
-    if (code != BN_CLICKED) {
-        return;
-    }
-
-    if (m_selectedIndex < 0 || m_selectedIndex >= (int)m_files.size()) {
-        if (id == ID_FLV_BTN_ADD && m_cbAdd) {
-            m_cbAdd("");
-        }
-        return;
-    }
-
-    const std::string& path = m_files[m_selectedIndex].path;
-
-    if (id == ID_FLV_BTN_UP && m_cbMoveUp) {
-        m_cbMoveUp(path);
-        return;
-    }
-
-    if (id == ID_FLV_BTN_DOWN && m_cbMoveDown) {
-        m_cbMoveDown(path);
-        return;
-    }
-
-    if (id == ID_FLV_BTN_REMOVE && m_cbRemove) {
-        m_cbRemove(path);
-        return;
-    }
-
-    if (id == ID_FLV_BTN_ADD && m_cbAdd) {
-        m_cbAdd(path);
-        return;
-    }
-}
-
-void FileListView::HandleDrawItem(const DRAWITEMSTRUCT* dis) {
-    if (!dis || dis->CtlType != ODT_BUTTON) return;
-
-    switch (dis->CtlID) {
-    case ID_FLV_BTN_UP:
-        DrawButton(dis->hDC, dis, L"↑", Style::INPUT_BG);
-        return;
-    case ID_FLV_BTN_DOWN:
-        DrawButton(dis->hDC, dis, L"↓", Style::INPUT_BG);
-        return;
-    case ID_FLV_BTN_REMOVE:
-        DrawButton(dis->hDC, dis, L"-", Style::INPUT_BG);
-        return;
-    case ID_FLV_BTN_ADD:
-        DrawButton(dis->hDC, dis, L"+", Style::INPUT_BG);
-        return;
-    default:
-        return;
-    }
-}
-
 bool FileListView::Create(HWND parent, HFONT font) {
     m_parent = parent;
     m_font = font;
 
     HINSTANCE hInst = GetModuleHandle(nullptr);
 
-    // Register child window class once.
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
     if (!GetClassInfoExW(hInst, FLV_CLASS_NAME, &wc)) {
@@ -934,138 +905,31 @@ bool FileListView::Create(HWND parent, HFONT font) {
         }
     }
 
-    // List window only.
     m_hwnd = CreateWindowExW(
         0,
         FLV_CLASS_NAME,
         L"",
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
-        Layout::FilesSection::FileListView::X,
-        Layout::FilesSection::FileListView::Y,
-        10, 10,
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL,
+        0, 0, 10, 10,
         parent,
         nullptr,
         hInst,
         this
     );
 
-    if (!m_hwnd) {
-        return false;
-    }
-
-    // Buttons are sibling children of HomeWindow, not inside scrolling list.
-    m_btnUp = CreateWindowExW(
-        0, L"BUTTON", L"",
-        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
-        0, 0, 10, 10,
-        parent,
-        (HMENU)ID_FLV_BTN_UP,
-        hInst,
-        nullptr
-    );
-
-    m_btnDown = CreateWindowExW(
-        0, L"BUTTON", L"",
-        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
-        0, 0, 10, 10,
-        parent,
-        (HMENU)ID_FLV_BTN_DOWN,
-        hInst,
-        nullptr
-    );
-
-    m_btnRemove = CreateWindowExW(
-        0, L"BUTTON", L"",
-        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
-        0, 0, 10, 10,
-        parent,
-        (HMENU)ID_FLV_BTN_REMOVE,
-        hInst,
-        nullptr
-    );
-
-    m_btnAdd = CreateWindowExW(
-        0, L"BUTTON", L"",
-        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
-        0, 0, 10, 10,
-        parent,
-        (HMENU)ID_FLV_BTN_ADD,
-        hInst,
-        nullptr
-    );
-
-    if (m_btnUp)     SendMessageW(m_btnUp, WM_SETFONT, (WPARAM)m_font, TRUE);
-    if (m_btnDown)   SendMessageW(m_btnDown, WM_SETFONT, (WPARAM)m_font, TRUE);
-    if (m_btnRemove) SendMessageW(m_btnRemove, WM_SETFONT, (WPARAM)m_font, TRUE);
-    if (m_btnAdd)    SendMessageW(m_btnAdd, WM_SETFONT, (WPARAM)m_font, TRUE);
-
-    UpdateLayout();
-    UpdateScrollBar();
-    UpdateButtonsState();
-    return true;
+    return m_hwnd != nullptr;
 }
 
 void FileListView::Resize(int parentWidth, int parentHeight) {
     if (!m_hwnd) return;
 
-    // List child window.
-    const int listX = Layout::FilesSection::FileListView::X;
-    const int listY = Layout::FilesSection::FileListView::Y;
-    const int listW = Layout::FilesSection::FileListView::CALC_W(parentWidth);
-    const int listH = Layout::FilesSection::FileListView::CALC_H(parentHeight);
+    const int x = Layout::FilesSection::X;
+    const int y = Layout::FilesSection::Y;
+    const int w = Layout::FilesSection::CALC_W(parentWidth);
+    const int h = Layout::FilesSection::CALC_H(parentHeight);
 
-    MoveWindow(m_hwnd, listX, listY, std::max(0, listW), std::max(0, listH), TRUE);
-
-    // Buttons inside FilesSection, but outside scrolling area.
-    const int btnW = std::max(0, Layout::FilesSection::CALC_CONTROL_INPUT_W(parentWidth));
-    const int btnY = Layout::FilesSection::CALC_CONTROL_UP_INPUT_Y(parentHeight);
-
-    if (m_btnUp) {
-        MoveWindow(
-            m_btnUp,
-            Layout::FilesSection::X + Layout::FilesSection::CALC_CONTROL_UP_INPUT_X(parentWidth),
-            Layout::FilesSection::Y + btnY,
-            btnW,
-            Layout::INPUT_H,
-            TRUE
-        );
-    }
-
-    if (m_btnDown) {
-        MoveWindow(
-            m_btnDown,
-            Layout::FilesSection::X + Layout::FilesSection::CALC_CONTROL_DOWN_INPUT_X(parentWidth),
-            Layout::FilesSection::Y + btnY,
-            btnW,
-            Layout::INPUT_H,
-            TRUE
-        );
-    }
-
-    if (m_btnRemove) {
-        MoveWindow(
-            m_btnRemove,
-            Layout::FilesSection::X + Layout::FilesSection::CALC_CONTROL_REMOVE_INPUT_X(parentWidth),
-            Layout::FilesSection::Y + btnY,
-            btnW,
-            Layout::INPUT_H,
-            TRUE
-        );
-    }
-
-    if (m_btnAdd) {
-        MoveWindow(
-            m_btnAdd,
-            Layout::FilesSection::X + Layout::FilesSection::CALC_CONTROL_ADD_INPUT_X(parentWidth),
-            Layout::FilesSection::Y + btnY,
-            btnW,
-            Layout::INPUT_H,
-            TRUE
-        );
-    }
-
+    MoveWindow(m_hwnd, x, y, std::max(0, w), std::max(0, h), TRUE);
     UpdateLayout();
-    UpdateScrollBar();
 }
 
 LRESULT CALLBACK FileListView::EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
@@ -1083,7 +947,54 @@ LRESULT CALLBACK FileListView::EditSubclassProc(HWND hwnd, UINT msg, WPARAM wPar
 }
 
 void FileListView::OnCreateInternal() {
-    UpdateScrollBar();
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+
+    m_btnUp = CreateWindowExW(
+        0, L"BUTTON", L"",
+        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
+        0, 0, 10, 10,
+        m_hwnd,
+        (HMENU)ID_FLV_BTN_UP,
+        hInst,
+        nullptr
+    );
+
+    m_btnDown = CreateWindowExW(
+        0, L"BUTTON", L"",
+        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
+        0, 0, 10, 10,
+        m_hwnd,
+        (HMENU)ID_FLV_BTN_DOWN,
+        hInst,
+        nullptr
+    );
+
+    m_btnRemove = CreateWindowExW(
+        0, L"BUTTON", L"",
+        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
+        0, 0, 10, 10,
+        m_hwnd,
+        (HMENU)ID_FLV_BTN_REMOVE,
+        hInst,
+        nullptr
+    );
+
+    m_btnAdd = CreateWindowExW(
+        0, L"BUTTON", L"",
+        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW,
+        0, 0, 10, 10,
+        m_hwnd,
+        (HMENU)ID_FLV_BTN_ADD,
+        hInst,
+        nullptr
+    );
+
+    if (m_btnUp)     SendMessageW(m_btnUp, WM_SETFONT, (WPARAM)m_font, TRUE);
+    if (m_btnDown)   SendMessageW(m_btnDown, WM_SETFONT, (WPARAM)m_font, TRUE);
+    if (m_btnRemove) SendMessageW(m_btnRemove, WM_SETFONT, (WPARAM)m_font, TRUE);
+    if (m_btnAdd)    SendMessageW(m_btnAdd, WM_SETFONT, (WPARAM)m_font, TRUE);
+
+    UpdateButtonsState();
     UpdateLayout();
 }
 
@@ -1106,27 +1017,6 @@ void FileListView::OnDestroyInternal() {
         DestroyWindow(m_btnAdd);
         m_btnAdd = nullptr;
     }
-}
-
-void ui::home::FileListView::OnCtlColorEditInternal(HDC hdc, HWND hwnd) {
-    SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, Style::INPUT_TEXT);
-    SetBkColor(hdc, Style::INPUT_BG);
-    (void)hwnd;
-}
-
-void FileListView::ClearSelectionPublic() {
-    ClearSelection();
-}
-
-bool FileListView::IsPointInside(int x, int y) const {
-    if (!m_hwnd) return false;
-
-    RECT rc;
-    GetWindowRect(m_hwnd, &rc);
-
-    POINT pt{ x, y };
-    return PtInRect(&rc, pt);
 }
 
 LRESULT CALLBACK FileListView::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -1169,6 +1059,12 @@ LRESULT CALLBACK FileListView::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     case WM_COMMAND:
         if (self) {
             self->OnCommandInternal(wParam, lParam);
+        }
+        return 0;
+
+    case WM_DRAWITEM:
+        if (self) {
+            self->OnDrawItemInternal(reinterpret_cast<const DRAWITEMSTRUCT*>(lParam));
         }
         return 0;
 

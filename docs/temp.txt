@@ -1,3 +1,5 @@
+* DƯỚI NÀY CHỈ LÀ CONTEXT PHỤC VỤ CHO MESSENGE TIẾP THEO, CHỈ CẦN TRẢ LỜI 'OK' VÀ DÚNG NÓ CHO MESSENGE SAU
+
 # TASK:
 - dựa vào HomeComponentMap.h và lấy ví dụ từ BasicConfigSection + tham khảo từ html, hãy code cho tôi full 2 file FileListView.h / .cpp với yêu cầu như dưới
 - sau khi code, chỉ tôi chỉnh lại HomeWindow.cpp/.h để áp dụng

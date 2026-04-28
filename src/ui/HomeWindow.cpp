@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <windowsx.h>
 #include <commctrl.h>
 #include "HomeWindow.h"
 #include "ui/components/HomeComponentMap.h"
@@ -160,7 +161,7 @@ void HomeWindow::OnCreate() {
     m_files.Set({
         {
             "C:/Docs/Test1.docx",
-            "Test11111111111111111111111111111111111111111111111111111111111111.docx",
+            "Test1.docx",
             "green",
             "1",
             "10"
@@ -199,6 +200,13 @@ void HomeWindow::OnCreate() {
             "green",
             "10",
             "10"
+        },
+        {
+            "C:/Docs/Test4.docx",
+            "Test4.docx",
+            "green",
+            "10",
+            "10"
         }
     });
 
@@ -209,19 +217,15 @@ void HomeWindow::OnCreate() {
     m_files.OnMoveUp([](const std::string& path) {
         OutputDebugStringA(("MoveUp: " + path + "\n").c_str());
     });
-
     m_files.OnMoveDown([](const std::string& path) {
         OutputDebugStringA(("MoveDown: " + path + "\n").c_str());
     });
-
     m_files.OnRemove([](const std::string& path) {
         OutputDebugStringA(("Remove: " + path + "\n").c_str());
     });
-
     m_files.OnAdd([](const std::string& path) {
         OutputDebugStringA(("Add: " + path + "\n").c_str());
     });
-
 }
 
 void HomeWindow::OnCommand(WPARAM wParam) {
@@ -266,6 +270,7 @@ void HomeWindow::OnPaint() {
     m_margin.OnPaint(mem);
     m_info.OnPaint(mem);
     m_control.OnPaint(mem);
+    m_files.OnPaintStatic(mem, rc.right, rc.bottom);
 
     BitBlt(hdc, 0, 0, rc.right, rc.bottom, mem, 0, 0, SRCCOPY);
 
@@ -285,6 +290,7 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_COMMAND:
         OnCommand(wParam);
         InvalidateRect(GetHwnd(), nullptr, FALSE);
+        m_files.HandleCommand(wParam);
         return 0;
 
     case WM_DRAWITEM:
@@ -303,6 +309,11 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         if (dis->CtlID == 5001 || dis->CtlID == 5002) {
             m_control.HandleDrawItem(dis);
+            return TRUE;
+        }
+
+        if (dis->CtlID >= 6201 && dis->CtlID <= 6204) {
+            m_files.HandleDrawItem(dis);
             return TRUE;
         }
 
@@ -356,6 +367,19 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_PAINT:
         OnPaint();
         return 0;
+
+    case WM_LBUTTONDOWN:
+    {
+        int x = GET_X_LPARAM(lParam);
+        int y = GET_Y_LPARAM(lParam);
+
+        // Nếu click KHÔNG nằm trong FileListView
+        if (!m_files.IsPointInside(x, y)) {
+            m_files.ClearSelectionPublic();
+        }
+
+        break;
+    }
 
     case WM_DESTROY:
         if (m_font) {
