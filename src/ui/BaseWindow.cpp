@@ -1,4 +1,5 @@
 #include "BaseWindow.h"
+#include "resource.h"
 
 BaseWindow::BaseWindow() : m_hwnd(nullptr) {}
 BaseWindow::~BaseWindow() {}
@@ -19,12 +20,27 @@ bool BaseWindow::Create(
     HWND parent,
     HMENU menu
 ) {
-    WNDCLASS wc = {};
+    WNDCLASSEX wc = {};
+    wc.cbSize = sizeof(WNDCLASSEX);
     wc.lpfnWndProc = BaseWindow::WindowProc;
     wc.hInstance = GetModuleHandle(nullptr);
     wc.lpszClassName = className;
 
-    RegisterClass(&wc);
+    wc.hIcon = (HICON)LoadImage(
+        wc.hInstance,
+        MAKEINTRESOURCE(IDI_APP_ICON),
+        IMAGE_ICON,
+        0, 0,
+        LR_DEFAULTSIZE
+    );
+
+    if (!wc.hIcon) {
+        MessageBox(NULL, L"LoadIcon FAILED", L"Error", MB_OK);
+    }
+
+    wc.hIconSm = wc.hIcon;
+
+    RegisterClassEx(&wc);
 
     m_hwnd = CreateWindowEx(
         exStyle,

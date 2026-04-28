@@ -23,10 +23,7 @@ file(GLOB SOURCES
 # =========================
 # RESOURCE (optional)
 # =========================
-set(RESOURCE_FILE "")
-if (EXISTS "${CMAKE_SOURCE_DIR}/resource/resource.rc")
-    set(RESOURCE_FILE resource/resource.rc)
-endif()
+set(RESOURCE_FILE "${CMAKE_SOURCE_DIR}/resource/resource.rc")
 
 # =========================
 # BUILD TARGET
@@ -44,17 +41,16 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     include/app
     include/ui
     include/ui/components
+    include/resource
     resource
 )
 
 # =========================
 # WINDOWS SETTINGS
 # =========================
-# if (WIN32 AND USE_WINDOWS_SUBSYSTEM)
-#     set_target_properties(${PROJECT_NAME} PROPERTIES
-#         LINK_FLAGS "-mwindows"
-#     )
-# endif()
+if (WIN32 AND USE_WINDOWS_SUBSYSTEM)
+    target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
+endif()
 
 # =========================
 # LINK LIBRARIES
