@@ -35,7 +35,7 @@ exit /b %errorlevel%
 )
 
 cd ..
-copy /Y .\build\SimplePrinter.exe .\test\SimplePrinter.exe 
+copy /Y .\build\SimplePrinter.exe .\SimplePrinter.exe 
 
 echo.
 echo ================================

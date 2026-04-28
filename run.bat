@@ -5,7 +5,7 @@ echo =========================================
 echo  CPP - RUN
 echo =========================================
 
-.\test\SimplePrinter.exe test.txt
+.\SimplePrinter.exe .\test\test.txt
 
 echo =========================================
 echo  CPP - DONE RUN

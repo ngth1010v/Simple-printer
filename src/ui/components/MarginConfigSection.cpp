@@ -257,7 +257,7 @@ void MarginConfigSection::OnPaint(HDC hdc) {
         X + MARGIN_TOP_LABEL_X + MARGIN_INPUT_W,
         Y + MARGIN_TOP_LABEL_Y + Layout::LABEL_H
     };
-    DrawTextW(hdc, L"Top", -1, &rcTop, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    DrawTextW(hdc, L"Margin Top", -1, &rcTop, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
     RECT rcBottom = {
         X + MARGIN_BOTTOM_LABEL_X,
@@ -265,7 +265,7 @@ void MarginConfigSection::OnPaint(HDC hdc) {
         X + MARGIN_BOTTOM_LABEL_X + MARGIN_INPUT_W,
         Y + MARGIN_BOTTOM_LABEL_Y + Layout::LABEL_H
     };
-    DrawTextW(hdc, L"Bottom", -1, &rcBottom, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    DrawTextW(hdc, L"Margin Bottom", -1, &rcBottom, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
     RECT rcLeft = {
         X + MARGIN_LEFT_LABEL_X,
@@ -273,7 +273,7 @@ void MarginConfigSection::OnPaint(HDC hdc) {
         X + MARGIN_LEFT_LABEL_X + MARGIN_INPUT_W,
         Y + MARGIN_LEFT_LABEL_Y + Layout::LABEL_H
     };
-    DrawTextW(hdc, L"Left", -1, &rcLeft, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    DrawTextW(hdc, L"Margin Left", -1, &rcLeft, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
     RECT rcRight = {
         X + MARGIN_RIGHT_LABEL_X,
@@ -281,7 +281,7 @@ void MarginConfigSection::OnPaint(HDC hdc) {
         X + MARGIN_RIGHT_LABEL_X + MARGIN_INPUT_W,
         Y + MARGIN_RIGHT_LABEL_Y + Layout::LABEL_H
     };
-    DrawTextW(hdc, L"Right", -1, &rcRight, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    DrawTextW(hdc, L"Margin Right", -1, &rcRight, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
     DrawInputChrome(hdc, m_parent, m_editTop, GetFocus() == m_editTop);
     DrawInputChrome(hdc, m_parent, m_editBottom, GetFocus() == m_editBottom);
