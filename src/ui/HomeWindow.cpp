@@ -8,6 +8,14 @@
 using namespace ui::home;
 
 bool HomeWindow::CreateWindowInstance() {
+    RECT rc = { 0, 0, Layout::MIN_WIDTH, Layout::MIN_HEIGHT };
+
+    AdjustWindowRect(
+        &rc,
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_SIZEBOX,
+        FALSE
+    );
+
     return Create(
         L"HomeWindowClass",
         L"Simple Printer",
@@ -15,8 +23,8 @@ bool HomeWindow::CreateWindowInstance() {
         0,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        Layout::MIN_WIDTH,
-        Layout::MIN_HEIGHT
+        rc.right - rc.left,
+        rc.bottom - rc.top
     );
 }
 
@@ -135,12 +143,24 @@ void HomeWindow::OnCreate() {
     m_info.SetPagesToPrintValue("1");
     m_info.SetSheetsRequiredValue("1");
 
+    // ===== CONTROL =====
+    m_control.Create(GetHwnd(), m_font);
+
+    m_control.OnPrint([]() {
+        OutputDebugStringA("Print clicked\n");
+    });
+
+    m_control.OnCancel([]() {
+        OutputDebugStringA("Cancel clicked\n");
+    });
+
 }
 
 void HomeWindow::OnCommand(WPARAM wParam) {
     m_basic.HandleCommand(wParam);
     m_adv.HandleCommand(wParam);
     m_margin.HandleCommand(wParam);
+    m_control.HandleCommand(wParam);
 }
 
 void HomeWindow::OnSize() {
@@ -151,6 +171,7 @@ void HomeWindow::OnSize() {
     m_adv.Resize(rc.right);
     m_margin.Resize(rc.right);
     m_info.Resize(rc.right);
+    m_control.Resize(rc.right, rc.bottom);
 
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
@@ -175,6 +196,7 @@ void HomeWindow::OnPaint() {
     m_adv.OnPaint(mem);
     m_margin.OnPaint(mem);
     m_info.OnPaint(mem);
+    m_control.OnPaint(mem);
 
     BitBlt(hdc, 0, 0, rc.right, rc.bottom, mem, 0, 0, SRCCOPY);
 
@@ -210,6 +232,11 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return TRUE;
         }
 
+        if (dis->CtlID == 5001 || dis->CtlID == 5002) {
+            m_control.HandleDrawItem(dis);
+            return TRUE;
+        }
+
         return FALSE;
     }
 
@@ -230,8 +257,18 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_GETMINMAXINFO:
     {
         MINMAXINFO* mmi = (MINMAXINFO*)lParam;
-        mmi->ptMinTrackSize.x = Layout::MIN_WIDTH;
-        mmi->ptMinTrackSize.y = Layout::MIN_HEIGHT;
+
+        RECT rc = { 0, 0, Layout::MIN_WIDTH, Layout::MIN_HEIGHT };
+
+        AdjustWindowRect(
+            &rc,
+            GetWindowLong(GetHwnd(), GWL_STYLE),
+            FALSE
+        );
+
+        mmi->ptMinTrackSize.x = rc.right - rc.left;
+        mmi->ptMinTrackSize.y = rc.bottom - rc.top;
+
         return 0;
     }
 

@@ -6,7 +6,7 @@ namespace Layout {
 
     // ===== WINDOW =====
     constexpr int MIN_WIDTH             = 470;
-    constexpr int MIN_HEIGHT            = 515;
+    constexpr int MIN_HEIGHT            = 477;
 
     constexpr int MARGIN                = 5;
     constexpr int SECTION_MARGIN        = 10;
@@ -161,6 +161,29 @@ namespace Layout {
         constexpr int SHEETS_REQUIRED_INPUT_X = SECTION_MARGIN;
         constexpr int SHEETS_REQUIRED_INPUT_Y = SHEETS_REQUIRED_LABEL_Y + LABEL_H + INPUT_GAP;
     }
+    
+    // ===== CONTROL BLOCK =====
+    namespace ControlBlock {
+
+        constexpr int CONTROL_INPUT_H = 25;   
+        constexpr int INPUT_W = (MIN_WIDTH - 2 * MARGIN - BasicSection::W - SECTION_GAP - INPUT_GAP) / 2;   
+
+        // Print
+        constexpr int PRINT_LABEL_W = 30;
+        inline    int CALC_PRINT_INPUT_X (int windowW) {return windowW - MARGIN - INPUT_W;}
+        inline    int CALC_PRINT_INPUT_Y (int windowH) {return windowH - MARGIN - CONTROL_INPUT_H;}
+
+        inline    int CALC_PRINT_LABEL_X (int windowW) {return CALC_PRINT_INPUT_X(windowW) + (INPUT_W - PRINT_LABEL_W) / 2;}
+        inline    int CALC_PRINT_LABEL_Y (int windowH) {return CALC_PRINT_INPUT_Y(windowH) + (INPUT_W - PRINT_LABEL_W) / 2;}
+
+        // Cancle
+        constexpr int CANCEL_LABEL_W = 36;
+        inline    int CALC_CANCEL_INPUT_X (int windowW) {return windowW - MARGIN - 2 * INPUT_W - INPUT_GAP;}
+        inline    int CALC_CANCEL_INPUT_Y (int windowH) {return windowH - MARGIN - CONTROL_INPUT_H;}
+
+        inline    int CALC_CANCEL_LABEL_X (int windowW) {return CALC_CANCEL_INPUT_X(windowW) + (INPUT_W - CANCEL_LABEL_W) / 2;}
+        inline    int CALC_CANCEL_LABEL_Y (int windowH) {return CALC_CANCEL_INPUT_Y(windowH) + (INPUT_W - CANCEL_LABEL_W) / 2;}
+    }
 
 } // namespace Layout
 namespace Style {
@@ -195,6 +218,10 @@ namespace Style {
     constexpr COLORREF INPUT_BORDER_HOVER       = RGB(180,180,180);
     constexpr COLORREF INPUT_BORDER_FOCUS       = RGB(180,180,180);
     constexpr COLORREF INPUT_BORDER_DISABLED    = RGB(220,220,220);
+
+
+    // Control
+    constexpr COLORREF PRINT_CONTROL_BG         = RGB(200,255,200);
     
 }
 } // namespace HomeWindow

@@ -1,5 +1,5 @@
 # TASK:
-- dựa vào HomeComponentMap.h và lấy ví dụ từ BasicConfigSection, hãy code cho tôi full 2 file InfoConfigSection.h / .cpp với yêu cầu như dưới
+- dựa vào HomeComponentMap.h và lấy ví dụ từ BasicConfigSection, hãy code cho tôi full 2 file ControlBlock.h / .cpp với yêu cầu như dưới
 - sau khi code, code lại luôn giúp tôi full file HomeWindow.cpp để áp dụng
 
 # EXPORT FUNCTION:
