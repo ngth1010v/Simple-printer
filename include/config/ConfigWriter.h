@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "ConfigModel.h"
+#include "config/ConfigModel.h"
 
 namespace config {
 

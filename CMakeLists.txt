@@ -15,11 +15,13 @@ option(USE_WINDOWS_SUBSYSTEM "Build as Windows GUI app" ON)
 # =========================
 file(GLOB SOURCES
     "src/*.cpp"
-    "src/ui/*.cpp"
-    "src/ui/home/*.cpp"
     "src/app/*.cpp"
     "src/config/*.cpp"
+    "src/controller/*.cpp"
+    "src/controller/home/*.cpp"
     "src/platform/*.cpp"
+    "src/ui/*.cpp"
+    "src/ui/home/*.cpp"
 )
 
 # =========================
@@ -40,12 +42,6 @@ add_executable(${PROJECT_NAME}
 # =========================
 target_include_directories(${PROJECT_NAME} PRIVATE
     include
-    include/app
-    include/config
-    include/platform
-    include/ui
-    include/ui/home
-    include/resource
     resource
 )
 

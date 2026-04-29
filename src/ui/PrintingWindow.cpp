@@ -1,4 +1,4 @@
-#include "PrintingWindow.h"
+#include "ui/PrintingWindow.h"
 
 #define ID_BTN_PAUSE     1001
 #define ID_BTN_CONTINUE 1002

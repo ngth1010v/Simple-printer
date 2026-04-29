@@ -1,4 +1,4 @@
-#include "ConfigWriter.h"
+#include "config/ConfigWriter.h"
 #include <windows.h>
 
 namespace config {

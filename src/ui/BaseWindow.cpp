@@ -1,4 +1,4 @@
-#include "BaseWindow.h"
+#include "ui/BaseWindow.h"
 #include "resource.h"
 
 BaseWindow::BaseWindow() : m_hwnd(nullptr) {}

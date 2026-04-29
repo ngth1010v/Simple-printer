@@ -1,5 +1,5 @@
-#include "AdvanceConfigSection.h"
-#include "HomeComponentMap.h"
+#include "ui/home/AdvanceConfigSection.h"
+#include "ui/home/HomeComponentMap.h"
 
 #include <commctrl.h>
 

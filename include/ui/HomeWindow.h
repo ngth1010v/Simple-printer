@@ -1,12 +1,12 @@
 #pragma once
 
-#include "BaseWindow.h"
-#include "BasicConfigSection.h"
-#include "AdvanceConfigSection.h"
-#include "MarginConfigSection.h"
-#include "InfoConfigSection.h"
-#include "ControlBlock.h"
-#include "FileListView.h"
+#include "ui/BaseWindow.h"
+#include "ui/home/BasicConfigSection.h"
+#include "ui/home/AdvanceConfigSection.h"
+#include "ui/home/MarginConfigSection.h"
+#include "ui/home/InfoConfigSection.h"
+#include "ui/home/ControlBlock.h"
+#include "ui/home/FileListView.h"
 
 class HomeWindow : public BaseWindow {
 public:

@@ -1,5 +1,5 @@
-#include "FileListView.h"
-#include "HomeComponentMap.h"
+#include "ui/home/FileListView.h"
+#include "ui/home/HomeComponentMap.h"
 
 #include <commctrl.h>
 #include <windowsx.h>

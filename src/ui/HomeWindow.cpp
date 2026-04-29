@@ -1,10 +1,8 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
-#include "HomeWindow.h"
-#include "ui/components/HomeComponentMap.h"
-#include "AdvanceConfigSection.h"
-#include "MarginConfigSection.h"
+#include "ui/HomeWindow.h"
+#include "ui/home/HomeComponentMap.h"
 
 using namespace ui::home;
 

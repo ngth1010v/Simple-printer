@@ -1,5 +1,5 @@
-#include "ControlBlock.h"
-#include "HomeComponentMap.h"
+#include "ui/home/ControlBlock.h"
+#include "ui/home/HomeComponentMap.h"
 
 #define ID_BTN_PRINT   5001
 #define ID_BTN_CANCEL  5002

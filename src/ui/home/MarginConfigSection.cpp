@@ -1,5 +1,5 @@
-#include "MarginConfigSection.h"
-#include "HomeComponentMap.h"
+#include "ui/home/MarginConfigSection.h"
+#include "ui/home/HomeComponentMap.h"
 
 #define ID_EDIT_TOP     5001
 #define ID_EDIT_BOTTOM  5002

@@ -1,7 +1,7 @@
 #include <windows.h>
 #include <commctrl.h>
-#include "CommandLine.h"
-#include "App.h"
+#include "app/CommandLine.h"
+#include "app/App.h"
 
 int main(int argc, char** argv) {
     INITCOMMONCONTROLSEX icc = {};

@@ -1,5 +1,5 @@
-#include "InfoConfigSection.h"
-#include "HomeComponentMap.h"
+#include "ui/home/InfoConfigSection.h"
+#include "ui/home/HomeComponentMap.h"
 
 using namespace ui::home;
 
