@@ -48,9 +48,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # =========================
 # WINDOWS SETTINGS
 # =========================
-# if (WIN32 AND USE_WINDOWS_SUBSYSTEM)
-#     target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
-# endif()
+if (WIN32 AND USE_WINDOWS_SUBSYSTEM)
+    target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
+endif()
 
 # =========================
 # LINK LIBRARIES

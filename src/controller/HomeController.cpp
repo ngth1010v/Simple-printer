@@ -25,44 +25,38 @@ int HomeController::Run()
     ShowWindow(win.GetHwnd(), SW_SHOW);
 
     // ===== BASIC =====
-    {
-        controller::home::BasicConfigSectionController basic(win, m_cfg);
-        basic.Init();
-        basic.Bind();
-    }
+    controller::home::BasicConfigSectionController basic(win, m_cfg);
+    basic.Init();
+    basic.Bind();
+
 
     // ===== ADVANCE =====
-    {
-        controller::home::AdvangeConfigSectionController adv(win, m_cfg);
-        adv.Init();
-        adv.Bind();
-    }
+    controller::home::AdvangeConfigSectionController adv(win, m_cfg);
+    adv.Init();
+    adv.Bind();
+
 
     // ===== MARGIN =====
-    {
-        controller::home::MarginConfigSectionController margin(win, m_cfg);
-        margin.Init();
-        margin.Bind();
-    }
+    controller::home::MarginConfigSectionController margin(win, m_cfg);
+    margin.Init();
+    margin.Bind();
+
 
     // ===== INFO =====
-    {
-        controller::home::InfoConfigSectionController info(win, m_cfg);
-        info.Init();
-    }
+    controller::home::InfoConfigSectionController info(win, m_cfg);
+    info.Init();
+    
 
     // ===== FILE LIST =====
-    {
-        controller::home::FileListViewController files(win, m_cfg);
-        files.Init();
-        files.Bind();
-    }
+    controller::home::FileListViewController files(win, m_cfg);
+    files.Init();
+    files.Bind();
 
+    
     // ===== CONTROL =====
-    {
-        controller::home::ControlBlockController control(win, m_cfg);
-        control.Bind();
-    }
+    controller::home::ControlBlockController control(win, m_cfg);
+    control.Bind();
+
 
     // ===== LOOP =====
     MSG msg = {};

@@ -15,20 +15,38 @@ ControlBlockController::ControlBlockController(HomeWindow& win, config::ConfigDa
 void ControlBlockController::Bind()
 {
     m_win.m_control.OnCancel([&]() {
-        config::Write("./config", m_cfg);
+        config::Write("./config.ini", m_cfg);
         DestroyWindow(m_win.GetHwnd());
     });
 
-    m_win.m_control.OnPrint([&]() {
-        config::Write("./config", m_cfg);
+    m_win.m_control.OnPrint([win = &m_win, cfg = &m_cfg]() {
+        config::Write("./config.ini", *cfg);
 
-        // run print flow with current cfg
-        PrintController printer(m_cfg);
-        printer.Run();
+        std::wstring cmd = L"SimplePrinter.exe --print";
 
-        // close home window after print returns
-        if (m_win.GetHwnd()) {
-            DestroyWindow(m_win.GetHwnd());
+        STARTUPINFOW si{};
+        si.cb = sizeof(si);
+
+        PROCESS_INFORMATION pi{};
+
+        BOOL ok = CreateProcessW(
+            nullptr,
+            cmd.data(),     // command line
+            nullptr,
+            nullptr,
+            FALSE,
+            0,
+            nullptr,
+            nullptr,
+            &si,
+            &pi
+        );
+
+        if (ok) {
+            CloseHandle(pi.hThread);
+            CloseHandle(pi.hProcess);
         }
+
+        DestroyWindow(win->GetHwnd());
     });
 }

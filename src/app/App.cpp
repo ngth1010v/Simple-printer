@@ -22,10 +22,6 @@ int App::Run()
     }
 
     // ===== PRINT MODE =====
-    if (files.empty()) {
-        return 0;
-    }
-
     auto printers = platform::printer::GetPrinters();
 
     bool printerMatch = false;
