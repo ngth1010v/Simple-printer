@@ -18,9 +18,9 @@ Simple-printer/
 │   │   └── TextRenderer.h
 │   │
 │   ├── config/
-│   │   ├── ConfigModel.h
-│   │   ├── ConfigParser.h
-│   │   └── ConfigWriter.h
+│   │   ├── ConfigModel.h (done)
+│   │   ├── ConfigParser.h (done)
+│   │   └── ConfigWriter.h (done)
 │   │
 │   ├── platform/
 │   │   ├── WinPrinter.h
@@ -63,8 +63,8 @@ Simple-printer/
 │   │   └── TextRenderer.cpp
 │   │
 │   ├── config/
-│   │   ├── ConfigParser.cpp
-│   │   └── ConfigWriter.cpp
+│   │   ├── ConfigParser.cpp (done)
+│   │   └── ConfigWriter.cpp (done)
 │   │
 │   ├── platform/
 │   │   ├── WinPrinter.cpp

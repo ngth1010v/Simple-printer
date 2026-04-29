@@ -1,0 +1,19 @@
+#pragma once
+#include <string>
+
+namespace config {
+
+struct ConfigData {
+    std::string printer     = "Microsoft Print to PDF";
+
+    std::string printMode   = "Simplex";
+    std::string paper       = "A4";
+    std::string scale       = "Fit to page (keep aspect ratio)";
+    std::string orientation = "Auto";
+    std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
+
+    // {top, right, bottom, left}
+    int margin[4] = {1, 1, 1, 1};
+};
+
+}
