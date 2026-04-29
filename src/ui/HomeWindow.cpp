@@ -48,93 +48,9 @@ void HomeWindow::OnCreate() {
         L"Segoe UI"
     );
 
-    // ===== BASIC =====
     m_basic.Create(GetHwnd(), m_font);
-
-    m_basic.SetPrinterOptions({
-        "Canon LBP 3018",
-        "HP LaserJet",
-        "Microsoft Print to PDF"
-    });
-
-    m_basic.OnPrinterChange([](const std::string& v) {
-        OutputDebugStringA(("Printer: " + v + "\n").c_str());
-    });
-
-    m_basic.OnCopiesChange([](const std::string& v) {
-        OutputDebugStringA(("Copies: " + v + "\n").c_str());
-    });
-
-    // ===== ADVANCE =====
     m_adv.Create(GetHwnd(), m_font);
-
-    m_adv.SetPrintModeOptions({
-        "Simplex",
-        "Duplex",
-        "Manual Duplex (Flip On Long Edge)",
-        "Manual Duplex (Flip On Short Edge)"
-    });
-    m_adv.SetPrintModeValue("Manual Duplex (Flip On Short Edge)");
-    m_adv.OnPrintModeChange([](const std::string& v) {
-        OutputDebugStringA(("PrintMode: " + v + "\n").c_str());
-    });
-
-    m_adv.SetPrintModeImage("./assets/PrintMode/flip-short-edge.bmp");
-
-    m_adv.SetPaperOptions({
-        "A4",
-        "A5",
-        "Letter"
-    });
-    m_adv.SetPaperValue("A4");
-    m_adv.OnPaperChange([](const std::string& v) {
-        OutputDebugStringA(("Paper: " + v + "\n").c_str());
-    });
-
-    m_adv.SetScaleOptions({
-        "No Scale",
-        "Fit to page (keep aspect ratio)",
-        "Fill page (ignore aspect ratio)"
-    });
-    m_adv.SetScaleValue("Fit to page (keep aspect ratio)");
-    m_adv.OnScaleChange([](const std::string& v) {
-        OutputDebugStringA(("Scale: " + v + "\n").c_str());
-    });
-
-    m_adv.SetOrientationOptions({
-        "Auto",
-        "Alway Portrait",
-        "Alway Landscape"
-    });
-    m_adv.SetOrientationValue("Auto");
-    m_adv.OnOrientationChange([](const std::string& v) {
-        OutputDebugStringA(("Orientation: " + v + "\n").c_str());
-    });
-
-    m_adv.SetCollateOptions({
-        "Collated (1,2,3 | 1,2,3 | 1,2,3)",
-        "Uncollated (1,1,1 | 2,2,2 | 3,3,3)"
-    });
-    m_adv.SetCollateValue("Collated (1,2,3 | 1,2,3 | 1,2,3)");
-    m_adv.OnCollateChange([](const std::string& v) {
-        OutputDebugStringA(("Collate: " + v + "\n").c_str());
-    });
-
-    // ===== MARGIN =====
     m_margin.Create(GetHwnd(), m_font);
-
-    m_margin.OnMarginTopChange([](const std::string& v) {
-        OutputDebugStringA(("Top: " + v + "\n").c_str());
-    });
-    m_margin.OnMarginBottomChange([](const std::string& v) {
-        OutputDebugStringA(("Bottom: " + v + "\n").c_str());
-    });
-    m_margin.OnMarginLeftChange([](const std::string& v) {
-        OutputDebugStringA(("Left: " + v + "\n").c_str());
-    });
-    m_margin.OnMarginRightChange([](const std::string& v) {
-        OutputDebugStringA(("Right: " + v + "\n").c_str());
-    });
 
     // ===== INFO =====
     m_info.Create(GetHwnd(), m_font);

@@ -16,8 +16,10 @@ option(USE_WINDOWS_SUBSYSTEM "Build as Windows GUI app" ON)
 file(GLOB SOURCES
     "src/*.cpp"
     "src/ui/*.cpp"
-    "src/ui/components/*.cpp"
+    "src/ui/home/*.cpp"
     "src/app/*.cpp"
+    "src/config/*.cpp"
+    "src/platform/*.cpp"
 )
 
 # =========================
@@ -39,8 +41,10 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE
     include
     include/app
+    include/config
+    include/platform
     include/ui
-    include/ui/components
+    include/ui/home
     include/resource
     resource
 )
@@ -48,9 +52,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # =========================
 # WINDOWS SETTINGS
 # =========================
-if (WIN32 AND USE_WINDOWS_SUBSYSTEM)
-    target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
-endif()
+# if (WIN32 AND USE_WINDOWS_SUBSYSTEM)
+#     target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
+# endif()
 
 # =========================
 # LINK LIBRARIES

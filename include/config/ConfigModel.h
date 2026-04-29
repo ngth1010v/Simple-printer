@@ -5,6 +5,7 @@ namespace config {
 
 struct ConfigData {
     std::string printer     = "Microsoft Print to PDF";
+    int         copies      = 1;
 
     std::string printMode   = "Simplex";
     std::string paper       = "A4";
@@ -13,7 +14,7 @@ struct ConfigData {
     std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
 
     // {top, right, bottom, left}
-    int margin[4] = {1, 1, 1, 1};
+    float margin[4] = {1, 1, 1, 1};
 };
 
 }

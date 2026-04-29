@@ -17,6 +17,8 @@ protected:
 
 private:
     HFONT m_font = nullptr;
+
+public:
     ui::home::BasicConfigSection m_basic;
     ui::home::AdvanceConfigSection m_adv;
     ui::home::MarginConfigSection m_margin;
