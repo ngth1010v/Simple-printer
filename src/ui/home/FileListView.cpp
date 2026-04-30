@@ -46,6 +46,16 @@ namespace {
 
         return std::wstring(s.begin(), s.end());
     }
+
+
+
+}
+
+bool FileListView::IsOurButton(HWND hwnd) {
+    return hwnd == m_btnUp ||
+        hwnd == m_btnDown ||
+        hwnd == m_btnRemove ||
+        hwnd == m_btnAdd;
 }
 
 FileListView::FileListView() {}
@@ -661,6 +671,13 @@ void FileListView::OnCommandInternal(WPARAM wParam, LPARAM lParam) {
 
     if ((id == ID_FLV_EDIT_FROM || id == ID_FLV_EDIT_TO) && hwndFrom) {
         if (code == EN_KILLFOCUS) {
+            HWND newFocus = GetFocus();
+
+            // 🔥 nếu đang chuyển focus sang button của mình → ignore
+            if (IsOurButton(newFocus)) {
+                return;
+            }
+
             CommitSelectedEditsIfNeeded(false);
             return;
         }
@@ -825,16 +842,47 @@ void FileListView::Set(std::vector<UiFileData> files) {
         return;
     }
 
-    m_isInternalUpdate = true;   // 🔥 bắt đầu guard
+    m_isInternalUpdate = true;
 
-    ClearSelection();            // sẽ KHÔNG trigger callback nữa
+    // 🔥 1. save current selected path
+    std::string selectedPath;
+    if (m_selectedIndex >= 0 && m_selectedIndex < (int)m_files.size()) {
+        selectedPath = m_files[m_selectedIndex].path;
+    }
+
+    // 🔥 2. commit trước khi mất edit
+    CommitSelectedEditsIfNeeded(false);
+    DestroySelectedEdits();
+
+    // 🔥 3. set new data
     m_files = std::move(files);
+
+    // 🔥 4. tìm lại index theo path
+    int newIndex = -1;
+    if (!selectedPath.empty()) {
+        for (int i = 0; i < (int)m_files.size(); ++i) {
+            if (m_files[i].path == selectedPath) {
+                newIndex = i;
+                break;
+            }
+        }
+    }
+
+    m_selectedIndex = newIndex;
+
+    // 🔥 5. recreate edit nếu vẫn còn selected
+    if (m_selectedIndex != -1) {
+        CreateSelectedEdits();
+        EnsureSelectionVisible();
+    }
+
     m_scrollY = 0;
     UpdateScrollBar();
     UpdateLayout();
+    UpdateButtonsState();
     InvalidateRect(m_hwnd, nullptr, TRUE);
 
-    m_isInternalUpdate = false;  // 🔥 kết thúc guard
+    m_isInternalUpdate = false;
 }
 
 void FileListView::OnChangeRange(std::function<void(const std::string& path, const std::string& fromRange, const std::string& toRange)> cb) {

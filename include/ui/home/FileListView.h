@@ -81,6 +81,7 @@ private:
     static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     static LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 
+    
     void OnCreateInternal();
     void OnDestroyInternal();
     void OnSizeInternal();
@@ -91,7 +92,7 @@ private:
     void OnMouseWheelInternal(short delta);
     void OnVScrollInternal(WPARAM wParam);
     void OnSetFocusInternal();
-
+    
     void UpdateLayout();
     void UpdateScrollBar();
     void UpdateButtonsState();
@@ -103,12 +104,12 @@ private:
     void DestroySelectedEdits();
     void CommitSelectedEditsIfNeeded(bool forceCallback);
     void ScrollTo(int newScrollY);
-
+    
     int  GetRowStep() const;
     int  GetListViewportHeight() const;
-
+    
     int  HitTestRow(int x, int y) const;
-
+    
     RECT GetClientRectSafe() const;
     RECT GetRowRect(int index) const;
     RECT GetLabelRect(int index) const;
@@ -116,11 +117,11 @@ private:
     RECT GetFromRect(int index) const;
     RECT GetToRect(int index) const;
     RECT GetDividerRect(int index) const;
-
+    
     std::wstring ToWide(const std::string& s) const;
     std::string ToNarrow(const std::wstring& ws) const;
     std::string GetWindowTextUtf8(HWND hwnd) const;
-
+    
     static std::string ToLowerCopy(std::string s);
     static bool StartsWithNoCase(const std::string& s, const char* prefix);
     static bool ParseRgbHex(const std::string& s, COLORREF& out);
@@ -130,6 +131,7 @@ private:
     static void DrawRoundedFrame(HDC hdc, const RECT& rc, COLORREF borderColor, int radius);
     static void DrawCenteredText(HDC hdc, const RECT& rc, const std::wstring& text, COLORREF color, HFONT font);
     static void DrawLeftEllipsisText(HDC hdc, const RECT& rc, const std::wstring& text, COLORREF color, HFONT font);
+    bool IsOurButton(HWND hwnd);
 
     void DrawRow(HDC hdc, int index, const RECT& clipRc);
     void DrawButton(HDC hdc, const DRAWITEMSTRUCT* dis, const wchar_t* text, COLORREF bg);
