@@ -131,16 +131,24 @@ static void AdvCollateUpdate(config::ConfigData& cfg, const std::string& v) {
     cfg.collate = v;
 }
 
+
+
 }
 
 using namespace controller::home;
+
+void AdvangeConfigSectionController::Fire(const AdvangeConfigSectionController::ChangeCallback& cb) {
+    if (cb) cb();
+}
 
 AdvangeConfigSectionController::AdvangeConfigSectionController(HomeWindow& win, config::ConfigData& cfg)
     : m_win(win), m_cfg(cfg) {
 }
 
-void AdvangeConfigSectionController::Init()
+void AdvangeConfigSectionController::Init(ChangeCallback cb)
 {
+    m_cb = std::move(cb);
+
     AdvPrintModeInit(m_win, m_cfg);
     AdvPaperInit(m_win, m_cfg);
     AdvScaleInit(m_win, m_cfg);
@@ -152,21 +160,26 @@ void AdvangeConfigSectionController::Bind()
 {
     m_win.m_adv.OnPrintModeChange([&](const std::string& v) {
         AdvPrintModeUpdate(m_win, m_cfg, v);
+        Fire(m_cb);
     });
 
     m_win.m_adv.OnPaperChange([&](const std::string& v) {
         AdvPaperUpdate(m_cfg, v);
+        Fire(m_cb);
     });
 
     m_win.m_adv.OnScaleChange([&](const std::string& v) {
         AdvScaleUpdate(m_cfg, v);
+        Fire(m_cb);
     });
 
     m_win.m_adv.OnOrientationChange([&](const std::string& v) {
         AdvOrientationUpdate(m_cfg, v);
+        Fire(m_cb);
     });
 
     m_win.m_adv.OnCollateChange([&](const std::string& v) {
         AdvCollateUpdate(m_cfg, v);
+        Fire(m_cb);
     });
 }

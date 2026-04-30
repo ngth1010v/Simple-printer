@@ -44,6 +44,7 @@ private:
 private:
     static constexpr UINT WM_FILELIST_COUNT_DONE = WM_APP + 0x431;
     static constexpr UINT_PTR SUBCLASS_ID = 0x46494C31; // "FIL1"
+    static constexpr UINT WM_FILELIST_NOTIFY_CHANGE = WM_APP + 0x432;
 
 private:
     static LRESULT CALLBACK SubclassProc(

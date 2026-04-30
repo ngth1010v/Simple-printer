@@ -49,97 +49,10 @@ void HomeWindow::OnCreate() {
     m_basic.Create(GetHwnd(), m_font);
     m_adv.Create(GetHwnd(), m_font);
     m_margin.Create(GetHwnd(), m_font);
-
-    // ===== INFO =====
     m_info.Create(GetHwnd(), m_font);
-
-    // default
-    m_info.SetTotalFilesValue("1");
-    m_info.SetPagesToPrintValue("1");
-    m_info.SetSheetsRequiredValue("1");
-
-    // ===== CONTROL =====
     m_control.Create(GetHwnd(), m_font);
-
-    m_control.OnPrint([]() {
-        OutputDebugStringA("Print clicked\n");
-    });
-
-    m_control.OnCancel([]() {
-        OutputDebugStringA("Cancel clicked\n");
-    });
-
-    // ===== FILE LIST =====
     m_files.Create(GetHwnd(), m_font);
 
-    m_files.Set({
-        {
-            "C:/Docs/Test1.docx",
-            "Test1.docx",
-            "green",
-            "1",
-            "10"
-        },
-        {
-            "C:/Docs/Test2.docx",
-            "Test2.docx",
-            "green",
-            "1",
-            "1"
-        },
-        {
-            "C:/Docs/Test3.docx",
-            "Test3.docx",
-            "red",
-            "5",
-            "20"
-        },
-        {
-            "C:/Docs/Test4.docx",
-            "Test4.docx",
-            "green",
-            "10",
-            "10"
-        },
-        {
-            "C:/Docs/Test4.docx",
-            "Test4.docx",
-            "green",
-            "10",
-            "10"
-        },
-        {
-            "C:/Docs/Test4.docx",
-            "Test4.docx",
-            "green",
-            "10",
-            "10"
-        },
-        {
-            "C:/Docs/Test4.docx",
-            "Test4.docx",
-            "green",
-            "10",
-            "10"
-        }
-    });
-
-    m_files.OnChangeRange([](const std::string& path, const std::string& fromRange, const std::string& toRange) {
-        OutputDebugStringA(("ChangeRange: " + path + " | " + fromRange + " -> " + toRange + "\n").c_str());
-    });
-
-    m_files.OnMoveUp([](const std::string& path) {
-        OutputDebugStringA(("MoveUp: " + path + "\n").c_str());
-    });
-    m_files.OnMoveDown([](const std::string& path) {
-        OutputDebugStringA(("MoveDown: " + path + "\n").c_str());
-    });
-    m_files.OnRemove([](const std::string& path) {
-        OutputDebugStringA(("Remove: " + path + "\n").c_str());
-    });
-    m_files.OnAdd([](const std::string& path) {
-        OutputDebugStringA(("Add: " + path + "\n").c_str());
-    });
 }
 
 void HomeWindow::OnCommand(WPARAM wParam) {
@@ -294,7 +207,7 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         break;
     }
-
+    
     case WM_DESTROY:
         if (m_font) {
             DeleteObject(m_font);

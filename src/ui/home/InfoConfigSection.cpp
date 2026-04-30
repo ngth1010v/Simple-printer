@@ -78,14 +78,17 @@ void InfoConfigSection::Resize(int parentWidth) {
 
 void InfoConfigSection::SetTotalFilesValue(const std::string& value) {
     m_totalFiles = ToWide(value);
+    InvalidateRect(m_parent, nullptr, TRUE);
 }
 
 void InfoConfigSection::SetPagesToPrintValue(const std::string& value) {
     m_pagesToPrint = ToWide(value);
+    InvalidateRect(m_parent, nullptr, TRUE);
 }
 
 void InfoConfigSection::SetSheetsRequiredValue(const std::string& value) {
     m_sheetsRequired = ToWide(value);
+    InvalidateRect(m_parent, nullptr, TRUE);
 }
 
 void InfoConfigSection::OnPaint(HDC hdc) {

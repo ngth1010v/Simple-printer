@@ -38,9 +38,16 @@ int HomeController::Run()
     basic.Bind();
 
 
+    // ===== INFO =====
+    controller::home::InfoConfigSectionController info(win, m_cfg);
+    info.Init();
+    
+    
     // ===== ADVANCE =====
     controller::home::AdvangeConfigSectionController adv(win, m_cfg);
-    adv.Init();
+    adv.Init([&]() {
+        info.Reload();
+    });
     adv.Bind();
 
 
@@ -50,14 +57,11 @@ int HomeController::Run()
     margin.Bind();
 
 
-    // ===== INFO =====
-    controller::home::InfoConfigSectionController info(win, m_cfg);
-    info.Init();
-    
-
     // ===== FILE LIST =====
     controller::home::FileListViewController files(win, m_cfg);
-    files.Init();
+    files.Init([&]() {
+        info.Reload();
+    });
     files.Bind();
 
     

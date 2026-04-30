@@ -116,6 +116,8 @@ LRESULT CALLBACK FileListViewController::SubclassProc(
         return ::DefSubclassProc(hwnd, msg, wParam, lParam);
     }
 
+
+
     return ::DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
@@ -332,8 +334,16 @@ void FileListViewController::RequestCountForItem(int index)
 
 void FileListViewController::NotifyHomeChanged()
 {
-    if (m_onChanged) {
+    if (!m_onChanged) return;
+
+    // đảm bảo chạy trên UI thread
+    if (GetCurrentThreadId() == GetWindowThreadProcessId(m_notifyHwnd, nullptr)) {
         m_onChanged();
+    } else {
+        // dispatch về UI thread
+        auto cb = new std::function<void()>(m_onChanged);
+
+        PostMessage(m_notifyHwnd, WM_APP + 999, 0, (LPARAM)cb);
     }
 }
 
