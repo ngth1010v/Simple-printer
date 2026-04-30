@@ -30,11 +30,11 @@ Simple-printer/
 │   ├── ui/
 │   │   ├── BaseWindow.h (done)
 │   │   │
-│   │   ├── HomeWindow.h (wait for update)
+│   │   ├── HomeWindow.h (done)
 │   │   ├── PrintingWindow.h (done)
 │   │   │
 │   │   └── home/
-│   │       ├── HomeComponentMap.h (wait for update)
+│   │       ├── HomeComponentMap.h (done)
 │   │       ├── BasicConfigSection.h (done)
 │   │       ├── AdvangeConfigSection.h (done)
 │   │       ├── MarginConfigSection.h (done)
@@ -87,7 +87,7 @@ Simple-printer/
 │   │   ├── BaseWindow.cpp (done)
 │   │   │
 │   │   ├── PrintingWindow.cpp (done)
-│   │   ├── HomeWindow.cpp (wait for update)
+│   │   ├── HomeWindow.cpp (done)
 │   │   │
 │   │   └── home/
 │   │       ├── BasicConfigSection.cpp (done)

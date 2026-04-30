@@ -5,8 +5,21 @@
 #include <vector>
 #include <functional>
 
+
+
+
+
 namespace ui {
 namespace home {
+
+LRESULT CALLBACK EditSubclassProc(
+    HWND hwnd,
+    UINT msg,
+    WPARAM wParam,
+    LPARAM lParam,
+    UINT_PTR uIdSubclass,
+    DWORD_PTR dwRefData
+);    
 
 class BasicConfigSection {
 public:
@@ -30,8 +43,19 @@ public:
     HWND GetCopiesHWND() const { return m_editCopies; }
 
 private:
+
+    friend LRESULT CALLBACK EditSubclassProc(
+        HWND,
+        UINT,
+        WPARAM,
+        LPARAM,
+        UINT_PTR,
+        DWORD_PTR
+    );
+
     HWND m_parent = nullptr;
     HFONT m_font = nullptr;
+    bool m_silentSet = false;
 
     // printer field is now a custom owner-draw button, not a native combobox
     HWND m_btnPrinter = nullptr;

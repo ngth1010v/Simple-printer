@@ -77,6 +77,35 @@ namespace {
             Style::INPUT_RADIUS
         );
     }
+
+
+}
+
+LRESULT CALLBACK ui::home::EditSubclassProc(
+    HWND hwnd,
+    UINT msg,
+    WPARAM wParam,
+    LPARAM lParam,
+    UINT_PTR uIdSubclass,
+    DWORD_PTR dwRefData
+) {
+    auto* self = reinterpret_cast<BasicConfigSection*>(dwRefData);
+    switch (msg) {
+    case WM_KEYDOWN:
+        if (wParam == VK_RETURN) {
+            if (!self->m_silentSet && self->m_cbCopiesChange) {
+                self->m_cbCopiesChange(self->GetEditText(hwnd));
+            }
+            // optional: bỏ focus để giống blur
+            SetFocus(self->m_parent);
+            return 0;
+        }
+        break;
+    case WM_NCDESTROY:
+        RemoveWindowSubclass(hwnd, EditSubclassProc, uIdSubclass);
+        break;
+    }
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
 BasicConfigSection::BasicConfigSection() {}
@@ -144,6 +173,7 @@ void BasicConfigSection::Create(HWND parent, HFONT font) {
     SendMessage(m_btnPrinter, WM_SETFONT, (WPARAM)m_font, TRUE);
     SendMessage(m_editCopies, WM_SETFONT, (WPARAM)m_font, TRUE);
 
+    // ❗ bỏ border mặc định
     LONG_PTR exStyle = GetWindowLongPtr(m_editCopies, GWL_EXSTYLE);
     exStyle &= ~WS_EX_CLIENTEDGE;
     SetWindowLongPtr(m_editCopies, GWL_EXSTYLE, exStyle);
@@ -153,7 +183,16 @@ void BasicConfigSection::Create(HWND parent, HFONT font) {
         0, 0, 0, 0,
         SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
     );
+
+    // ✅ SUBCLASS Ở ĐÂY
+    SetWindowSubclass(
+        m_editCopies,
+        EditSubclassProc,
+        0,
+        reinterpret_cast<DWORD_PTR>(this)
+    );
 }
+
 
 void BasicConfigSection::Resize(int parentWidth) {
     (void)parentWidth;
@@ -213,7 +252,10 @@ void BasicConfigSection::OnPrinterChange(std::function<void(const std::string&)>
 
 void BasicConfigSection::SetCopiesValue(const std::string& value) {
     std::wstring ws = ToWide(value);
+
+    m_silentSet = true;
     SetWindowText(m_editCopies, ws.c_str());
+    m_silentSet = false;
 }
 
 void BasicConfigSection::OnCopiesChange(std::function<void(const std::string&)> cb) {
@@ -229,11 +271,21 @@ void BasicConfigSection::HandleCommand(WPARAM wParam) {
         return;
     }
 
-    if (id == ID_EDIT_COPIES && code == EN_CHANGE) {
-        if (m_cbCopiesChange) {
-            m_cbCopiesChange(GetEditText(m_editCopies));
+    if (id == ID_EDIT_COPIES) {
+
+        // chỉ khi mất focus
+        if (code == EN_KILLFOCUS) {
+            if (!m_silentSet && m_cbCopiesChange) {
+                m_cbCopiesChange(GetEditText(m_editCopies));
+            }
+            return;
         }
-        return;
+
+        // Enter → commit luôn
+        if (code == EN_UPDATE) {
+            // không dùng EN_UPDATE trực tiếp, sẽ handle Enter ở subclass
+            return;
+        }
     }
 }
 
