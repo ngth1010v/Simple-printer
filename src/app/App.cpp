@@ -49,8 +49,9 @@ int App::Run()
 
             config::FileData fd;
             fd.path = path;
-            fd.fromRange = -1;
-            fd.toRange   = -1;
+            fd.fromRange = 0;
+            fd.toRange   = 0;
+            fd.pages     = 0;
 
             cfg.files.push_back(fd);
         }

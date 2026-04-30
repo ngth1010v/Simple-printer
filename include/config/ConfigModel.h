@@ -6,6 +6,7 @@ namespace config {
 
 struct FileData {
     std::string path;
+    int pages = 0;
     int fromRange;
     int toRange;
 };

@@ -30,6 +30,7 @@ Simple-printer/
 │   ├── platform/
 │   │   ├── WinPrinter.h
 │   │   ├── WinSpooler.h
+│   │   ├── FilePicker.h
 │   │   └── WinUtils.h
 │   │
 │   ├── ui/
@@ -91,6 +92,7 @@ Simple-printer/
 │   ├── platform/
 │   │   ├── WinPrinter.cpp
 │   │   ├── WinSpooler.cpp
+│   │   ├── FilePicker.cpp
 │   │   └── WinUtils.cpp
 │   │
 │   ├── ui/

@@ -1,5 +1,6 @@
 #include "controller/home/FileListView.h"
 #include "ui/HomeWindow.h"
+#include "counter/Counter.h"
 
 #include <windows.h>
 #include <string>

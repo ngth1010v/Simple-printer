@@ -10,8 +10,13 @@
 #include "controller/home/ControlBlock.h"
 #include "controller/home/FileListView.h"
 
+#include "counter/Counter.h"
+
 #include <windows.h>
 
+//============================================================================
+// MAIN
+//============================================================================
 namespace controller {
 
 HomeController::HomeController(config::ConfigData& cfg)
@@ -23,6 +28,9 @@ int HomeController::Run()
     HomeWindow win;
     if (!win.CreateWindowInstance()) return 0;
     ShowWindow(win.GetHwnd(), SW_SHOW);
+    counter::Init();
+
+
 
     // ===== BASIC =====
     controller::home::BasicConfigSectionController basic(win, m_cfg);
@@ -65,6 +73,7 @@ int HomeController::Run()
         DispatchMessage(&msg);
     }
 
+    counter::Shutdown();
     return 0;
 }
 
