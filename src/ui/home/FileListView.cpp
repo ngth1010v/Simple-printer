@@ -118,6 +118,9 @@ COLORREF FileListView::ParseColorString(const std::string& s, bool* ok) {
     } else if (t == "red") {
         out = Style::FILE_LIST_VIEW_RED_STATUS;
         parsed = true;
+    } else if (t == "yellow") {
+        out = Style::FILE_LIST_VIEW_YELLOW_STATUS;
+        parsed = true;
     } else if (t == "black") {
         out = RGB(0, 0, 0);
         parsed = true;
@@ -760,6 +763,9 @@ void FileListView::DrawRow(HDC hdc, int index, const RECT& clipRc) {
     if (lc.find("red") != std::string::npos) {
         status = Style::FILE_LIST_VIEW_RED_STATUS;
         bg = Style::FILE_LIST_VIEW_RED_BG;
+    } else if (lc.find("yellow") != std::string::npos) {
+        status = Style::FILE_LIST_VIEW_YELLOW_STATUS;
+        bg = Style::FILE_LIST_VIEW_YELLOW_BG;
     } else if (lc.find("green") != std::string::npos) {
         status = Style::FILE_LIST_VIEW_GREEN_STATUS;
         bg = Style::FILE_LIST_VIEW_GREEN_BG;

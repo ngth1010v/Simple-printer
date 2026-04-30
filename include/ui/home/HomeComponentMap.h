@@ -341,8 +341,11 @@ namespace Style {
     constexpr COLORREF FILE_LIST_VIEW_GREEN_STATUS          = RGB(100,210,100);
     constexpr COLORREF FILE_LIST_VIEW_GREEN_BG              = RGB(230,250,230);
     
-    constexpr COLORREF FILE_LIST_VIEW_RED_STATUS            = RGB(210,100,100);
+    constexpr COLORREF FILE_LIST_VIEW_RED_STATUS            = RGB(210,70,70);
     constexpr COLORREF FILE_LIST_VIEW_RED_BG                = RGB(250,230,230);
+    
+    constexpr COLORREF FILE_LIST_VIEW_YELLOW_STATUS         = RGB(200,140,50);
+    constexpr COLORREF FILE_LIST_VIEW_YELLOW_BG             = RGB(250,240,230);
     
     
 }
