@@ -24,6 +24,7 @@ file(GLOB SOURCES
     "src/config/*.cpp"
     "src/controller/*.cpp"
     "src/controller/home/*.cpp"
+    "src/counter/*.cpp"
     "src/platform/*.cpp"
     "src/ui/*.cpp"
     "src/ui/home/*.cpp"

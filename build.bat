@@ -35,7 +35,9 @@ exit /b %errorlevel%
 )
 
 cd ..
-copy /Y .\build\SimplePrinter.exe .\SimplePrinter.exe 
+mkdir bin
+copy /Y .\build\SimplePrinter.exe .\bin\SimplePrinter.exe 
+copy /y .\external\pdfium\bin\pdfium.dll .\bin\pdfium.dll
 
 echo.
 echo ================================

@@ -5,6 +5,7 @@ build/
 out/
 dist/
 cmake-build-*/
+bin/
 
 # =========================
 # CMake
