@@ -1,5 +1,6 @@
 #include "ui/home/MarginConfigSection.h"
 #include "ui/home/HomeComponentMap.h"
+#include <commctrl.h>
 
 #define ID_EDIT_TOP     5001
 #define ID_EDIT_BOTTOM  5002
@@ -60,7 +61,50 @@ namespace {
         SelectObject(hdc, oldPen);
         DeleteObject(pen);
     }
+
+
 }
+
+    LRESULT CALLBACK ui::home::EditSubclassProc(
+        HWND hwnd,
+        UINT msg,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR uIdSubclass,
+        DWORD_PTR dwRefData
+    ) {
+        auto* self = reinterpret_cast<MarginConfigSection*>(dwRefData);
+
+        if (msg == WM_KEYDOWN && wParam == VK_RETURN) {
+
+            if (!self->m_silentSet) {
+
+                int id = GetDlgCtrlID(hwnd);
+
+                if (id == ID_EDIT_TOP && self->m_cbTop)
+                    self->m_cbTop(self->GetEditText(hwnd));
+
+                if (id == ID_EDIT_BOTTOM && self->m_cbBottom)
+                    self->m_cbBottom(self->GetEditText(hwnd));
+
+                if (id == ID_EDIT_LEFT && self->m_cbLeft)
+                    self->m_cbLeft(self->GetEditText(hwnd));
+
+                if (id == ID_EDIT_RIGHT && self->m_cbRight)
+                    self->m_cbRight(self->GetEditText(hwnd));
+            }
+
+            SetFocus(self->m_parent); // giống blur
+            return 0;
+        }
+
+        if (msg == WM_NCDESTROY) {
+            RemoveWindowSubclass(hwnd, EditSubclassProc, uIdSubclass);
+        }
+
+        return DefSubclassProc(hwnd, msg, wParam, lParam);
+    }
+
 
 MarginConfigSection::MarginConfigSection() {}
 
@@ -126,6 +170,11 @@ void MarginConfigSection::Create(HWND parent, HFONT font) {
     m_editLeft = createEdit(ID_EDIT_LEFT);
     m_editRight = createEdit(ID_EDIT_RIGHT);
 
+    SetWindowSubclass(m_editTop, EditSubclassProc, 0, (DWORD_PTR)this);
+    SetWindowSubclass(m_editBottom, EditSubclassProc, 0, (DWORD_PTR)this);
+    SetWindowSubclass(m_editLeft, EditSubclassProc, 0, (DWORD_PTR)this);
+    SetWindowSubclass(m_editRight, EditSubclassProc, 0, (DWORD_PTR)this);
+
     SendMessage(m_editTop, WM_SETFONT, (WPARAM)m_font, TRUE);
     SendMessage(m_editBottom, WM_SETFONT, (WPARAM)m_font, TRUE);
     SendMessage(m_editLeft, WM_SETFONT, (WPARAM)m_font, TRUE);
@@ -183,19 +232,31 @@ void MarginConfigSection::Resize(int) {
 }
 
 void MarginConfigSection::SetMarginTopValue(const std::string& v) {
-    if (m_editTop) SetWindowTextW(m_editTop, ToWide(v).c_str());
+    if (!m_editTop) return;
+    m_silentSet = true;
+    SetWindowTextW(m_editTop, ToWide(v).c_str());
+    m_silentSet = false;
 }
 
 void MarginConfigSection::SetMarginBottomValue(const std::string& v) {
-    if (m_editBottom) SetWindowTextW(m_editBottom, ToWide(v).c_str());
+    if (!m_editBottom) return;
+    m_silentSet = true;
+    SetWindowTextW(m_editBottom, ToWide(v).c_str());
+    m_silentSet = false;
 }
 
 void MarginConfigSection::SetMarginLeftValue(const std::string& v) {
-    if (m_editLeft) SetWindowTextW(m_editLeft, ToWide(v).c_str());
+    if (!m_editLeft) return;
+    m_silentSet = true;
+    SetWindowTextW(m_editLeft, ToWide(v).c_str());
+    m_silentSet = false;
 }
 
 void MarginConfigSection::SetMarginRightValue(const std::string& v) {
-    if (m_editRight) SetWindowTextW(m_editRight, ToWide(v).c_str());
+    if (!m_editRight) return;
+    m_silentSet = true;
+    SetWindowTextW(m_editRight, ToWide(v).c_str());
+    m_silentSet = false;
 }
 
 void MarginConfigSection::OnMarginTopChange(std::function<void(const std::string&)> cb) {
@@ -224,11 +285,13 @@ void MarginConfigSection::HandleCommand(WPARAM wParam) {
     int id = LOWORD(wParam);
     int code = HIWORD(wParam);
 
-    if (code == EN_CHANGE) {
-        if (id == ID_EDIT_TOP && m_cbTop) m_cbTop(GetEditText(m_editTop));
-        if (id == ID_EDIT_BOTTOM && m_cbBottom) m_cbBottom(GetEditText(m_editBottom));
-        if (id == ID_EDIT_LEFT && m_cbLeft) m_cbLeft(GetEditText(m_editLeft));
-        if (id == ID_EDIT_RIGHT && m_cbRight) m_cbRight(GetEditText(m_editRight));
+    if (code == EN_KILLFOCUS) {
+        if (!m_silentSet) {
+            if (id == ID_EDIT_TOP && m_cbTop) m_cbTop(GetEditText(m_editTop));
+            if (id == ID_EDIT_BOTTOM && m_cbBottom) m_cbBottom(GetEditText(m_editBottom));
+            if (id == ID_EDIT_LEFT && m_cbLeft) m_cbLeft(GetEditText(m_editLeft));
+            if (id == ID_EDIT_RIGHT && m_cbRight) m_cbRight(GetEditText(m_editRight));
+        }
 
         if (m_parent) InvalidateRect(m_parent, nullptr, FALSE);
         return;

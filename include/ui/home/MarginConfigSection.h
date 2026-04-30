@@ -5,8 +5,14 @@
 #include <vector>
 #include <functional>
 
+
+
 namespace ui {
 namespace home {
+
+LRESULT CALLBACK EditSubclassProc(
+   HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR
+);    
 
 class MarginConfigSection {
 public:
@@ -35,8 +41,13 @@ public:
     void OnPaint(HDC hdc);
 
 private:
+    friend LRESULT CALLBACK EditSubclassProc(
+        HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR
+    );
+
     HWND m_parent = nullptr;
     HFONT m_font = nullptr;
+    bool m_silentSet = false;
 
     HWND m_editTop = nullptr;
     HWND m_editBottom = nullptr;
