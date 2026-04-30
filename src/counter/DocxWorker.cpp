@@ -1,7 +1,7 @@
 #include "counter/DocxWorker.h"
 
 #include <windows.h>
-#include <comdef.h>
+#include <oleauto.h>
 
 #include <string>
 #include <queue>
@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <thread>
 #include <atomic>
+#include <utility>
 
 namespace counter {
 
@@ -91,6 +92,94 @@ static std::string HrToString(HRESULT hr) {
     swprintf_s(buf, L"0x%08X", static_cast<unsigned>(hr));
     return ToA(buf);
 }
+
+template <typename T>
+class ComPtr {
+public:
+    ComPtr() = default;
+    explicit ComPtr(T* p) : m_ptr(p) {}
+
+    ~ComPtr() {
+        reset();
+    }
+
+    ComPtr(const ComPtr&) = delete;
+    ComPtr& operator=(const ComPtr&) = delete;
+
+    ComPtr(ComPtr&& other) noexcept : m_ptr(other.m_ptr) {
+        other.m_ptr = nullptr;
+    }
+
+    ComPtr& operator=(ComPtr&& other) noexcept {
+        if (this != &other) {
+            reset();
+            m_ptr = other.m_ptr;
+            other.m_ptr = nullptr;
+        }
+        return *this;
+    }
+
+    T* get() const { return m_ptr; }
+    T** put() {
+        reset();
+        return &m_ptr;
+    }
+
+    T* detach() {
+        T* tmp = m_ptr;
+        m_ptr = nullptr;
+        return tmp;
+    }
+
+    void reset(T* p = nullptr) {
+        if (m_ptr) {
+            m_ptr->Release();
+        }
+        m_ptr = p;
+    }
+
+    T* operator->() const { return m_ptr; }
+    explicit operator bool() const { return m_ptr != nullptr; }
+
+private:
+    T* m_ptr = nullptr;
+};
+
+class VariantHolder {
+public:
+    VariantHolder() {
+        VariantInit(&m_var);
+    }
+
+    ~VariantHolder() {
+        VariantClear(&m_var);
+    }
+
+    VariantHolder(const VariantHolder&) = delete;
+    VariantHolder& operator=(const VariantHolder&) = delete;
+
+    VARIANT* get() { return &m_var; }
+    const VARIANT* get() const { return &m_var; }
+
+    VARIANT* operator&() = delete;
+
+    VARIANT& ref() { return m_var; }
+
+private:
+    VARIANT m_var;
+};
+
+struct CoInitGuard {
+    bool ok = false;
+
+    explicit CoInitGuard(HRESULT hr) : ok(SUCCEEDED(hr)) {}
+
+    ~CoInitGuard() {
+        if (ok) {
+            CoUninitialize();
+        }
+    }
+};
 
 static VARIANT MakeBool(bool v) {
     VARIANT var;
@@ -190,7 +279,7 @@ static IDispatch* CreateWordApp(std::string& error) {
         return nullptr;
     }
 
-    // Best-effort settings; ignore failures here because Word can still work without them.
+    // Best-effort settings, ignore failures.
     {
         VARIANT v = MakeBool(false);
         PutProperty(word, L"Visible", &v);
@@ -210,6 +299,15 @@ static IDispatch* CreateWordApp(std::string& error) {
     return word;
 }
 
+static void SafeInvokeCallback(const DocxWorker::Callback& cb, int pages, const std::string& error) noexcept {
+    if (!cb) return;
+    try {
+        cb(pages, error);
+    } catch (...) {
+        // Callback should never kill the worker thread.
+    }
+}
+
 } // namespace
 
 DocxWorker::DocxWorker() {}
@@ -224,7 +322,8 @@ bool DocxWorker::CheckWordInstalled() {
 }
 
 void DocxWorker::Start() {
-    if (m_running.exchange(true)) {
+    bool expected = false;
+    if (!m_running.compare_exchange_strong(expected, true)) {
         return;
     }
 
@@ -233,11 +332,19 @@ void DocxWorker::Start() {
 }
 
 void DocxWorker::Stop() {
-    if (!m_running.exchange(false)) {
+    bool expected = true;
+    if (!m_running.compare_exchange_strong(expected, false)) {
         return;
     }
 
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        std::queue<Task> empty;
+        std::swap(m_queue, empty);
+    }
+
     m_cv.notify_all();
+
     if (m_thread.joinable()) {
         m_thread.join();
     }
@@ -248,7 +355,7 @@ void DocxWorker::Enqueue(const std::string& path, Callback cb) {
         return;
     }
 
-    if (!m_running) {
+    if (!m_running.load()) {
         cb(0, "DocxWorker not started");
         return;
     }
@@ -268,55 +375,72 @@ void DocxWorker::Enqueue(const std::string& path, Callback cb) {
 
 void DocxWorker::WorkerLoop() {
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    CoInitGuard coGuard(hr);
+
     if (FAILED(hr)) {
         const std::string err = "COM init failed: " + HrToString(hr);
-        while (m_running) {
+
+        while (true) {
             Task task;
             {
                 std::unique_lock<std::mutex> lock(m_mutex);
-                m_cv.wait(lock, [&]() { return !m_running || !m_queue.empty(); });
-                if (!m_running && m_queue.empty()) break;
-                task = m_queue.front();
+                m_cv.wait(lock, [&]() {
+                    return !m_running.load() || !m_queue.empty();
+                });
+
+                if (!m_running.load()) {
+                    break;
+                }
+
+                task = std::move(m_queue.front());
                 m_queue.pop();
             }
-            if (task.cb) task.cb(0, err);
+
+            SafeInvokeCallback(task.cb, 0, err);
         }
+
         return;
     }
-
-    struct CoUninitGuard {
-        ~CoUninitGuard() { CoUninitialize(); }
-    } coGuard;
 
     std::string createError;
-    IDispatch* word = CreateWordApp(createError);
+    ComPtr<IDispatch> word(CreateWordApp(createError));
     if (!word) {
-        while (m_running) {
+        while (true) {
             Task task;
             {
                 std::unique_lock<std::mutex> lock(m_mutex);
-                m_cv.wait(lock, [&]() { return !m_running || !m_queue.empty(); });
-                if (!m_running && m_queue.empty()) break;
-                task = m_queue.front();
+                m_cv.wait(lock, [&]() {
+                    return !m_running.load() || !m_queue.empty();
+                });
+
+                if (!m_running.load()) {
+                    break;
+                }
+
+                task = std::move(m_queue.front());
                 m_queue.pop();
             }
-            if (task.cb) task.cb(0, createError);
+
+            SafeInvokeCallback(task.cb, 0, createError);
         }
+
         return;
     }
 
-    while (m_running) {
+    while (true) {
         Task task;
 
         {
             std::unique_lock<std::mutex> lock(m_mutex);
-            m_cv.wait(lock, [&]() { return !m_running || !m_queue.empty(); });
+            m_cv.wait(lock, [&]() {
+                return !m_running.load() || !m_queue.empty();
+            });
 
-            if (!m_running && m_queue.empty()) {
+            if (!m_running.load()) {
                 break;
             }
 
-            task = m_queue.front();
+            task = std::move(m_queue.front());
             m_queue.pop();
         }
 
@@ -335,61 +459,53 @@ void DocxWorker::WorkerLoop() {
                 break;
             }
 
-            VARIANT docsVar;
-            VariantInit(&docsVar);
-
-            HRESULT hrDocs = GetProperty(word, L"Documents", &docsVar);
-            if (FAILED(hrDocs) || docsVar.vt != VT_DISPATCH || !docsVar.pdispVal) {
+            VariantHolder docsVar;
+            HRESULT hrDocs = GetProperty(word.get(), L"Documents", docsVar.get());
+            if (FAILED(hrDocs) || docsVar.ref().vt != VT_DISPATCH || !docsVar.ref().pdispVal) {
                 error = "Documents failed: " + HrToString(hrDocs);
-                VariantClear(&docsVar);
                 break;
             }
 
-            IDispatch* docs = docsVar.pdispVal;
+            ComPtr<IDispatch> docs(docsVar.ref().pdispVal);
+            docsVar.ref().pdispVal->AddRef(); // because docs owns one reference too
 
-            // Open only needs FileName here.
-            VARIANT openArg = MakeBstr(absW);
-            VARIANT docVar;
-            VariantInit(&docVar);
+            VariantHolder openArg;
+            openArg.ref() = MakeBstr(absW);
 
-            HRESULT hrOpen = CallMethod(docs, L"Open", &openArg, 1, &docVar);
-            VariantClear(&openArg);
-
-            if (FAILED(hrOpen) || docVar.vt != VT_DISPATCH || !docVar.pdispVal) {
+            VariantHolder docVar;
+            HRESULT hrOpen = CallMethod(docs.get(), L"Open", openArg.get(), 1, docVar.get());
+            if (FAILED(hrOpen) || docVar.ref().vt != VT_DISPATCH || !docVar.ref().pdispVal) {
                 error = "Open failed: " + HrToString(hrOpen);
-                VariantClear(&docVar);
-                VariantClear(&docsVar);
                 break;
             }
 
-            IDispatch* doc = docVar.pdispVal;
+            ComPtr<IDispatch> doc(docVar.ref().pdispVal);
+            docVar.ref().pdispVal->AddRef(); // same reason as above
 
-            VARIANT statArg = MakeI4(2); // wdStatisticPages
-            VARIANT statRes;
-            VariantInit(&statRes);
+            VariantHolder statArg;
+            statArg.ref() = MakeI4(2); // wdStatisticPages
 
-            HRESULT hrStat = CallMethod(doc, L"ComputeStatistics", &statArg, 1, &statRes);
-            VariantClear(&statArg);
-
+            VariantHolder statRes;
+            HRESULT hrStat = CallMethod(doc.get(), L"ComputeStatistics", statArg.get(), 1, statRes.get());
             if (FAILED(hrStat)) {
                 error = "ComputeStatistics failed: " + HrToString(hrStat);
-            } else if (statRes.vt == VT_I4) {
-                pages = statRes.lVal;
-            } else if (statRes.vt == VT_I2) {
-                pages = statRes.iVal;
+            } else if (statRes.ref().vt == VT_I4) {
+                pages = statRes.ref().lVal;
+            } else if (statRes.ref().vt == VT_I2) {
+                pages = statRes.ref().iVal;
             } else {
                 error = "ComputeStatistics returned unexpected type";
             }
 
-            VariantClear(&statRes);
+            // Always try to close the document, even if ComputeStatistics failed.
+            {
+                VariantHolder closeArg;
+                closeArg.ref() = MakeBool(false);
+                CallMethod(doc.get(), L"Close", closeArg.get(), 1, nullptr);
+            }
 
-            // Close without saving to avoid prompts.
-            VARIANT closeArg = MakeBool(false);
-            CallMethod(doc, L"Close", &closeArg, 1, nullptr);
-            VariantClear(&closeArg);
-
-            VariantClear(&docVar);
-            VariantClear(&docsVar);
+            // Extra best-effort cleanup before leaving task.
+            doc.reset();
 
         } while (false);
 
@@ -397,19 +513,20 @@ void DocxWorker::WorkerLoop() {
             error = "Unknown docx error";
         }
 
-        if (task.cb) {
-            task.cb(pages, error);
-        }
+        SafeInvokeCallback(task.cb, pages, error);
     }
 
-    // Quit Word cleanly.
+    // Best-effort quit.
     {
-        VARIANT quitArg = MakeBool(false);
-        CallMethod(word, L"Quit", &quitArg, 1, nullptr);
-        VariantClear(&quitArg);
+        VariantHolder quitArg;
+        quitArg.ref() = MakeBool(false);
+        CallMethod(word.get(), L"Quit", quitArg.get(), 1, nullptr);
     }
 
-    word->Release();
+    word.reset();
+
+    // Help COM release any unused server proxies sooner.
+    CoFreeUnusedLibraries();
 }
 
 } // namespace counter
