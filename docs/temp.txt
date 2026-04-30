@@ -1,2 +1,69 @@
 # TASKS:
-- trong control
+- 
+
+
+# EXPORT FUNCTION:
+- Renderer.h:
++ void renderer::Init(int dpi)
++ void renderer::Render(string srcPath, string targetPath, int page = 1, void callback nhận tham số: string error)
++ void renderer::Shutdown()
+
+# FOLDER TREE:
+renderer/
+├── Renderer.cpp/.h
+├── ImageWorker.cpp/.h
+├── PdfWorker.cpp/.h
+└── DocxWorker.cpp/.h
+
+# IDEA:
+- workflow:
++ Init():
+++ lưu dpi
+++ tạo 3 worker trong theard khác (chỉ được tạo 3 cái, không thêm)
+
++ Render():
+++ xét ext của srcPath:
++++ nếu là file ảnh:
+++++ đẩy vào pending của ImageWorker
++++ nếu là file pdf:
+++++ đẩy vào pending của PdfWorker
++++ nếu là file docx:
+++++ đẩy vào pending của DocxWorker
++++ nếu không thuộc cái trên -> skip (không gọi cb)
+
++ Shutdown():
+++ safe force shutdown các worker (chỉ gọi các worker để nó tự đóng)
+
++ ImageWorker:
+++ chuyển từ ảnh src sang target với độ phân giải mặc định của file gốc
+++ duyệt tuần tự theo thứ tự được add, không multitheard
+++ sau khi xong 1 ảnh -> fire callback của ảnh đó
+
++ PdfWorker:
+++ render tuần tự từng page sang bmp với dpi được set ở init
+++ duyệt tuần tự theo thứ tự được add, không multitheard
+++ sau khi xong 1 page -> fire callback của page đó
+++ các page cùng srcPath thường sẽ được gọi kề nhau, hãy tận dụng để tăng tốc độ render
+
++ DocxWorker:
+++ tự tạo 1 folder "_temp_simple_printer_docx"
+++ dùng Word COM để chuyển từ docx -> pdf vào trong _temp_simple_printer_docx (nhớ rename/map các file temp.pdf để tránh các file src khác path nhưng trùng tên)
+++ các file temp.pdf sẽ không được xóa cho đến khi shutdown xóa nó
+++ render tuần tự từng pdf page sang bmp với dpi được set ở init
+++ duyệt tuần tự theo thứ tự được add, không multitheard
+++ sau khi xong 1 page -> fire callback của page đó
+++ các page cùng srcPath thường sẽ được gọi kề nhau, hãy tận dụng để tăng tốc độ render
+
+++ khi Shutdown:
++++ xóa folder "_temp_simple_printer_docx"
+
+# RULE:
+- code full cả 8 file
+- tất cả các code khác muốn truy cập render thì đều chỉ được đi qua Renderer.h
+- tất cả hàm (trừ các ultis chỉ dùng cho cpp) phải được bộc namespace renderer::
+
+# NOTE:
+- nếu có thiếu thông tin, hãy hỏi tôi, đừng đoán bừa
+
+
+

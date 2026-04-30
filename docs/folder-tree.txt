@@ -12,12 +12,12 @@ Simple-printer/
 │   │   └── PrintQueue.h
 │   │
 │   ├── render/
-│   │   ├── IRenderer.h
-│   │   ├── IRenderer.h
-│   │   ├── PdfRenderer.h
-│   │   └── TextRenderer.h
+│   │   ├── Renderer.h (done)
+│   │   ├── ImageWorker.h (done)
+│   │   ├── PdfWorker.h (done)
+│   │   └── DocxWorker.h (done)
 │   │
-│   ├── couter/
+│   ├── counter/
 │   │   ├── Counter.h (done)
 │   │   ├── PdfWorker.h (done)
 │   │   └── DocxWorker.h (done)
@@ -76,11 +76,12 @@ Simple-printer/
 │   │   └── PrintQueue.cpp
 │   │
 │   ├── render/
-│   │   ├── ImageRenderer.cpp
-│   │   ├── PdfRenderer.cpp
-│   │   └── TextRenderer.cpp
+│   │   ├── Renderer.cpp (done)
+│   │   ├── ImageWorker.cpp (done)
+│   │   ├── PdfWorker.cpp (done)
+│   │   └── DocxWorker.cpp (done)
 │   │
-│   ├── couter/
+│   ├── counter/
 │   │   ├── Counter.cpp (done)
 │   │   ├── PdfWorker.cpp (done)
 │   │   └── DocxWorker.cpp (done)
