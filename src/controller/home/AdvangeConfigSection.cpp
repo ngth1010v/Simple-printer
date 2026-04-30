@@ -16,10 +16,10 @@ static void AdvPrintModeInit(HomeWindow& win, config::ConfigData& cfg) {
     };
 
     std::vector<std::string> imgs = {
-        "./assets/PrintMode/simplex.bmp",
-        "./assets/PrintMode/duplex.bmp",
-        "./assets/PrintMode/flip-long-edge.bmp",
-        "./assets/PrintMode/flip-short-edge.bmp"
+        "../assets/PrintMode/simplex.bmp",
+        "../assets/PrintMode/duplex.bmp",
+        "../assets/PrintMode/flip-long-edge.bmp",
+        "../assets/PrintMode/flip-short-edge.bmp"
     };
 
     win.m_adv.SetPrintModeOptions(options);
