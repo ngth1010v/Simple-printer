@@ -6,6 +6,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # =========================
+# PDFIUM
+# =========================
+set(PDFIUM_DIR ${CMAKE_SOURCE_DIR}/external/pdfium)
+
+# =========================
 # OPTIONS
 # =========================
 option(USE_WINDOWS_SUBSYSTEM "Build as Windows GUI app" ON)
@@ -42,6 +47,7 @@ add_executable(${PROJECT_NAME}
 # =========================
 target_include_directories(${PROJECT_NAME} PRIVATE
     include
+    ${PDFIUM_DIR}/include
     resource
 )
 
@@ -55,13 +61,19 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # =========================
 # LINK LIBRARIES
 # =========================
+target_link_directories(${PROJECT_NAME} PRIVATE
+    ${PDFIUM_DIR}/lib
+)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     gdiplus
     shell32
     msimg32
     comctl32
     uxtheme   
+    pdfium
 )
+
 
 # =========================
 # COMPILE OPTIONS
@@ -89,3 +101,9 @@ if (MINGW)
         -Wl,--allow-multiple-definition
     )
 endif()
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${PDFIUM_DIR}/bin/pdfium.dll
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>
+)

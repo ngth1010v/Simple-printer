@@ -13,9 +13,14 @@ Simple-printer/
 │   │
 │   ├── render/
 │   │   ├── IRenderer.h
-│   │   ├── ImageRenderer.h
+│   │   ├── IRenderer.h
 │   │   ├── PdfRenderer.h
 │   │   └── TextRenderer.h
+│   │
+│   ├── couter/
+│   │   ├── Counter.h
+│   │   ├── PdfCounter.h
+│   │   └── DocxCounter.h
 │   │
 │   ├── config/
 │   │   ├── ConfigModel.h (done)
@@ -73,6 +78,11 @@ Simple-printer/
 │   │   ├── ImageRenderer.cpp
 │   │   ├── PdfRenderer.cpp
 │   │   └── TextRenderer.cpp
+│   │
+│   ├── couter/
+│   │   ├── Counter.cpp
+│   │   ├── PdfCounter.cpp
+│   │   └── DocxCounter.cpp
 │   │
 │   ├── config/
 │   │   ├── ConfigParser.cpp (done)

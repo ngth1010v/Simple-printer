@@ -2,7 +2,6 @@
 # Build folders
 # =========================
 build/
-bin/
 out/
 dist/
 cmake-build-*/
@@ -15,23 +14,6 @@ CMakeCache.txt
 cmake_install.cmake
 Makefile
 compile_commands.json
-
-# =========================
-# Object files
-# =========================
-*.o
-*.obj
-*.lo
-*.slo
-
-# =========================
-# Libraries
-# =========================
-*.a
-*.lib
-*.dll
-*.so
-*.dylib
 
 # =========================
 # Executables
