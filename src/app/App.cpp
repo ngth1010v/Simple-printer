@@ -52,6 +52,7 @@ int App::Run()
             fd.fromRange = 0;
             fd.toRange   = 0;
             fd.pages     = 0;
+            fd.loaded    = false;
 
             cfg.files.push_back(fd);
         }

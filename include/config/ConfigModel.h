@@ -9,6 +9,7 @@ struct FileData {
     int pages = 0;
     int fromRange;
     int toRange;
+    bool loaded = false;
 };
 
 struct ConfigData {

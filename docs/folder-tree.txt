@@ -18,9 +18,9 @@ Simple-printer/
 │   │   └── TextRenderer.h
 │   │
 │   ├── couter/
-│   │   ├── Counter.h
-│   │   ├── PdfCounter.h
-│   │   └── DocxCounter.h
+│   │   ├── Counter.h (done)
+│   │   ├── PdfWorker.h (done)
+│   │   └── DocxWorker.h (done)
 │   │
 │   ├── config/
 │   │   ├── ConfigModel.h (done)
@@ -30,7 +30,7 @@ Simple-printer/
 │   ├── platform/
 │   │   ├── WinPrinter.h
 │   │   ├── WinSpooler.h
-│   │   ├── FilePicker.h
+│   │   ├── FilePicker.h (done)
 │   │   └── WinUtils.h
 │   │
 │   ├── ui/
@@ -81,9 +81,9 @@ Simple-printer/
 │   │   └── TextRenderer.cpp
 │   │
 │   ├── couter/
-│   │   ├── Counter.cpp
-│   │   ├── PdfCounter.cpp
-│   │   └── DocxCounter.cpp
+│   │   ├── Counter.cpp (done)
+│   │   ├── PdfWorker.cpp (done)
+│   │   └── DocxWorker.cpp (done)
 │   │
 │   ├── config/
 │   │   ├── ConfigParser.cpp (done)
@@ -92,7 +92,7 @@ Simple-printer/
 │   ├── platform/
 │   │   ├── WinPrinter.cpp
 │   │   ├── WinSpooler.cpp
-│   │   ├── FilePicker.cpp
+│   │   ├── FilePicker.cpp (done)
 │   │   └── WinUtils.cpp
 │   │
 │   ├── ui/
