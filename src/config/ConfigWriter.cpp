@@ -36,6 +36,12 @@ static void WriteInt(
 
 void Write(const std::string& path, const ConfigData& data)
 {
+    WritePrivateProfileStringA("Basic",     NULL, NULL, path.c_str());
+    WritePrivateProfileStringA("Advance",   NULL, NULL, path.c_str());
+    WritePrivateProfileStringA("Margin",    NULL, NULL, path.c_str());
+    WritePrivateProfileStringA("Files",     NULL, NULL, path.c_str());
+
+    
     // ===== Basic =====
     WriteString("Basic", "printer", data.printer, path);
 
@@ -56,19 +62,16 @@ void Write(const std::string& path, const ConfigData& data)
     if (!data.files.empty()) {
         WriteInt("Files", "count", (int)data.files.size(), path);
 
-        for (size_t i = 0; i < data.files.size(); ++i) {
+        for (int i = 0; i < (int)data.files.size(); ++i) {
             char key[64];
 
-            // path{i}
-            wsprintfA(key, "path%zu", i);
+            wsprintfA(key, "path%d", i);
             WriteString("Files", key, data.files[i].path, path);
 
-            // fromRange{i}
-            wsprintfA(key, "fromRange%zu", i);
+            wsprintfA(key, "fromRange%d", i);
             WriteInt("Files", key, data.files[i].fromRange, path);
 
-            // toRange{i}
-            wsprintfA(key, "toRange%zu", i);
+            wsprintfA(key, "toRange%d", i);
             WriteInt("Files", key, data.files[i].toRange, path);
         }
     }

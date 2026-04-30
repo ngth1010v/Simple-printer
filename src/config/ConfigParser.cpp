@@ -61,35 +61,35 @@ ConfigData Parse(const std::string& path)
     data.margin[3] = (float)ReadInt("Margin", "left",   (int)data.margin[3], path);
 
     // ===== Files =====
-    int count = ReadInt("Files", "count", 0, path);
-    data.files.clear();
+    // int count = ReadInt("Files", "count", 0, path);
+    // data.files.clear();
 
-    for (int i = 0; i < count; ++i) {
-        char key[64];
+    // for (int i = 0; i < count; ++i) {
+    //     char key[64];
 
-        // path{i}
-        wsprintfA(key, "path%d", i);
-        std::string filePath = ReadString("Files", key, "", path);
+    //     // path{i}
+    //     wsprintfA(key, "path%d", i);
+    //     std::string filePath = ReadString("Files", key, "", path);
 
-        if (filePath.empty()) {
-            continue; // skip invalid
-        }
+    //     if (filePath.empty()) {
+    //         continue; // skip invalid
+    //     }
 
-        // fromRange{i}
-        wsprintfA(key, "fromRange%d", i);
-        int from = ReadInt("Files", key, 0, path);
+    //     // fromRange{i}
+    //     wsprintfA(key, "fromRange%d", i);
+    //     int from = ReadInt("Files", key, 0, path);
 
-        // toRange{i}
-        wsprintfA(key, "toRange%d", i);
-        int to = ReadInt("Files", key, 0, path);
+    //     // toRange{i}
+    //     wsprintfA(key, "toRange%d", i);
+    //     int to = ReadInt("Files", key, 0, path);
 
-        FileData f;
-        f.path = filePath;
-        f.fromRange = from;
-        f.toRange = to;
+    //     FileData f;
+    //     f.path = filePath;
+    //     f.fromRange = from;
+    //     f.toRange = to;
 
-        data.files.push_back(f);
-    }
+    //     data.files.push_back(f);
+    // }
 
     return data;
 }
