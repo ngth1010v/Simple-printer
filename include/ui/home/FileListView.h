@@ -46,6 +46,7 @@ public:
     bool IsPointInside(int x, int y) const;
 
 private:
+    bool m_isInternalUpdate = false;
     HWND m_parent = nullptr;
     HWND m_hwnd = nullptr;   // list child window only
     HFONT m_font = nullptr;

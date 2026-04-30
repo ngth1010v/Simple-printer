@@ -440,6 +440,8 @@ void FileListView::DestroySelectedEdits() {
 }
 
 void FileListView::CommitSelectedEditsIfNeeded(bool forceCallback) {
+    if (m_isInternalUpdate) return;
+
     if (m_selectedIndex < 0 || m_selectedIndex >= (int)m_files.size()) return;
     if (!m_editFrom || !m_editTo) return;
 
@@ -823,12 +825,16 @@ void FileListView::Set(std::vector<UiFileData> files) {
         return;
     }
 
-    ClearSelection();
+    m_isInternalUpdate = true;   // 🔥 bắt đầu guard
+
+    ClearSelection();            // sẽ KHÔNG trigger callback nữa
     m_files = std::move(files);
     m_scrollY = 0;
     UpdateScrollBar();
     UpdateLayout();
     InvalidateRect(m_hwnd, nullptr, TRUE);
+
+    m_isInternalUpdate = false;  // 🔥 kết thúc guard
 }
 
 void FileListView::OnChangeRange(std::function<void(const std::string& path, const std::string& fromRange, const std::string& toRange)> cb) {
