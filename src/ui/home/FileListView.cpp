@@ -357,7 +357,7 @@ void FileListView::CreateSelectedEdits() {
         return;
     }
 
-    const FileData& data = m_files[m_selectedIndex];
+    const UiFileData& data = m_files[m_selectedIndex];
     RECT fromRc = GetFromRect(m_selectedIndex);
     RECT toRc = GetToRect(m_selectedIndex);
 
@@ -731,7 +731,7 @@ void FileListView::DrawRow(HDC hdc, int index, const RECT& clipRc) {
     RECT row = GetRowRect(index);
     if (row.bottom < clipRc.top || row.top > clipRc.bottom) return;
 
-    const FileData& data = m_files[index];
+    const UiFileData& data = m_files[index];
 
     bool parsed = false;
     COLORREF status = ParseColorString(data.statusColor, &parsed);
@@ -817,7 +817,7 @@ void FileListView::OnPaintStatic(HDC hdc, int parentWidth, int parentHeight) {
     SelectObject(hdc, oldFont);
 }
 
-void FileListView::Set(std::vector<FileData> files) {
+void FileListView::Set(std::vector<UiFileData> files) {
     if (!m_hwnd) {
         m_files = std::move(files);
         return;

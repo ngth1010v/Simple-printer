@@ -8,7 +8,7 @@
 namespace ui {
 namespace home {
 
-struct FileData {
+struct UiFileData {
     std::string path;
     std::string name;
     std::string statusColor;
@@ -23,7 +23,7 @@ public:
     bool Create(HWND parent, HFONT font);
     void Resize(int parentWidth, int parentHeight);
 
-    void Set(std::vector<FileData> files);
+    void Set(std::vector<UiFileData> files);
 
     void OnChangeRange(std::function<void(const std::string& path, const std::string& fromRange, const std::string& toRange)> cb);
     void OnMoveUp(std::function<void(const std::string& path)> cb);
@@ -50,7 +50,7 @@ private:
     HWND m_hwnd = nullptr;   // list child window only
     HFONT m_font = nullptr;
 
-    std::vector<FileData> m_files;
+    std::vector<UiFileData> m_files;
 
     int m_scrollY = 0;
     int m_maxScrollY = 0;
