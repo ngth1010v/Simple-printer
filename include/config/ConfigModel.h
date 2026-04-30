@@ -1,7 +1,14 @@
 #pragma once
 #include <string>
+#include <vector>
 
 namespace config {
+
+struct FileData {
+    std::string path;
+    int fromRange;
+    int toRange;
+};
 
 struct ConfigData {
     std::string printer     = "Microsoft Print to PDF";
@@ -15,6 +22,8 @@ struct ConfigData {
 
     // {top, right, bottom, left}
     float margin[4] = {1, 1, 1, 1};
+
+    std::vector<FileData> files;
 };
 
 }

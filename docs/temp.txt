@@ -1,118 +1,223 @@
-# TASKS:
-- tôi đang có 1 bug như sau:
-+ khi OnPrint, HomeWindow phải đóng sau đó mới mở PrintWindow nhưng hiện tại thì PrintWindow mở xong thì Home mới chịu đóng, có cách fix không?
+# TASK:
+- tôi có sẵn 3 file thao tác config bên dưới, hãy code lại hoàn bộ 2 file parser và writer để thêm chức năng đọc / ghi file
 
-# CODE:
-### HomeController.cpp:
+# INPUT:
+- ConfigModel.h
+- ConfigParser.h/cpp
+- ConfigWriter.h/cpp
 
-#include "controller/HomeController.h"
+# OUTPUT:
+- ConfigParser.cpp (full)
+- ConfigWriter.cpp (full)
 
-#include "ui/HomeWindow.h"
-#include "controller/PrintController.h"
+# FORMAT NEW .ini
+các fleid trước ...
+[Files]
+count=3
+path0=.\test.txt
+fromRange0=1
+toRange0=10
+path1=.\test2.txt
+fromRange1=5
+toRange1=10
+...
 
-#include "controller/home/BasicConfigSection.h"
-#include "controller/home/AdvangeConfigSection.h"
-#include "controller/home/MarginConfigSection.h"
-#include "controller/home/InfoConfigSection.h"
-#include "controller/home/ControlBlock.h"
-#include "controller/home/FileListView.h"
+# IDEA:
+- chỉ dùng winApi để đọc .ini
+- ConfigWriter:
++ giữ các fleid hiện tại nhưng thêm tính năng ghi Files như trên, nếu cfg.files empty thì không cần
+- ConfigParser:
++ giữ các config hiện tại 
 
-#include <windows.h>
+# NOTE:
+- nếu có thắc mắc, hãy hỏi tôi trước khi code
 
-namespace controller {
+# CODE
+### ConfigModel.h:
+#pragma once
+#include <string>
+#include <vector>
 
-HomeController::HomeController(config::ConfigData& cfg)
-    : m_cfg(cfg) {
+namespace config {
+
+struct FileData {
+    std::string path;
+    int fromRange;
+    int toRange;
+};
+
+struct ConfigData {
+    std::string printer     = "Microsoft Print to PDF";
+    int         copies      = 1;
+
+    std::string printMode   = "Simplex";
+    std::string paper       = "A4";
+    std::string scale       = "Fit to page (keep aspect ratio)";
+    std::string orientation = "Auto";
+    std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
+
+    // {top, right, bottom, left}
+    float margin[4] = {1, 1, 1, 1};
+
+    std::vector<FileData> files;
+};
+
 }
 
-int HomeController::Run()
+
+
+### ConfigParser.h:
+#pragma once
+#include <string>
+#include "config/ConfigModel.h"
+
+namespace config {
+
+ConfigData Parse(const std::string& path);
+
+}
+
+
+
+### ConfigParser.cpp:
+#include "config/ConfigParser.h"
+#include <windows.h>
+
+namespace config {
+
+static std::string ReadString(
+    const char* section,
+    const char* key,
+    const std::string& def,
+    const std::string& path)
 {
-    HomeWindow win;
-    if (!win.CreateWindowInstance()) return 0;
-    ShowWindow(win.GetHwnd(), SW_SHOW);
+    char buffer[512] = {};
+    GetPrivateProfileStringA(
+        section,
+        key,
+        def.c_str(),
+        buffer,
+        sizeof(buffer),
+        path.c_str()
+    );
+    return std::string(buffer);
+}
 
-    // ===== BASIC =====
-    controller::home::BasicConfigSectionController basic(win, m_cfg);
-    basic.Init();
-    basic.Bind();
+static int ReadInt(
+    const char* section,
+    const char* key,
+    int def,
+    const std::string& path)
+{
+    return GetPrivateProfileIntA(
+        section,
+        key,
+        def,
+        path.c_str()
+    );
+}
 
+ConfigData Parse(const std::string& path)
+{
+    ConfigData data;
 
-    // ===== ADVANCE =====
-    controller::home::AdvangeConfigSectionController adv(win, m_cfg);
-    adv.Init();
-    adv.Bind();
-
-
-    // ===== MARGIN =====
-    controller::home::MarginConfigSectionController margin(win, m_cfg);
-    margin.Init();
-    margin.Bind();
-
-
-    // ===== INFO =====
-    controller::home::InfoConfigSectionController info(win, m_cfg);
-    info.Init();
-    
-
-    // ===== FILE LIST =====
-    controller::home::FileListViewController files(win, m_cfg);
-    files.Init();
-    files.Bind();
-
-    
-    // ===== CONTROL =====
-    controller::home::ControlBlockController control(win, m_cfg);
-    control.Bind();
-
-
-    // ===== LOOP =====
-    MSG msg = {};
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+    DWORD attr = GetFileAttributesA(path.c_str());
+    if (attr == INVALID_FILE_ATTRIBUTES) {
+        return data;
     }
 
-    return 0;
+    // ===== Basic =====
+    data.printer = ReadString("Basic", "printer", data.printer, path);
+
+    // ===== Advance =====
+    data.printMode   = ReadString("Advance", "printMode",   data.printMode,   path);
+    data.paper       = ReadString("Advance", "paper",       data.paper,       path);
+    data.scale       = ReadString("Advance", "scale",       data.scale,       path);
+    data.orientation = ReadString("Advance", "orientation", data.orientation, path);
+    data.collate     = ReadString("Advance", "collate",     data.collate,     path);
+
+    // ===== Margin =====
+    data.margin[0] = ReadInt("Margin", "top",    data.margin[0], path);
+    data.margin[1] = ReadInt("Margin", "right",  data.margin[1], path);
+    data.margin[2] = ReadInt("Margin", "bottom", data.margin[2], path);
+    data.margin[3] = ReadInt("Margin", "left",   data.margin[3], path);
+
+    return data;
 }
 
 }
 
 
-### ControlBlock.cpp:
-#include "controller/home/ControlBlock.h"
 
-#include "controller/PrintController.h"
-#include "ui/HomeWindow.h"
+### ConfigWriter.h:
+#pragma once
+#include <string>
+#include "config/ConfigModel.h"
+
+namespace config {
+
+void Write(const std::string& path, const ConfigData& data);
+
+}
+
+
+
+### ConfigWriter.cpp:
 #include "config/ConfigWriter.h"
-
 #include <windows.h>
 
-using namespace controller::home;
+namespace config {
 
-ControlBlockController::ControlBlockController(HomeWindow& win, config::ConfigData& cfg)
-    : m_win(win), m_cfg(cfg) {
-}
-
-void ControlBlockController::Bind()
+static void WriteString(
+    const char* section,
+    const char* key,
+    const std::string& value,
+    const std::string& path)
 {
-    m_win.m_control.OnCancel([&]() {
-        config::Write("./config.ini", m_cfg);
-        DestroyWindow(m_win.GetHwnd());
-    });
+    WritePrivateProfileStringA(
+        section,
+        key,
+        value.c_str(),
+        path.c_str()
+    );
+}
 
-    m_win.m_control.OnPrint([&]() {
-        config::Write("./config.ini", m_cfg);
+static void WriteInt(
+    const char* section,
+    const char* key,
+    int value,
+    const std::string& path)
+{
+    char buffer[64];
+    wsprintfA(buffer, "%d", value);
 
-        // run print flow with current cfg
-        PrintController printer(m_cfg);
-        printer.Run();
+    WritePrivateProfileStringA(
+        section,
+        key,
+        buffer,
+        path.c_str()
+    );
+}
 
-        // close home window after print returns
-        if (m_win.GetHwnd()) {
-            DestroyWindow(m_win.GetHwnd());
-        }
-    });
+void Write(const std::string& path, const ConfigData& data)
+{
+    // ===== Basic =====
+    WriteString("Basic", "printer", data.printer, path);
+
+    // ===== Advance =====
+    WriteString("Advance", "printMode",   data.printMode,   path);
+    WriteString("Advance", "paper",       data.paper,       path);
+    WriteString("Advance", "scale",       data.scale,       path);
+    WriteString("Advance", "orientation", data.orientation, path);
+    WriteString("Advance", "collate",     data.collate,     path);
+
+    // ===== Margin =====
+    WriteInt("Margin", "top",    data.margin[0], path);
+    WriteInt("Margin", "right",  data.margin[1], path);
+    WriteInt("Margin", "bottom", data.margin[2], path);
+    WriteInt("Margin", "left",   data.margin[3], path);
+}
+
 }
 
 
-# NOTE: neu thieu thong tin, hãy hỏi tôi

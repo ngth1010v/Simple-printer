@@ -6,7 +6,6 @@
 #include <cctype>
 #include <string>
 #include <vector>
-#include <iostream>
 
 namespace {
 
@@ -66,8 +65,6 @@ static void BasicCopiesUiInit(HomeWindow& win, config::ConfigData& cfg) {
 static void BasicCopiesUiUpdate(HomeWindow& win, config::ConfigData& cfg, const std::string& v) {
     bool valid = true;
     if (v.empty()) valid = false;
-
-    std::cout << v << '\n';
 
     for (char c : v) {
         if (!std::isdigit(static_cast<unsigned char>(c))) {

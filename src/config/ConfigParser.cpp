@@ -55,10 +55,41 @@ ConfigData Parse(const std::string& path)
     data.collate     = ReadString("Advance", "collate",     data.collate,     path);
 
     // ===== Margin =====
-    data.margin[0] = ReadInt("Margin", "top",    data.margin[0], path);
-    data.margin[1] = ReadInt("Margin", "right",  data.margin[1], path);
-    data.margin[2] = ReadInt("Margin", "bottom", data.margin[2], path);
-    data.margin[3] = ReadInt("Margin", "left",   data.margin[3], path);
+    data.margin[0] = (float)ReadInt("Margin", "top",    (int)data.margin[0], path);
+    data.margin[1] = (float)ReadInt("Margin", "right",  (int)data.margin[1], path);
+    data.margin[2] = (float)ReadInt("Margin", "bottom", (int)data.margin[2], path);
+    data.margin[3] = (float)ReadInt("Margin", "left",   (int)data.margin[3], path);
+
+    // ===== Files =====
+    int count = ReadInt("Files", "count", 0, path);
+    data.files.clear();
+
+    for (int i = 0; i < count; ++i) {
+        char key[64];
+
+        // path{i}
+        wsprintfA(key, "path%d", i);
+        std::string filePath = ReadString("Files", key, "", path);
+
+        if (filePath.empty()) {
+            continue; // skip invalid
+        }
+
+        // fromRange{i}
+        wsprintfA(key, "fromRange%d", i);
+        int from = ReadInt("Files", key, 0, path);
+
+        // toRange{i}
+        wsprintfA(key, "toRange%d", i);
+        int to = ReadInt("Files", key, 0, path);
+
+        FileData f;
+        f.path = filePath;
+        f.fromRange = from;
+        f.toRange = to;
+
+        data.files.push_back(f);
+    }
 
     return data;
 }
