@@ -4,6 +4,6 @@
 
 namespace config {
 
-ConfigData Parse(const std::string& path);
+ConfigData Parse(const std::string& path, bool keepFiles = false);
 
 }

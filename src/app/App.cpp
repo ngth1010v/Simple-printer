@@ -37,7 +37,7 @@ int App::Run()
     const auto& files = CommandLine::GetArgs();
 
     // Config
-    auto cfg = config::Parse("./config.ini");
+    auto cfg = config::Parse("./config.ini", files.size() == 0);
     {
         for (const auto& f : files)
         {
