@@ -1,69 +1,428 @@
 # TASKS:
-- 
+- viết cho tôi full 6 file theo OUTPUT để thực hiện idea bên dưới
+
+
+# FOLDER TREE:
+controller/
+├── PrintController.h /cpp
+└── print/
+    ├── Counter.h/cpp
+    ├── Renderer.h/cpp
+
+
+# INPUT
+- ui/PrintWindow.h
+- PrintController.h (cũ)
+- PrintController.cpp (cũ)
+- counter/Counter.h (này là của counter/ không phải của controller/, Init và Destroy phải được dùng trong controller/print/Counter, không được dùng ờ PrintController da sẽ xung dột với render) 
+- renderer/Renderer.h (tương tự như counter/Counter.h nhưng phải dùng trong controller/print/Renderer)
 
 
 # EXPORT FUNCTION:
-- Renderer.h:
-+ void renderer::Init(int dpi)
-+ void renderer::Render(string srcPath, string targetPath, int page = 1, void callback nhận tham số: string error)
-+ void renderer::Shutdown()
+- PrintController:
++ Run()
 
-# FOLDER TREE:
-renderer/
-├── Renderer.cpp/.h
-├── ImageWorker.cpp/.h
-├── PdfWorker.cpp/.h
-└── DocxWorker.cpp/.h
 
 # IDEA:
-- workflow:
-+ Init():
-++ lưu dpi
-++ tạo 3 worker trong theard khác (chỉ được tạo 3 cái, không thêm)
+- PrintController sẽ:
++ giữ win 
++ bind và quản lí các con trong print/
++ tạo / clear folder "_temp_simple_printer" để chứa các file bmp sẽ render
++ khi đóng win sẽ tự xóa "_temp_simple_printer" 
 
-+ Render():
-++ xét ext của srcPath:
-+++ nếu là file ảnh:
-++++ đẩy vào pending của ImageWorker
-+++ nếu là file pdf:
-++++ đẩy vào pending của PdfWorker
-+++ nếu là file docx:
-++++ đẩy vào pending của DocxWorker
-+++ nếu không thuộc cái trên -> skip (không gọi cb)
+- Counter sẽ:
++ SetNotification = "Calculating pages..."
++ tính lại from-to page:
+++ kiểm tra nếu from == to == 0 (giá trị default) thì sẽ gọi Count để tính lại số trang file đó sau đó set vào cfg:
++++ from = 1
++++ to = số pages của file đó
++++ nếu count error -> mở 1 messenge box từ winapi (dùng build-in của win32, không cần ui phức tạp):
+++++ hỏi kiểu "file này đang lỗi, muốn đi tiếp trong khi skip file này không ? " 
+++++ cho 2 option continue và cancel , nếu click cancel thì đóng luôn win
 
-+ Shutdown():
-++ safe force shutdown các worker (chỉ gọi các worker để nó tự đóng)
+- Renderer sẽ:
++ tự tạo 1 theard riêng tách với ui
++ chạy for cho từng page trong từng file:
++ SetNotification = file + page đang render
++ SetResourceProcess = số page đã xong và số page mục tiêu
+++ đánh số tất cả các page từ 1 và coi nó như target name của page
+++ gọi Render vào "_temp_simple_printer", nếu bị trả error -> SetResourceProcessColor("red") + mở messenge giống Counter để dùng toàn bộ win, cho 2 option:
++++ skip this page -> tự qua page khác
++++ cancel -> đóng win
 
-+ ImageWorker:
-++ chuyển từ ảnh src sang target với độ phân giải mặc định của file gốc
-++ duyệt tuần tự theo thứ tự được add, không multitheard
-++ sau khi xong 1 ảnh -> fire callback của ảnh đó
-
-+ PdfWorker:
-++ render tuần tự từng page sang bmp với dpi được set ở init
-++ duyệt tuần tự theo thứ tự được add, không multitheard
-++ sau khi xong 1 page -> fire callback của page đó
-++ các page cùng srcPath thường sẽ được gọi kề nhau, hãy tận dụng để tăng tốc độ render
-
-+ DocxWorker:
-++ tự tạo 1 folder "_temp_simple_printer_docx"
-++ dùng Word COM để chuyển từ docx -> pdf vào trong _temp_simple_printer_docx (nhớ rename/map các file temp.pdf để tránh các file src khác path nhưng trùng tên)
-++ các file temp.pdf sẽ không được xóa cho đến khi shutdown xóa nó
-++ render tuần tự từng pdf page sang bmp với dpi được set ở init
-++ duyệt tuần tự theo thứ tự được add, không multitheard
-++ sau khi xong 1 page -> fire callback của page đó
-++ các page cùng srcPath thường sẽ được gọi kề nhau, hãy tận dụng để tăng tốc độ render
-
-++ khi Shutdown:
-+++ xóa folder "_temp_simple_printer_docx"
 
 # RULE:
-- code full cả 8 file
-- tất cả các code khác muốn truy cập render thì đều chỉ được đi qua Renderer.h
-- tất cả hàm (trừ các ultis chỉ dùng cho cpp) phải được bộc namespace renderer::
+- tất cả function (ngoại trừ các utils dùng trong cpp) phải được bọc namespace controller::, với các file con trong print/ thì controller::print::
+- code full cả 6 file
 
 # NOTE:
-- nếu có thiếu thông tin, hãy hỏi tôi, đừng đoán bừa
+- nếu có thiếu thông tin, hãy hỏi tôi trước khi code, không tự đoán bừa
+
+# CODE:
+### ui/PrintWindow.h:
+#pragma once
+
+#include "ui/BaseWindow.h"
+#include <string>
+#include <functional>
+
+namespace ui {
+    
+class PrintWindow : public BaseWindow {
+public:
+    bool CreateWindowInstance();
+
+    void SetResourceProcess(int target, int current);
+    void SetResourceProcessLabel(const std::wstring& content);
+    void SetResourceProcessColor(const std::string& color);
+
+    void SetPrintProcess(int target, int current);
+    void SetPrintProcessLabel(const std::wstring& content);
+    void SetPrintProcessColor(const std::string& color);
+
+    void SetAllowPause(bool allow = true);
+    void SetAllowContinue(bool allow = true);
+    void SetNotification(const std::wstring& content = L"");
+
+    void OnPause(std::function<void()> cb);
+    void OnContinue(std::function<void()> cb);
+    void OnCancel(std::function<void()> cb);
+
+protected:
+    LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) override;
+
+private:
+    HWND m_btnPause = nullptr;
+    HWND m_btnContinue = nullptr;
+    HWND m_btnCancel = nullptr;
+    HWND m_lblNotification = nullptr;
+
+    HFONT m_font = nullptr;
+    HFONT m_fontSmall = nullptr;
+
+    int m_resTarget = 0;
+    int m_resCurrent = 0;
+
+    int m_printTarget = 0;
+    int m_printCurrent = 0;
+
+    std::wstring m_resLabel = L"Rendering resources...";
+    std::wstring m_printLabel = L"Printing...";
+    std::wstring m_notification = L"";
+
+    COLORREF m_resColor = RGB(255,255,0);
+    COLORREF m_printColor = RGB(0,255,0);
+
+    bool m_allowPause = true;
+    bool m_allowContinue = true;
+
+    std::function<void()> m_cbPause;
+    std::function<void()> m_cbContinue;
+    std::function<void()> m_cbCancel;
+
+private:
+    void OnCreate();
+    void OnCommand(WPARAM wParam);
+    void OnPaint();
+
+    COLORREF ParseColor(const std::string& color);
+};
+
+}
+
+
+
+### PrintController.h:
+#pragma once
+
+#include "config/ConfigModel.h"
+
+namespace controller {
+
+class PrintController {
+public:
+    explicit PrintController(const config::ConfigData& cfg);
+
+    int Run();
+
+private:
+    config::ConfigData m_cfg;
+};
+
+}
+
+
+
+
+### PrintController.cpp :
+#include "controller/PrintController.h"
+#include "ui/PrintWindow.h"
+
+#include <windows.h>
+
+namespace controller {
+
+
+PrintController::PrintController(const config::ConfigData& cfg)
+    : m_cfg(cfg) {
+    (void)m_cfg;
+}
+
+int PrintController::Run()
+{
+    ui::PrintWindow win;
+
+    if (!win.CreateWindowInstance()) {
+        return 0;
+    }
+
+    ShowWindow(win.GetHwnd(), SW_SHOW);
+
+    // ===== INIT UI =====
+    win.SetResourceProcessLabel(L"Rendering resources...");
+    win.SetResourceProcess(20, 0);
+    win.SetResourceProcessColor("green");
+
+    win.SetPrintProcessLabel(L"Printing...");
+    win.SetPrintProcess(20, 0);
+    win.SetPrintProcessColor("green");
+
+    win.SetNotification(L"Wait for input...");
+
+    win.SetAllowPause(true);
+    win.SetAllowContinue(false);
+
+    // ===== CALLBACK =====
+    win.OnPause([&]() {
+        win.SetNotification(L"Paused...");
+        win.SetAllowPause(false);
+        win.SetAllowContinue(true);
+    });
+
+    win.OnContinue([&]() {
+        win.SetNotification(L"Continue...");
+        win.SetAllowPause(true);
+        win.SetAllowContinue(false);
+    });
+
+    win.OnCancel([&]() {
+        PostQuitMessage(0);
+    });
+
+    // ===== SIMULATION TIMER =====
+    SetTimer(win.GetHwnd(), 1, 100, nullptr);
+
+    int resCurrent = 0;
+    int printCurrent = 0;
+
+    // ===== MESSAGE LOOP =====
+    MSG msg = {};
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+
+        if (msg.message == WM_TIMER && msg.wParam == 1) {
+
+            if (resCurrent < 20) {
+                resCurrent++;
+                win.SetResourceProcess(20, resCurrent);
+            }
+            else if (printCurrent < 20) {
+                printCurrent++;
+                win.SetPrintProcess(20, printCurrent);
+            }
+            else {
+                win.SetNotification(L"Done!");
+                KillTimer(win.GetHwnd(), 1);
+            }
+        }
+
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    return 0;
+}
+
+}
+
+
+
+### counter/Counter.h:
+#pragma once
+#include <string>
+#include <functional>
+#include <memory>
+
+namespace counter {
+
+using CountCallback = std::function<void(int pages, const std::string& error)>;
+
+void Init();
+void Count(const std::string& path, CountCallback cb);
+void Shutdown(); // rename từ Close
+
+}
+
+
+
+### renderer/Renderer.h:
+#pragma once
+
+#include <functional>
+#include <string>
+
+namespace renderer {
+
+using RenderCallback = std::function<void(std::string error)>;
+
+void Init(int dpi);
+void Render(const std::string& srcPath,
+            const std::string& targetPath,
+            int page = 1,
+            RenderCallback callback = {});
+void Shutdown();
+
+} // namespace renderer
+
+
+
+# THÔNG TIN THÊM
+### ConfigModel.h:
+#pragma once
+#include <string>
+#include <vector>
+
+namespace config {
+
+struct FileData {
+    std::string path;
+    int pages = 0;
+    int fromRange;
+    int toRange;
+    bool loaded = false;
+};
+
+struct ConfigData {
+    std::string printer     = "Microsoft Print to PDF";
+    int         copies      = 1;
+
+    std::string printMode   = "Simplex";
+    std::string paper       = "A4";
+    std::string scale       = "Fit to page (keep aspect ratio)";
+    std::string orientation = "Auto";
+    std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
+
+    // {top, right, bottom, left}
+    float margin[4] = {1, 1, 1, 1};
+
+    std::vector<FileData> files;
+};
+
+}
+
+
+### App.cpp (bên dùng PrintController)
+#include "app/App.h"
+#include "app/CommandLine.h"
+#include "config/ConfigParser.h"
+#include "platform/WinPrinter.h"
+
+#include "controller/HomeController.h"
+#include "controller/PrintController.h"
+
+#include <windows.h> 
+#include <string>
+
+// helper: bỏ quote nếu có
+static std::string StripQuotes(const std::string& s)
+{
+    if (s.size() >= 2) {
+        if ((s.front() == '"' && s.back() == '"') ||
+            (s.front() == '\'' && s.back() == '\'')) {
+            return s.substr(1, s.size() - 2);
+        }
+    }
+    return s;
+}
+
+// helper: check tồn tại file (WinAPI)
+static bool FileExists(const std::string& path)
+{
+    DWORD attr = GetFileAttributesA(path.c_str());
+    return (attr != INVALID_FILE_ATTRIBUTES &&
+            !(attr & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+
+
+int App::Run()
+{
+    bool isPrint = CommandLine::HasFlag("print");
+    const auto& files = CommandLine::GetArgs();
+
+    // Config
+    auto cfg = config::Parse("./config.ini", files.size() == 0);
+    {
+        for (const auto& f : files)
+        {
+            std::string path = StripQuotes(f);
+
+            if (!FileExists(path)) {
+                continue;
+            }
+
+            config::FileData fd;
+            fd.path = path;
+            fd.fromRange = 0;
+            fd.toRange   = 0;
+            fd.pages     = 0;
+            fd.loaded    = false;
+
+            cfg.files.push_back(fd);
+        }
+    }
+
+
+
+    // ===== UI MODE =====
+    if (!isPrint) {
+        controller::HomeController ctrl(cfg);
+        return ctrl.Run();
+    }
+
+    // ===== PRINT MODE =====
+    auto printers = platform::printer::GetPrinters();
+
+    bool printerMatch = false;
+    for (const auto& p : printers) {
+        if (p == cfg.printer) {
+            printerMatch = true;
+            break;
+        }
+    }
+
+    if (printerMatch) {
+        controller::PrintController ctrl(cfg);
+        return ctrl.Run();
+    }
+
+    // ===== NOT MATCH =====
+    int result = MessageBoxA(
+        nullptr,
+        "The printer in config was not found.\nDo you want to open the UI to select another printer?",
+        "Printer not found",
+        MB_YESNO | MB_ICONQUESTION
+    );
+
+    if (result == IDYES) {
+        controller::HomeController ctrl(cfg);
+        return ctrl.Run();
+    }
+
+    return 0;
+}
+
+
+
 
 
 

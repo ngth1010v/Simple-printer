@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(SimplePrinter)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # =========================
@@ -24,6 +24,7 @@ file(GLOB SOURCES
     "src/config/*.cpp"
     "src/controller/*.cpp"
     "src/controller/home/*.cpp"
+    "src/controller/print/*.cpp"
     "src/counter/*.cpp"
     "src/platform/*.cpp"
     "src/renderer/*.cpp"

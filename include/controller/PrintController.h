@@ -14,4 +14,4 @@ private:
     config::ConfigData m_cfg;
 };
 
-}
+} // namespace controller

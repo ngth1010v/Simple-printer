@@ -1,88 +1,140 @@
 #include "controller/PrintController.h"
+#include "controller/print/Counter.h"
+
 #include "ui/PrintWindow.h"
 
 #include <windows.h>
 
+#include <atomic>
+#include <filesystem>
+#include <string>
+#include <thread>
+#include <vector>
+
 namespace controller {
+namespace fs = std::filesystem;
 
+namespace {
 
-PrintController::PrintController(const config::ConfigData& cfg)
-    : m_cfg(cfg) {
-    (void)m_cfg;
+bool ClearTempFolder(const fs::path& dir) {
+    std::error_code ec;
+
+    if (fs::exists(dir, ec)) {
+        fs::remove_all(dir, ec);
+        if (ec) {
+            return false;
+        }
+    }
+
+    fs::create_directories(dir, ec);
+    return !ec;
 }
 
-int PrintController::Run()
-{
-    ui::PrintWindow win;
+} // namespace
 
+
+
+PrintController::PrintController(const config::ConfigData& cfg): m_cfg(cfg) {}
+
+int PrintController::Run() {
+
+    //===================================================
+    // Create window
+    ui::PrintWindow win;
     if (!win.CreateWindowInstance()) {
         return 0;
     }
-
     ShowWindow(win.GetHwnd(), SW_SHOW);
+    UpdateWindow(win.GetHwnd());
 
-    // ===== INIT UI =====
-    win.SetResourceProcessLabel(L"Rendering resources...");
-    win.SetResourceProcess(20, 0);
-    win.SetResourceProcessColor("green");
 
-    win.SetPrintProcessLabel(L"Printing...");
-    win.SetPrintProcess(20, 0);
-    win.SetPrintProcessColor("green");
 
-    win.SetNotification(L"Wait for input...");
+    //===================================================
+    // Create temp dir
+    const fs::path tempFolder = fs::current_path() / "_temp_simple_printer";
+    {
+        if (!ClearTempFolder(tempFolder)) {
+            MessageBoxW(
+                win.GetHwnd(),
+                L"Cannot create or clear the temp folder \"_temp_simple_printer\".",
+                L"Print error",
+                MB_OK | MB_ICONERROR
+            );
+            return 0;
+        }
+    }
 
-    win.SetAllowPause(true);
-    win.SetAllowContinue(false);
 
-    // ===== CALLBACK =====
-    win.OnPause([&]() {
-        win.SetNotification(L"Paused...");
+
+    //===================================================
+    // Init flag
+    std::atomic<bool> runFlag{false};
+    std::atomic<bool> cancelFlag{false};
+    bool printing = false;
+
+    controller::print::Counter::Init(m_cfg, runFlag, cancelFlag);
+
+
+
+
+    //===================================================
+    // Create default value for win ui 
+    {
+        win.SetResourceProcessLabel(L"Rendering resources...");
+        win.SetResourceProcessColor("green");
+        win.SetResourceProcess(0, 0);
+
+        win.SetPrintProcessLabel(L"Printing...");
+        win.SetPrintProcessColor("green");
+        win.SetPrintProcess(0, 0);
+
+        win.SetNotification(L"Calculating pages...");
         win.SetAllowPause(false);
-        win.SetAllowContinue(true);
-    });
-
-    win.OnContinue([&]() {
-        win.SetNotification(L"Continue...");
-        win.SetAllowPause(true);
         win.SetAllowContinue(false);
-    });
 
-    win.OnCancel([&]() {
-        PostQuitMessage(0);
-    });
+        win.OnCancel([&]() {
+            cancelFlag.store(true, std::memory_order_relaxed);
+        });
+    }
 
-    // ===== SIMULATION TIMER =====
-    SetTimer(win.GetHwnd(), 1, 100, nullptr);
+    
 
-    int resCurrent = 0;
-    int printCurrent = 0;
-
-    // ===== MESSAGE LOOP =====
+    //===================================================
+    // Message loop
     MSG msg = {};
     while (GetMessage(&msg, nullptr, 0, 0)) {
 
-        if (msg.message == WM_TIMER && msg.wParam == 1) {
 
-            if (resCurrent < 20) {
-                resCurrent++;
-                win.SetResourceProcess(20, resCurrent);
-            }
-            else if (printCurrent < 20) {
-                printCurrent++;
-                win.SetPrintProcess(20, printCurrent);
-            }
-            else {
-                win.SetNotification(L"Done!");
-                KillTimer(win.GetHwnd(), 1);
-            }
+
+        //===================================================
+        // CANCLE
+        if (cancelFlag.load(std::memory_order_relaxed)) {
+            PostQuitMessage(0);
         }
 
+
+        //===================================================
+        // DONE COUNTER
+        if (runFlag.load(std::memory_order_relaxed)) {
+
+            // Cleanup
+            win.SetNotification(L"");
+            controller::print::Counter::Destroy();
+        }
+        
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+    
+    
+    //===================================================
+    // Clean up 
+    controller::print::Counter::Destroy();
+
+    std::error_code ec;
+    fs::remove_all(tempFolder, ec);
 
     return 0;
 }
 
-}
+} // namespace controller

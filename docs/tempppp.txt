@@ -1,0 +1,116 @@
+# TASKS:
+- viết cho tôi 2 file Renderer.h/cpp để render từng trang của file ảnh/doc/pdf bằng hàm có sẵn
+
+# ENV:
+- urtc64 + ninja + cpp20
+
+# INPUT:
+- renderer/Renderer.h
+- config/ConfigModel.h
+
+# OUTPUT:
+- controller/print/Renderer.h (full)
+- controller/print/Renderer.cpp (full)
+
+# EXPORT FUNCTION:
+- controller::print::Renderer::Init(config::ConfigData& cfg, string tempDir, int dpi, atomic<bool>& cancelFlag, ui::PrintWindow& win)
+- controller::print::Renderer::Run()
+- controller::print::Renderer::Destroy()
+
+# IDEA:
+- khi được gọi Init, Renderer sẽ:
++ lưu tham số lại
++ không làm gì thêm (quan trọng: không gọi renderer::Init ở đây)
+
+- khi được gọi Run(), Renderer sẽ:
++ win.SetResourceProcessLabel(L"Rendering resources...");
++ win.SetResourceProcessColor("green");
++ win.SetResourceProcess(tổng số trang cần render, 0);
++ chạy renderer::Init()
++ chạy renderer::Render hết range trong từng file trong cfg.files để render từng file với quy tắc đặt tên targetPath như sau:
+++ bắt đầu từ 1, đặt tên các file tăng dần với đuôi .bmp và phải đảm bảo tên luôn liền mạch
+++ ví dụ: "tempDir/1.bmp", "tempDir/2.bmp", ...
++ sau khi các trang chạy xong sẽ được gọi cb, lúc đó hãy trong mỗi cb sẽ:
+++ xem pages trả về có error không (nếu có thì error != empty)
++++ nếu error:
+++++ win.SetResourceProcessColor("red");
+++++ chạy 1 messengebox bằng winapi log lỗi ra và cho user chọn:
++++++ 'skip this page' -> skip + win.SetResourceProcessColor("green") + win.SetResourceProcess(tổng số page còn lại, số page đã render thành công);
++++++ 'cancel' -> sẽ set cancelFlag = true + return
++++ nếu không error:
+++++ win.SetResourceProcess(tổng số page còn lại, số page đã render thành công);
++ sau khi tất cả cb đã được trả về mà không có cancel giữa chùng thì return 
+
+- Destroy():
++ gọi renderer::Destroy()
++ cleanup nếu cần
+
+- *note: 
++ renderer::Count chạy theo kiểu async, tức gọi xong nó sẽ tự đẩy qua cho theard khác rồi trả quyền ngay
++ Destroy() chỉ được dùng từ bên ngoài, không tự gọi destroy trong controller::print::Renderer
+
+# RULE:
+- code đơn giản, không quá overskill, tận dụng cpp20 để làm code đơn giản hơn
+- tối ưu cho cpu yếu
+- mọi function (ngoại trừ utils nhỏ phục vụ cho cpp) đều phải được bọc namespace hoặc class: controller::print::Renderer 
+- code full 2 file tôi yêu cầu
+
+# NOTE:
+- nếu thiếu thông tin hay có mơ hổ logic, hãy hỏi tôi trước khi thực hiện bất cứ yêu cầu nào bên trên
+
+# INPUT CODE:
+### renderer/Renderer.h:
+#pragma once
+
+#include <functional>
+#include <string>
+
+namespace renderer {
+
+using RenderCallback = std::function<void(std::string error)>;
+
+void Init(int dpi);
+void Render(const std::string& srcPath,
+            const std::string& targetPath,
+            int page = 1,
+            RenderCallback callback = {});
+void Shutdown();
+
+} // namespace renderer
+
+
+
+### config/ConfigModel.h:
+#pragma once
+#include <string>
+#include <vector>
+
+namespace config {
+
+struct FileData {
+    std::string path;
+    int pages = 0;
+    int fromRange;
+    int toRange;
+    bool loaded = false;
+};
+
+struct ConfigData {
+    std::string printer     = "Microsoft Print to PDF";
+    int         copies      = 1;
+
+    std::string printMode   = "Simplex";
+    std::string paper       = "A4";
+    std::string scale       = "Fit to page (keep aspect ratio)";
+    std::string orientation = "Auto";
+    std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
+
+    // {top, right, bottom, left}
+    float margin[4] = {1, 1, 1, 1};
+
+    std::vector<FileData> files;
+};
+
+}
+
+
