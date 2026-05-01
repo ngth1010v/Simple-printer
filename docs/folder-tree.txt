@@ -51,13 +51,18 @@ Simple-printer/
 │   ├── controller/
 │   │   ├── PrintController.h (done)
 │   │   ├── HomeController.h (done)
-│   │   └── home/
-│   │       ├── ControlBlock.h (done)
-│   │       ├── BasicConfigSection.h (done)
-│   │       ├── AdvangeConfigSection.h (done)
-│   │       ├── MarginConfigSection.h (done)
-│   │       ├── InfoConfigSection.h (done)
-│   │       └── FileListView.h (done)
+│   │   │
+│   │   ├── home/
+│   │   │   ├── ControlBlock.h (done)
+│   │   │   ├── BasicConfigSection.h (done)
+│   │   │   ├── AdvangeConfigSection.h (done)
+│   │   │   ├── MarginConfigSection.h (done)
+│   │   │   ├── InfoConfigSection.h (done)
+│   │   │   └── FileListView.h (done)
+│   │   │
+│   │   └── print/
+│   │       ├── Renderer.h
+│   │       └── Printer.h
 │   │
 │   └── app/
 │       ├── App.h (done)
@@ -113,13 +118,18 @@ Simple-printer/
 │   ├── controller/
 │   │   ├── PrintController.cpp (done)
 │   │   ├── HomeController.cpp (done)
-│   │   └── home/
-│   │       ├── BasicConfigSection.cpp (done)
-│   │       ├── AdvangeConfigSection.cpp (done)
-│   │       ├── MarginConfigSection.cpp (done)
-│   │       ├── InfoConfigSection.cpp (done)
-│   │       ├── ControlBlock.cpp  (done)
-│   │       └── FileListView.cpp (done)
+│   │   │ 
+│   │   ├── home/
+│   │   │   ├── BasicConfigSection.cpp (done)
+│   │   │   ├── AdvangeConfigSection.cpp (done)
+│   │   │   ├── MarginConfigSection.cpp (done)
+│   │   │   ├── InfoConfigSection.cpp (done)
+│   │   │   ├── ControlBlock.cpp  (done)
+│   │   │   └── FileListView.cpp (done)
+│   │   │
+│   │   └── print/
+│   │       ├── Renderer.cpp
+│   │       └── Printer.cpp
 │   │
 │   ├── app/
 │   │   ├── App.cpp (wait for update)

@@ -1,4 +1,4 @@
-#include "ui/PrintingWindow.h"
+#include "ui/PrintWindow.h"
 
 #define ID_BTN_PAUSE     1001
 #define ID_BTN_CONTINUE 1002
@@ -10,12 +10,12 @@
 #define SECTION_GAP 10
 
 
-
+namespace ui {
 // ================= CREATE =================
 
-bool PrintingWindow::CreateWindowInstance() {
+bool PrintWindow::CreateWindowInstance() {
     return Create(
-        L"PrintingWindowClass",
+        L"PrintWindowClass",
         L"Printing...",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, // có taskbar
         0,
@@ -28,68 +28,68 @@ bool PrintingWindow::CreateWindowInstance() {
 
 // ================= PUBLIC =================
 
-void PrintingWindow::SetResourceProcess(int t, int c) {
+void PrintWindow::SetResourceProcess(int t, int c) {
     m_resTarget = t;
     m_resCurrent = c;
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
-void PrintingWindow::SetResourceProcessLabel(const std::wstring& s) {
+void PrintWindow::SetResourceProcessLabel(const std::wstring& s) {
     m_resLabel = s;
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
-void PrintingWindow::SetResourceProcessColor(const std::string& c) {
+void PrintWindow::SetResourceProcessColor(const std::string& c) {
     m_resColor = ParseColor(c);
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
-void PrintingWindow::SetPrintProcess(int t, int c) {
+void PrintWindow::SetPrintProcess(int t, int c) {
     m_printTarget = t;
     m_printCurrent = c;
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
-void PrintingWindow::SetPrintProcessLabel(const std::wstring& s) {
+void PrintWindow::SetPrintProcessLabel(const std::wstring& s) {
     m_printLabel = s;
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
-void PrintingWindow::SetPrintProcessColor(const std::string& c) {
+void PrintWindow::SetPrintProcessColor(const std::string& c) {
     m_printColor = ParseColor(c);
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
-void PrintingWindow::SetAllowPause(bool allow) {
+void PrintWindow::SetAllowPause(bool allow) {
     m_allowPause = allow;
     if (m_btnPause) EnableWindow(m_btnPause, allow);
 }
 
-void PrintingWindow::SetAllowContinue(bool allow) {
+void PrintWindow::SetAllowContinue(bool allow) {
     m_allowContinue = allow;
     if (m_btnContinue) EnableWindow(m_btnContinue, allow);
 }
 
-void PrintingWindow::SetNotification(const std::wstring& s) {
+void PrintWindow::SetNotification(const std::wstring& s) {
     if (m_notification == s) return;
     m_notification = s;
     InvalidateRect(GetHwnd(), nullptr, FALSE);
 }
 
-void PrintingWindow::OnPause(std::function<void()> cb) { m_cbPause = cb; }
-void PrintingWindow::OnContinue(std::function<void()> cb) { m_cbContinue = cb; }
-void PrintingWindow::OnCancel(std::function<void()> cb) { m_cbCancel = cb; }
+void PrintWindow::OnPause(std::function<void()> cb) { m_cbPause = cb; }
+void PrintWindow::OnContinue(std::function<void()> cb) { m_cbContinue = cb; }
+void PrintWindow::OnCancel(std::function<void()> cb) { m_cbCancel = cb; }
 
 // ================= INTERNAL =================
 
-COLORREF PrintingWindow::ParseColor(const std::string& c) {
+COLORREF PrintWindow::ParseColor(const std::string& c) {
     if (c == "red") return RGB(200,0,0);
     if (c == "green") return RGB(0,200,0);
     if (c == "yellow") return RGB(200,200,0);
     return RGB(200,200,200);
 }
 
-void PrintingWindow::OnCreate() {
+void PrintWindow::OnCreate() {
     // ===== STYLE FIX (rất quan trọng cho flicker) =====
     SetWindowLong(GetHwnd(), GWL_STYLE,
         GetWindowLong(GetHwnd(), GWL_STYLE) | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
@@ -168,7 +168,7 @@ void PrintingWindow::OnCreate() {
     EnableWindow(m_btnContinue, m_allowContinue);
 }
 
-void PrintingWindow::OnCommand(WPARAM wParam) {
+void PrintWindow::OnCommand(WPARAM wParam) {
     switch (LOWORD(wParam)) {
     case ID_BTN_PAUSE:
         if (m_allowPause && m_cbPause) m_cbPause();
@@ -183,7 +183,7 @@ void PrintingWindow::OnCommand(WPARAM wParam) {
 }
 
 // ================= RENDER =================
-void PrintingWindow::OnPaint() {
+void PrintWindow::OnPaint() {
     PAINTSTRUCT ps;
     HDC hdc = BeginPaint(GetHwnd(), &ps);
 
@@ -318,7 +318,7 @@ void PrintingWindow::OnPaint() {
 }
 
 // ================= MSG =================
-LRESULT PrintingWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT PrintWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
 
     case WM_CREATE:
@@ -412,4 +412,6 @@ LRESULT PrintingWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     }
 
     return BaseWindow::HandleMessage(msg, wParam, lParam);
+}
+
 }

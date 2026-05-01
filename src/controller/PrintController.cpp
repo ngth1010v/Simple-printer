@@ -1,5 +1,5 @@
 #include "controller/PrintController.h"
-#include "ui/PrintingWindow.h"
+#include "ui/PrintWindow.h"
 
 #include <windows.h>
 
@@ -13,7 +13,7 @@ PrintController::PrintController(const config::ConfigData& cfg)
 
 int PrintController::Run()
 {
-    PrintingWindow win;
+    ui::PrintWindow win;
 
     if (!win.CreateWindowInstance()) {
         return 0;

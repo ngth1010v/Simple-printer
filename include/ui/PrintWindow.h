@@ -4,7 +4,9 @@
 #include <string>
 #include <functional>
 
-class PrintingWindow : public BaseWindow {
+namespace ui {
+    
+class PrintWindow : public BaseWindow {
 public:
     bool CreateWindowInstance();
 
@@ -63,3 +65,5 @@ private:
 
     COLORREF ParseColor(const std::string& color);
 };
+
+}
