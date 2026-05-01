@@ -1,5 +1,6 @@
 #include "controller/PrintController.h"
 #include "controller/print/Counter.h"
+#include "controller/print/Renderer.h"
 
 #include "ui/PrintWindow.h"
 
@@ -73,6 +74,8 @@ int PrintController::Run() {
     bool printing = false;
 
     controller::print::Counter::Init(m_cfg, runFlag, cancelFlag);
+    controller::print::Renderer renderer;
+    
 
 
 
@@ -115,11 +118,18 @@ int PrintController::Run() {
 
         //===================================================
         // DONE COUNTER
-        if (runFlag.load(std::memory_order_relaxed)) {
+        if (runFlag.load(std::memory_order_relaxed) && !printing) {
+            printing = true;
 
-            // Cleanup
+            // Cleanup Counter
             win.SetNotification(L"");
+            win.SetAllowPause(true);
             controller::print::Counter::Destroy();
+
+
+            // Start render
+            renderer.Init(m_cfg, tempFolder.string(), 300, cancelFlag, win );
+            renderer.Run();
         }
         
         TranslateMessage(&msg);
@@ -130,6 +140,7 @@ int PrintController::Run() {
     //===================================================
     // Clean up 
     controller::print::Counter::Destroy();
+    renderer.Destroy();
 
     std::error_code ec;
     fs::remove_all(tempFolder, ec);
