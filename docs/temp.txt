@@ -1,428 +1,173 @@
-# TASKS:
-- viết cho tôi full 6 file theo OUTPUT để thực hiện idea bên dưới
-
-
-# FOLDER TREE:
-controller/
-├── PrintController.h /cpp
-└── print/
-    ├── Counter.h/cpp
-    ├── Renderer.h/cpp
-
-
-# INPUT
-- ui/PrintWindow.h
-- PrintController.h (cũ)
-- PrintController.cpp (cũ)
-- counter/Counter.h (này là của counter/ không phải của controller/, Init và Destroy phải được dùng trong controller/print/Counter, không được dùng ờ PrintController da sẽ xung dột với render) 
-- renderer/Renderer.h (tương tự như counter/Counter.h nhưng phải dùng trong controller/print/Renderer)
-
-
-# EXPORT FUNCTION:
-- PrintController:
-+ Run()
-
-
-# IDEA:
-- PrintController sẽ:
-+ giữ win 
-+ bind và quản lí các con trong print/
-+ tạo / clear folder "_temp_simple_printer" để chứa các file bmp sẽ render
-+ khi đóng win sẽ tự xóa "_temp_simple_printer" 
-
-- Counter sẽ:
-+ SetNotification = "Calculating pages..."
-+ tính lại from-to page:
-++ kiểm tra nếu from == to == 0 (giá trị default) thì sẽ gọi Count để tính lại số trang file đó sau đó set vào cfg:
-+++ from = 1
-+++ to = số pages của file đó
-+++ nếu count error -> mở 1 messenge box từ winapi (dùng build-in của win32, không cần ui phức tạp):
-++++ hỏi kiểu "file này đang lỗi, muốn đi tiếp trong khi skip file này không ? " 
-++++ cho 2 option continue và cancel , nếu click cancel thì đóng luôn win
-
-- Renderer sẽ:
-+ tự tạo 1 theard riêng tách với ui
-+ chạy for cho từng page trong từng file:
-+ SetNotification = file + page đang render
-+ SetResourceProcess = số page đã xong và số page mục tiêu
-++ đánh số tất cả các page từ 1 và coi nó như target name của page
-++ gọi Render vào "_temp_simple_printer", nếu bị trả error -> SetResourceProcessColor("red") + mở messenge giống Counter để dùng toàn bộ win, cho 2 option:
-+++ skip this page -> tự qua page khác
-+++ cancel -> đóng win
-
+#TASKS:
+- từ code có sẳn bên dưới, hảy viết cho tôi thêm hàm để lấy DPI nhận tham số là string name của máy in
 
 # RULE:
-- tất cả function (ngoại trừ các utils dùng trong cpp) phải được bọc namespace controller::, với các file con trong print/ thì controller::print::
-- code full cả 6 file
+- chỉ cần chỉ tôi thêm code / không cần code hết lại
 
 # NOTE:
-- nếu có thiếu thông tin, hãy hỏi tôi trước khi code, không tự đoán bừa
+- nếu chó thắc mắc / thiếu thông tin, hãy hỏi kĩ tôi trước khi code
 
 # CODE:
-### ui/PrintWindow.h:
-#pragma once
-
-#include "ui/BaseWindow.h"
-#include <string>
-#include <functional>
-
-namespace ui {
-    
-class PrintWindow : public BaseWindow {
-public:
-    bool CreateWindowInstance();
-
-    void SetResourceProcess(int target, int current);
-    void SetResourceProcessLabel(const std::wstring& content);
-    void SetResourceProcessColor(const std::string& color);
-
-    void SetPrintProcess(int target, int current);
-    void SetPrintProcessLabel(const std::wstring& content);
-    void SetPrintProcessColor(const std::string& color);
-
-    void SetAllowPause(bool allow = true);
-    void SetAllowContinue(bool allow = true);
-    void SetNotification(const std::wstring& content = L"");
-
-    void OnPause(std::function<void()> cb);
-    void OnContinue(std::function<void()> cb);
-    void OnCancel(std::function<void()> cb);
-
-protected:
-    LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) override;
-
-private:
-    HWND m_btnPause = nullptr;
-    HWND m_btnContinue = nullptr;
-    HWND m_btnCancel = nullptr;
-    HWND m_lblNotification = nullptr;
-
-    HFONT m_font = nullptr;
-    HFONT m_fontSmall = nullptr;
-
-    int m_resTarget = 0;
-    int m_resCurrent = 0;
-
-    int m_printTarget = 0;
-    int m_printCurrent = 0;
-
-    std::wstring m_resLabel = L"Rendering resources...";
-    std::wstring m_printLabel = L"Printing...";
-    std::wstring m_notification = L"";
-
-    COLORREF m_resColor = RGB(255,255,0);
-    COLORREF m_printColor = RGB(0,255,0);
-
-    bool m_allowPause = true;
-    bool m_allowContinue = true;
-
-    std::function<void()> m_cbPause;
-    std::function<void()> m_cbContinue;
-    std::function<void()> m_cbCancel;
-
-private:
-    void OnCreate();
-    void OnCommand(WPARAM wParam);
-    void OnPaint();
-
-    COLORREF ParseColor(const std::string& color);
-};
-
-}
-
-
-
-### PrintController.h:
-#pragma once
-
-#include "config/ConfigModel.h"
-
-namespace controller {
-
-class PrintController {
-public:
-    explicit PrintController(const config::ConfigData& cfg);
-
-    int Run();
-
-private:
-    config::ConfigData m_cfg;
-};
-
-}
-
-
-
-
-### PrintController.cpp :
-#include "controller/PrintController.h"
-#include "ui/PrintWindow.h"
-
-#include <windows.h>
-
-namespace controller {
-
-
-PrintController::PrintController(const config::ConfigData& cfg)
-    : m_cfg(cfg) {
-    (void)m_cfg;
-}
-
-int PrintController::Run()
-{
-    ui::PrintWindow win;
-
-    if (!win.CreateWindowInstance()) {
-        return 0;
-    }
-
-    ShowWindow(win.GetHwnd(), SW_SHOW);
-
-    // ===== INIT UI =====
-    win.SetResourceProcessLabel(L"Rendering resources...");
-    win.SetResourceProcess(20, 0);
-    win.SetResourceProcessColor("green");
-
-    win.SetPrintProcessLabel(L"Printing...");
-    win.SetPrintProcess(20, 0);
-    win.SetPrintProcessColor("green");
-
-    win.SetNotification(L"Wait for input...");
-
-    win.SetAllowPause(true);
-    win.SetAllowContinue(false);
-
-    // ===== CALLBACK =====
-    win.OnPause([&]() {
-        win.SetNotification(L"Paused...");
-        win.SetAllowPause(false);
-        win.SetAllowContinue(true);
-    });
-
-    win.OnContinue([&]() {
-        win.SetNotification(L"Continue...");
-        win.SetAllowPause(true);
-        win.SetAllowContinue(false);
-    });
-
-    win.OnCancel([&]() {
-        PostQuitMessage(0);
-    });
-
-    // ===== SIMULATION TIMER =====
-    SetTimer(win.GetHwnd(), 1, 100, nullptr);
-
-    int resCurrent = 0;
-    int printCurrent = 0;
-
-    // ===== MESSAGE LOOP =====
-    MSG msg = {};
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-
-        if (msg.message == WM_TIMER && msg.wParam == 1) {
-
-            if (resCurrent < 20) {
-                resCurrent++;
-                win.SetResourceProcess(20, resCurrent);
-            }
-            else if (printCurrent < 20) {
-                printCurrent++;
-                win.SetPrintProcess(20, printCurrent);
-            }
-            else {
-                win.SetNotification(L"Done!");
-                KillTimer(win.GetHwnd(), 1);
-            }
-        }
-
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-
-    return 0;
-}
-
-}
-
-
-
-### counter/Counter.h:
-#pragma once
-#include <string>
-#include <functional>
-#include <memory>
-
-namespace counter {
-
-using CountCallback = std::function<void(int pages, const std::string& error)>;
-
-void Init();
-void Count(const std::string& path, CountCallback cb);
-void Shutdown(); // rename từ Close
-
-}
-
-
-
-### renderer/Renderer.h:
-#pragma once
-
-#include <functional>
-#include <string>
-
-namespace renderer {
-
-using RenderCallback = std::function<void(std::string error)>;
-
-void Init(int dpi);
-void Render(const std::string& srcPath,
-            const std::string& targetPath,
-            int page = 1,
-            RenderCallback callback = {});
-void Shutdown();
-
-} // namespace renderer
-
-
-
-# THÔNG TIN THÊM
-### ConfigModel.h:
+### WinPrinter.h:
 #pragma once
 #include <string>
 #include <vector>
 
-namespace config {
+namespace platform {
+namespace printer {
 
-struct FileData {
-    std::string path;
-    int pages = 0;
-    int fromRange;
-    int toRange;
-    bool loaded = false;
-};
+std::vector<std::string> GetPrinters();
 
-struct ConfigData {
-    std::string printer     = "Microsoft Print to PDF";
-    int         copies      = 1;
+std::vector<std::string> GetSupportedPapers(const std::string& printerName);
 
-    std::string printMode   = "Simplex";
-    std::string paper       = "A4";
-    std::string scale       = "Fit to page (keep aspect ratio)";
-    std::string orientation = "Auto";
-    std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
-
-    // {top, right, bottom, left}
-    float margin[4] = {1, 1, 1, 1};
-
-    std::vector<FileData> files;
-};
-
+}
 }
 
 
-### App.cpp (bên dùng PrintController)
-#include "app/App.h"
-#include "app/CommandLine.h"
-#include "config/ConfigParser.h"
+
+### WinPrinter.cpp:
 #include "platform/WinPrinter.h"
-
-#include "controller/HomeController.h"
-#include "controller/PrintController.h"
-
-#include <windows.h> 
+#include <windows.h>
+#include <winspool.h>
+#include <vector>
 #include <string>
+#include <unordered_map>
 
-// helper: bỏ quote nếu có
-static std::string StripQuotes(const std::string& s)
+namespace platform {
+namespace printer {
+
+// ===== UTF16 -> UTF8 =====
+static std::string WStringToString(const std::wstring& w)
 {
-    if (s.size() >= 2) {
-        if ((s.front() == '"' && s.back() == '"') ||
-            (s.front() == '\'' && s.back() == '\'')) {
-            return s.substr(1, s.size() - 2);
-        }
-    }
-    return s;
+    if (w.empty()) return {};
+
+    int size = WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), nullptr, 0, nullptr, nullptr);
+    std::string result(size, 0);
+
+    WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), result.data(), size, nullptr, nullptr);
+    return result;
 }
 
-// helper: check tồn tại file (WinAPI)
-static bool FileExists(const std::string& path)
+// ===== UTF8 -> UTF16 =====
+static std::wstring StringToWString(const std::string& s)
 {
-    DWORD attr = GetFileAttributesA(path.c_str());
-    return (attr != INVALID_FILE_ATTRIBUTES &&
-            !(attr & FILE_ATTRIBUTE_DIRECTORY));
+    if (s.empty()) return {};
+
+    int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0);
+    std::wstring result(size, 0);
+
+    MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), result.data(), size);
+    return result;
 }
 
-
-
-int App::Run()
+// ===== Paper map (giống Word ~90%) =====
+static std::string MapPaperName(WORD paperId, const std::wstring& driverName)
 {
-    bool isPrint = CommandLine::HasFlag("print");
-    const auto& files = CommandLine::GetArgs();
+    static const std::unordered_map<WORD, std::string> map = {
+        {DMPAPER_A3, "A3"},
+        {DMPAPER_A4, "A4"},
+        {DMPAPER_A5, "A5"},
+        {DMPAPER_A6, "A6"},
+        {DMPAPER_LETTER, "Letter"},
+        {DMPAPER_LEGAL, "Legal"},
+        {DMPAPER_EXECUTIVE, "Executive"},
+        {DMPAPER_B4, "B4"},
+        {DMPAPER_B5, "B5"},
+    };
 
-    // Config
-    auto cfg = config::Parse("./config.ini", files.size() == 0);
-    {
-        for (const auto& f : files)
-        {
-            std::string path = StripQuotes(f);
+    auto it = map.find(paperId);
+    if (it != map.end())
+        return it->second;
 
-            if (!FileExists(path)) {
-                continue;
-            }
+    // fallback driver name
+    return WStringToString(driverName);
+}
 
-            config::FileData fd;
-            fd.path = path;
-            fd.fromRange = 0;
-            fd.toRange   = 0;
-            fd.pages     = 0;
-            fd.loaded    = false;
+// ============================================================
+// GetPrinters
+// ============================================================
+std::vector<std::string> GetPrinters()
+{
+    std::vector<std::string> result;
 
-            cfg.files.push_back(fd);
+    DWORD needed = 0;
+    DWORD returned = 0;
+
+    EnumPrintersW(PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
+                  nullptr, 2,
+                  nullptr, 0,
+                  &needed, &returned);
+
+    if (needed == 0)
+        return result;
+
+    std::vector<BYTE> buffer(needed);
+
+    if (!EnumPrintersW(PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
+                       nullptr, 2,
+                       buffer.data(), needed,
+                       &needed, &returned))
+        return result;
+
+    PRINTER_INFO_2W* printers = reinterpret_cast<PRINTER_INFO_2W*>(buffer.data());
+
+    for (DWORD i = 0; i < returned; ++i) {
+        if (printers[i].pPrinterName) {
+            result.push_back(WStringToString(printers[i].pPrinterName));
         }
     }
 
+    return result;
+}
 
+// ============================================================
+// GetSupportedPapers
+// ============================================================
+std::vector<std::string> GetSupportedPapers(const std::string& printerName)
+{
+    std::vector<std::string> result;
 
-    // ===== UI MODE =====
-    if (!isPrint) {
-        controller::HomeController ctrl(cfg);
-        return ctrl.Run();
-    }
+    std::wstring wPrinter = StringToWString(printerName);
 
-    // ===== PRINT MODE =====
-    auto printers = platform::printer::GetPrinters();
-
-    bool printerMatch = false;
-    for (const auto& p : printers) {
-        if (p == cfg.printer) {
-            printerMatch = true;
-            break;
-        }
-    }
-
-    if (printerMatch) {
-        controller::PrintController ctrl(cfg);
-        return ctrl.Run();
-    }
-
-    // ===== NOT MATCH =====
-    int result = MessageBoxA(
+    int count = DeviceCapabilitiesW(
+        wPrinter.c_str(),
         nullptr,
-        "The printer in config was not found.\nDo you want to open the UI to select another printer?",
-        "Printer not found",
-        MB_YESNO | MB_ICONQUESTION
+        DC_PAPERS,
+        nullptr,
+        nullptr
     );
 
-    if (result == IDYES) {
-        controller::HomeController ctrl(cfg);
-        return ctrl.Run();
+    if (count <= 0)
+        return result;
+
+    std::vector<WORD> paperIds(count);
+    std::vector<wchar_t> paperNames(count * 64); // mỗi name tối đa 64 wchar
+
+    DeviceCapabilitiesW(
+        wPrinter.c_str(),
+        nullptr,
+        DC_PAPERS,
+        reinterpret_cast<LPWSTR>(paperIds.data()),
+        nullptr
+    );
+
+    DeviceCapabilitiesW(
+        wPrinter.c_str(),
+        nullptr,
+        DC_PAPERNAMES,
+        paperNames.data(),
+        nullptr
+    );
+
+    for (int i = 0; i < count; ++i) {
+        std::wstring name(&paperNames[i * 64]);
+        result.push_back(MapPaperName(paperIds[i], name));
     }
 
-    return 0;
+    return result;
 }
 
-
-
-
+}
+}
 
 

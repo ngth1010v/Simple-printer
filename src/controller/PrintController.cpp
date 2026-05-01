@@ -1,6 +1,7 @@
 #include "controller/PrintController.h"
 #include "controller/print/Counter.h"
 #include "controller/print/Renderer.h"
+#include "platform/WinPrinter.h"
 
 #include "ui/PrintWindow.h"
 
@@ -128,7 +129,13 @@ int PrintController::Run() {
 
 
             // Start render
-            renderer.Init(m_cfg, tempFolder.string(), 300, cancelFlag, win );
+            int dpiX = 300;
+            int dpiY = 300;
+            if (!platform::printer::GetPrinterDPI(m_cfg.printer, dpiX, dpiY)) {
+                dpiX = 300;
+                dpiY = 300;
+            }
+            renderer.Init(m_cfg, tempFolder.string(), std::max(dpiX, dpiY), cancelFlag, win );
             renderer.Run();
         }
         

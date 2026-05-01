@@ -139,5 +139,32 @@ std::vector<std::string> GetSupportedPapers(const std::string& printerName)
     return result;
 }
 
+bool GetPrinterDPI(const std::string& printerName, int& dpiX, int& dpiY)
+{
+    dpiX = 0;
+    dpiY = 0;
+
+    std::wstring wPrinter = StringToWString(printerName);
+
+    // Tạo DC của printer
+    HDC hdc = CreateDCW(
+        L"WINSPOOL",           // driver chuẩn cho printer
+        wPrinter.c_str(),      // tên máy in
+        nullptr,
+        nullptr
+    );
+
+    if (!hdc)
+        return false;
+
+    // DPI thật
+    dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
+    dpiY = GetDeviceCaps(hdc, LOGPIXELSY);
+
+    DeleteDC(hdc);
+
+    return (dpiX > 0 && dpiY > 0);
+}
+
 }
 }
