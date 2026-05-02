@@ -5,7 +5,6 @@
 
 #include "controller/home/BasicConfigSection.h"
 #include "controller/home/AdvangeConfigSection.h"
-#include "controller/home/MarginConfigSection.h"
 #include "controller/home/InfoConfigSection.h"
 #include "controller/home/ControlBlock.h"
 #include "controller/home/FileListView.h"
@@ -49,13 +48,6 @@ int HomeController::Run()
         info.Reload();
     });
     adv.Bind();
-
-
-    // ===== MARGIN =====
-    controller::home::MarginConfigSectionController margin(win, m_cfg);
-    margin.Init();
-    margin.Bind();
-
 
     // ===== FILE LIST =====
     controller::home::FileListViewController files(win, m_cfg);

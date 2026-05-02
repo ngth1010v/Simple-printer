@@ -6,7 +6,7 @@ namespace Layout {
 
     // ===== WINDOW =====
     constexpr int MIN_WIDTH             = 470;
-    constexpr int MIN_HEIGHT            = 477;
+    constexpr int MIN_HEIGHT            = 377;
 
     constexpr int MARGIN                = 5;
     constexpr int SECTION_MARGIN        = 10;

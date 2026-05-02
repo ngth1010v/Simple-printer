@@ -52,11 +52,6 @@ void Write(const std::string& path, const ConfigData& data)
     WriteString("Advance", "orientation", data.orientation, path);
     WriteString("Advance", "collate",     data.collate,     path);
 
-    // ===== Margin =====
-    WriteInt("Margin", "top",    (int)data.margin[0], path);
-    WriteInt("Margin", "right",  (int)data.margin[1], path);
-    WriteInt("Margin", "bottom", (int)data.margin[2], path);
-    WriteInt("Margin", "left",   (int)data.margin[3], path);
 
     // ===== Files =====
     if (!data.files.empty()) {

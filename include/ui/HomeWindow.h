@@ -3,7 +3,6 @@
 #include "ui/BaseWindow.h"
 #include "ui/home/BasicConfigSection.h"
 #include "ui/home/AdvanceConfigSection.h"
-#include "ui/home/MarginConfigSection.h"
 #include "ui/home/InfoConfigSection.h"
 #include "ui/home/ControlBlock.h"
 #include "ui/home/FileListView.h"
@@ -21,7 +20,6 @@ private:
 public:
     ui::home::BasicConfigSection m_basic;
     ui::home::AdvanceConfigSection m_adv;
-    ui::home::MarginConfigSection m_margin;
     ui::home::InfoConfigSection m_info;
     ui::home::ControlBlock m_control;
     ui::home::FileListView m_files;

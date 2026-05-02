@@ -48,7 +48,6 @@ void HomeWindow::OnCreate() {
 
     m_basic.Create(GetHwnd(), m_font);
     m_adv.Create(GetHwnd(), m_font);
-    m_margin.Create(GetHwnd(), m_font);
     m_info.Create(GetHwnd(), m_font);
     m_control.Create(GetHwnd(), m_font);
     m_files.Create(GetHwnd(), m_font);
@@ -58,7 +57,6 @@ void HomeWindow::OnCreate() {
 void HomeWindow::OnCommand(WPARAM wParam) {
     m_basic.HandleCommand(wParam);
     m_adv.HandleCommand(wParam);
-    m_margin.HandleCommand(wParam);
     m_control.HandleCommand(wParam);
 }
 
@@ -68,7 +66,6 @@ void HomeWindow::OnSize() {
 
     m_basic.Resize(rc.right);
     m_adv.Resize(rc.right);
-    m_margin.Resize(rc.right);
     m_info.Resize(rc.right);
     m_control.Resize(rc.right, rc.bottom);
     m_files.Resize(rc.right, rc.bottom);
@@ -94,7 +91,6 @@ void HomeWindow::OnPaint() {
     // Vẽ tất cả section lên mem DC trước
     m_basic.OnPaint(mem);
     m_adv.OnPaint(mem);
-    m_margin.OnPaint(mem);
     m_info.OnPaint(mem);
     m_control.OnPaint(mem);
     m_files.OnPaintStatic(mem, rc.right, rc.bottom);

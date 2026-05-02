@@ -22,9 +22,6 @@ struct ConfigData {
     std::string orientation = "Auto";
     std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
 
-    // {top, right, bottom, left}
-    float margin[4] = {1, 1, 1, 1};
-
     std::vector<FileData> files;
 };
 

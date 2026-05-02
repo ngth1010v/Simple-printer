@@ -54,11 +54,6 @@ ConfigData Parse(const std::string& path, bool keepFiles)
     data.orientation = ReadString("Advance", "orientation", data.orientation, path);
     data.collate     = ReadString("Advance", "collate",     data.collate,     path);
 
-    // ===== Margin =====
-    data.margin[0] = (float)ReadInt("Margin", "top",    (int)data.margin[0], path);
-    data.margin[1] = (float)ReadInt("Margin", "right",  (int)data.margin[1], path);
-    data.margin[2] = (float)ReadInt("Margin", "bottom", (int)data.margin[2], path);
-    data.margin[3] = (float)ReadInt("Margin", "left",   (int)data.margin[3], path);
 
     // ===== Files =====
     if (keepFiles){
