@@ -10,6 +10,7 @@
 #include <thread>
 #include <atomic>
 #include <utility>
+#include <iostream>
 
 namespace counter {
 
@@ -308,6 +309,14 @@ static void SafeInvokeCallback(const DocxWorker::Callback& cb, int pages, const 
     }
 }
 
+static VARIANT MakeMissing() {
+    VARIANT v;
+    VariantInit(&v);
+    v.vt = VT_ERROR;
+    v.scode = DISP_E_PARAMNOTFOUND;
+    return v;
+}
+
 } // namespace
 
 DocxWorker::DocxWorker() {}
@@ -467,20 +476,44 @@ void DocxWorker::WorkerLoop() {
             }
 
             ComPtr<IDispatch> docs(docsVar.ref().pdispVal);
-            docsVar.ref().pdispVal->AddRef(); // because docs owns one reference too
+            docsVar.ref().pdispVal->AddRef();
 
-            VariantHolder openArg;
-            openArg.ref() = MakeBstr(absW);
+            // Word.Documents.Open(FileName, ConfirmConversions, ReadOnly)
+            // rgvarg is reversed:
+            //   [0] = ReadOnly
+            //   [1] = ConfirmConversions (missing)
+            //   [2] = FileName
+            VARIANT args[3];
+            for (int i = 0; i < 3; ++i) {
+                VariantInit(&args[i]);
+            }
+
+            args[0] = MakeBool(true);   // ReadOnly
+            args[1].vt = VT_ERROR;      // ConfirmConversions omitted
+            args[1].scode = DISP_E_PARAMNOTFOUND;
+            args[2] = MakeBstr(absW);   // FileName
 
             VariantHolder docVar;
-            HRESULT hrOpen = CallMethod(docs.get(), L"Open", openArg.get(), 1, docVar.get());
+            HRESULT hrOpen = CallMethod(
+                docs.get(),
+                L"Open",
+                args,
+                3,
+                docVar.get()
+            );
+
+            for (int i = 0; i < 3; ++i) {
+                VariantClear(&args[i]);
+            }
+
             if (FAILED(hrOpen) || docVar.ref().vt != VT_DISPATCH || !docVar.ref().pdispVal) {
                 error = "Open failed: " + HrToString(hrOpen);
+                std::cout << HrToString(hrOpen) << "[" << hrOpen << "]" << '\n';
                 break;
             }
 
             ComPtr<IDispatch> doc(docVar.ref().pdispVal);
-            docVar.ref().pdispVal->AddRef(); // same reason as above
+            docVar.ref().pdispVal->AddRef();
 
             VariantHolder statArg;
             statArg.ref() = MakeI4(2); // wdStatisticPages
@@ -497,14 +530,12 @@ void DocxWorker::WorkerLoop() {
                 error = "ComputeStatistics returned unexpected type";
             }
 
-            // Always try to close the document, even if ComputeStatistics failed.
             {
                 VariantHolder closeArg;
                 closeArg.ref() = MakeBool(false);
                 CallMethod(doc.get(), L"Close", closeArg.get(), 1, nullptr);
             }
 
-            // Extra best-effort cleanup before leaving task.
             doc.reset();
 
         } while (false);
@@ -516,7 +547,6 @@ void DocxWorker::WorkerLoop() {
         SafeInvokeCallback(task.cb, pages, error);
     }
 
-    // Best-effort quit.
     {
         VariantHolder quitArg;
         quitArg.ref() = MakeBool(false);
@@ -524,9 +554,8 @@ void DocxWorker::WorkerLoop() {
     }
 
     word.reset();
-
-    // Help COM release any unused server proxies sooner.
     CoFreeUnusedLibraries();
 }
+
 
 } // namespace counter

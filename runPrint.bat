@@ -6,7 +6,7 @@ echo  CPP - RUN
 echo =========================================
 
 cd bin
-.\SimplePrinter.exe --print ..\test\test.pdf ..\test\test.png
+.\SimplePrinter.exe --print
 
 echo =========================================
 echo  CPP - DONE RUN

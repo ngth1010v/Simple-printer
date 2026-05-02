@@ -1,8 +1,35 @@
 # TASKS:
-- viết cho tôi 2 file Renderer.h/cpp để render từng trang của file ảnh/doc/pdf bằng hàm có sẵn
+- viết cho tôi 6 file như dưới để từ path .bmp và config sẽ đẩy ra máy in và in
 
 # ENV:
 - urtc64 + ninja + cpp20
+
+# FOLDER TREE
+printer/
+  ├── Printer.h
+  ├── WinSpooler.h
+  └── WinPrinter.h
+
+# CONFIG:
+struct ConfigData {
+    std::string printer     = "Microsoft Print to PDF";
+    int         copies      = 1;
+
+    std::string printMode   = "Simplex";
+    std::string paper       = "A4";
+    std::string scale       = "Fit to page (keep aspect ratio)";
+    std::string orientation = "Auto";
+    std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
+
+    // {top, right, bottom, left}
+    float margin[4] = {1, 1, 1, 1};
+
+    std::vector<FileData> files; // này là cho code khác dùng, không cần quan tâm phân này
+};
+
+
+
+
 
 # INPUT:
 - renderer/Renderer.h

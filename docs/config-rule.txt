@@ -32,6 +32,12 @@ collate=Collated (1,2,3 | 1,2,3 | 1,2,3)
 ++ "Uncollated (1,1,1 | 2,2,2 | 3,3,3)"
 
 [Margin]
+mode=Respect document layout
++ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
+++ "Respect document layout"
+++ "Fit to printable area"
+++ "Custom margin override"
+
 top=1
 bottom=1
 left=1

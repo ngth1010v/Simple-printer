@@ -101,6 +101,67 @@ bool EnsureParentDir(const std::wstring& filePath) {
     return !ec;
 }
 
+
+static VARIANT MakeBool(bool v) {
+    VARIANT var;
+    VariantInit(&var);
+    var.vt = VT_BOOL;
+    var.boolVal = v ? VARIANT_TRUE : VARIANT_FALSE;
+    return var;
+}
+
+static VARIANT MakeBstr(const std::wstring& s) {
+    VARIANT var;
+    VariantInit(&var);
+    var.vt = VT_BSTR;
+    var.bstrVal = SysAllocString(s.c_str());
+    return var;
+}
+
+static VARIANT MakeI4(long v) {
+    VARIANT var;
+    VariantInit(&var);
+    var.vt = VT_I4;
+    var.lVal = v;
+    return var;
+}
+
+static HRESULT InvokeDispatch(
+    IDispatch* obj,
+    const wchar_t* name,
+    WORD flags,
+    DISPPARAMS* params,
+    VARIANT* result = nullptr
+) {
+    if (!obj || !name) return E_POINTER;
+
+    LPOLESTR names[] = { const_cast<LPOLESTR>(name) };
+    DISPID dispid = 0;
+
+    HRESULT hr = obj->GetIDsOfNames(IID_NULL, names, 1, LOCALE_USER_DEFAULT, &dispid);
+    if (FAILED(hr)) return hr;
+
+    return obj->Invoke(
+        dispid,
+        IID_NULL,
+        LOCALE_USER_DEFAULT,
+        flags,
+        params,
+        result,
+        nullptr,
+        nullptr
+    );
+}
+
+static HRESULT CallMethod(IDispatch* obj, const wchar_t* name, VARIANT* args, UINT argCount, VARIANT* result = nullptr) {
+    DISPPARAMS params{};
+    params.cArgs = argCount;
+    params.rgvarg = args;
+
+    return InvokeDispatch(obj, name, DISPATCH_METHOD, &params, result);
+}
+
+
 bool WriteBmp32TopDown(const std::wstring& filePath,
                        int width,
                        int height,
@@ -282,6 +343,30 @@ VARIANT MakeBoolVariant(bool value) {
     return v;
 }
 
+class VariantHolder {
+public:
+    VariantHolder() {
+        VariantInit(&m_var);
+    }
+
+    ~VariantHolder() {
+        VariantClear(&m_var);
+    }
+
+    VariantHolder(const VariantHolder&) = delete;
+    VariantHolder& operator=(const VariantHolder&) = delete;
+
+    VARIANT* get() { return &m_var; }
+    const VARIANT* get() const { return &m_var; }
+
+    VARIANT* operator&() = delete;
+
+    VARIANT& ref() { return m_var; }
+
+private:
+    VARIANT m_var;
+};
+
 bool GetDispatchProperty(IDispatch* disp, const wchar_t* name, IDispatch** out, std::string& error) {
     if (!out) {
         error = "invalid output";
@@ -333,71 +418,94 @@ bool CallDocumentsOpen(IDispatch* documents,
                        const std::wstring& fileName,
                        IDispatch** outDoc,
                        std::string& error) {
-    if (!outDoc) {
-        error = "invalid output";
+    if (!documents || !outDoc) {
+        error = "invalid argument";
         return false;
     }
 
-    // Open(FileName)
-    VARIANT fileVar = MakeStringVariant(fileName);
-    if (fileVar.vt != VT_BSTR || fileVar.bstrVal == nullptr) {
-        error = "out of memory";
+    *outDoc = nullptr;
+
+    // Word.Documents.Open(FileName, ConfirmConversions, ReadOnly)
+    // rgvarg is reversed:
+    //   [0] = ReadOnly
+    //   [1] = ConfirmConversions (missing)
+    //   [2] = FileName
+    VARIANT args[3];
+    for (int i = 0; i < 3; ++i) {
+        VariantInit(&args[i]);
+    }
+
+    args[0] = MakeBool(true);   // ReadOnly = true
+    args[1].vt = VT_ERROR;      // ConfirmConversions omitted
+    args[1].scode = DISP_E_PARAMNOTFOUND;
+    args[2] = MakeBstr(fileName);
+
+    VariantHolder docVar;
+    HRESULT hrOpen = CallMethod(
+        documents,
+        L"Open",
+        args,
+        3,
+        docVar.get()
+    );
+
+    for (int i = 0; i < 3; ++i) {
+        VariantClear(&args[i]);
+    }
+
+    if (FAILED(hrOpen) || docVar.ref().vt != VT_DISPATCH || !docVar.ref().pdispVal) {
+        error = "Open failed: " ;//+ HrToString(hrOpen);
         return false;
     }
 
-    std::vector<VARIANT> args;
-    args.push_back(fileVar);
-
-    VARIANT result;
-    VariantInit(&result);
-
-    const bool ok = Invoke(documents, L"Open", DISPATCH_METHOD, args, &result, error);
-    VariantClear(&fileVar);
-
-    if (!ok) {
-        VariantClear(&result);
-        return false;
-    }
-
-    if (result.vt != VT_DISPATCH || result.pdispVal == nullptr) {
-        VariantClear(&result);
-        error = "Open did not return document";
-        return false;
-    }
-
-    *outDoc = result.pdispVal;
+    *outDoc = docVar.ref().pdispVal;
     (*outDoc)->AddRef();
-    VariantClear(&result);
     return true;
 }
-
 bool CallExportAsPdf(IDispatch* doc,
                      const std::wstring& pdfPath,
                      std::string& error) {
+    if (!doc) {
+        error = "invalid argument";
+        return false;
+    }
+
     // ExportAsFixedFormat(OutputFileName, ExportFormat, OpenAfterExport, OptimizeFor, Range)
-    // Provide only the first five args, in natural order.
-    VARIANT outputFile = MakeStringVariant(pdfPath);
-    VARIANT exportFormat = MakeLongVariant(kWordFormatPdf);
-    VARIANT openAfterExport = MakeBoolVariant(false);
-    VARIANT optimizeFor = MakeLongVariant(0);  // wdExportOptimizeForPrint
-    VARIANT range = MakeLongVariant(0);        // wdExportAllDocument
+    // rgvarg is reversed:
+    //   [0] = Range
+    //   [1] = OptimizeFor
+    //   [2] = OpenAfterExport
+    //   [3] = ExportFormat
+    //   [4] = OutputFileName
+    VARIANT args[5];
+    for (int i = 0; i < 5; ++i) {
+        VariantInit(&args[i]);
+    }
 
-    std::vector<VARIANT> args;
-    args.push_back(outputFile);
-    args.push_back(exportFormat);
-    args.push_back(openAfterExport);
-    args.push_back(optimizeFor);
-    args.push_back(range);
+    args[0] = MakeI4(0);               // wdExportAllDocument
+    args[1] = MakeI4(0);               // wdExportOptimizeForPrint
+    args[2] = MakeBool(false);         // OpenAfterExport = false
+    args[3] = MakeI4(kWordFormatPdf);  // wdExportFormatPDF
+    args[4] = MakeBstr(pdfPath);        // OutputFileName
 
-    const bool ok = Invoke(doc, L"ExportAsFixedFormat", DISPATCH_METHOD, args, nullptr, error);
+    HRESULT hr = CallMethod(
+        doc,
+        L"ExportAsFixedFormat",
+        args,
+        5,
+        nullptr
+    );
 
-    VariantClear(&outputFile);
-    VariantClear(&exportFormat);
-    VariantClear(&openAfterExport);
-    VariantClear(&optimizeFor);
-    VariantClear(&range);
+    for (int i = 0; i < 5; ++i) {
+        VariantClear(&args[i]);
+    }
 
-    return ok;
+    if (FAILED(hr)) {
+        error = "ExportAsFixedFormat failed: " ;//+ HrToString(hr);
+        return false;
+    }
+
+    return true;
 }
 
 bool CallCloseDocument(IDispatch* doc, std::string& error) {
