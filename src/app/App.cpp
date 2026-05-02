@@ -1,7 +1,7 @@
 #include "app/App.h"
 #include "app/CommandLine.h"
 #include "config/ConfigParser.h"
-#include "platform/WinPrinter.h"
+#include "platform/WinUtils.h"
 
 #include "controller/HomeController.h"
 #include "controller/PrintController.h"

@@ -1,7 +1,7 @@
 #include "controller/PrintController.h"
 #include "controller/print/Counter.h"
 #include "controller/print/Renderer.h"
-#include "platform/WinPrinter.h"
+#include "platform/WinUtils.h"
 
 #include "ui/PrintWindow.h"
 

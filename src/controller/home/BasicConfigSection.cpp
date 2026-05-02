@@ -1,6 +1,6 @@
 #include "controller/home/BasicConfigSection.h"
 
-#include "platform/WinPrinter.h"
+#include "platform/WinUtils.h"
 #include "ui/HomeWindow.h"
 
 #include <cctype>

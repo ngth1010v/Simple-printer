@@ -1,5 +1,5 @@
 #include "controller/home/AdvangeConfigSection.h"
-#include "platform/WinPrinter.h"
+#include "platform/WinUtils.h"
 #include "ui/HomeWindow.h"
 
 #include <string>

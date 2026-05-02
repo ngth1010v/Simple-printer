@@ -1,4 +1,4 @@
-#include "platform/WinPrinter.h"
+#include "platform/WinUtils.h"
 #include <windows.h>
 #include <winspool.h>
 #include <vector>
