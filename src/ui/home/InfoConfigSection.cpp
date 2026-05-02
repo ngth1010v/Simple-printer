@@ -98,8 +98,8 @@ void InfoConfigSection::OnPaint(HDC hdc) {
     GetClientRect(m_parent, &rcParent);
     int parentW = rcParent.right;
 
-    int sectionW = CALC_W(parentW);
-    int inputW   = CALC_INPUT_W(parentW);
+    int sectionW = W;
+    int inputW   = INPUT_W;
 
     // ===== section background =====
     RECT sec = { X, Y, X + sectionW, Y + H };
