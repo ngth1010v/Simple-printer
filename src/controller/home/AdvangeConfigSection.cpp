@@ -62,7 +62,7 @@ static void AdvPrintModeUpdate(HomeWindow& win, config::ConfigData& cfg, const s
 }
 
 static void AdvPaperInit(HomeWindow& win, config::ConfigData& cfg) {
-    auto papers = platform::printer::GetSupportedPapers(cfg.printer);
+    auto papers = platform::GetSupportedPapers(cfg.printer);
 
     if (papers.empty()) return;
 

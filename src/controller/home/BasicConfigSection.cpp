@@ -10,7 +10,7 @@
 namespace {
 
 static void BasicPrinterUiInit(HomeWindow& win, config::ConfigData& cfg) {
-    auto printers = platform::printer::GetPrinters();
+    auto printers = platform::GetPrinters();
     win.m_basic.SetPrinterOptions(printers);
 
     bool match = false;
@@ -37,7 +37,7 @@ static void BasicPrinterUiUpdate(HomeWindow& win, config::ConfigData& cfg, const
     cfg.printer = v;
 
     // ===== UPDATE PAPER WHEN PRINTER CHANGE =====
-    auto papers = platform::printer::GetSupportedPapers(v);
+    auto papers = platform::GetSupportedPapers(v);
 
     if (!papers.empty()) {
         win.m_adv.SetPaperOptions(papers);

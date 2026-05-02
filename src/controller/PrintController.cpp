@@ -131,7 +131,7 @@ int PrintController::Run() {
             // Start render
             int dpiX = 300;
             int dpiY = 300;
-            if (!platform::printer::GetPrinterDPI(m_cfg.printer, dpiX, dpiY)) {
+            if (!platform::GetPrinterDPI(m_cfg.printer, dpiX, dpiY)) {
                 dpiX = 300;
                 dpiY = 300;
             }

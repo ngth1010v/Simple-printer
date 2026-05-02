@@ -67,7 +67,7 @@ int App::Run()
     }
 
     // ===== PRINT MODE =====
-    auto printers = platform::printer::GetPrinters();
+    auto printers = platform::GetPrinters();
 
     bool printerMatch = false;
     for (const auto& p : printers) {

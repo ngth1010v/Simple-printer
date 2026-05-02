@@ -6,7 +6,6 @@
 #include <unordered_map>
 
 namespace platform {
-namespace printer {
 
 // ===== UTF16 -> UTF8 =====
 static std::string WStringToString(const std::wstring& w)
@@ -166,5 +165,4 @@ bool GetPrinterDPI(const std::string& printerName, int& dpiX, int& dpiY)
     return (dpiX > 0 && dpiY > 0);
 }
 
-}
 }
