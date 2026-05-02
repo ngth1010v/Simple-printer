@@ -24,6 +24,11 @@ void Renderer::Init(config::ConfigData& cfg,
     successPages_.store(0);
     donePages_.store(0);
     totalPages_ = 0;
+    done_.store(false, std::memory_order_relaxed);
+
+    // if (totalPages_ == 0) {
+    //     done_.store(true, std::memory_order_relaxed);
+    // }
 
     // count total pages
     for (const auto& f : cfg_->files) {
@@ -99,6 +104,7 @@ void Renderer::Run() {
 
                         if (done == totalPages_) {
                             win_->SetResourceProcessLabel(L"Rendering resources done.");
+                            done_.store(true, std::memory_order_relaxed); 
                         }
                         return;
                     }
@@ -111,6 +117,7 @@ void Renderer::Run() {
 
                     if (done == totalPages_) {
                         win_->SetResourceProcessLabel(L"Rendering resources done.");
+                        done_.store(true, std::memory_order_relaxed); 
                     }
                 });
         }

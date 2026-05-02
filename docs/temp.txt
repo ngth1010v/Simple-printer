@@ -1,87 +1,121 @@
 # TASKS:
-- viết cho tôi 6 file như dưới để từ path .bmp và config sẽ đẩy ra máy in và in
+- viết cho tôi 2 file Printer.cpp/h để quản lí việc đẩy từ bmp sang máy in và cập nhật vào UI
 
 # ENV:
 - urtc64 + ninja + cpp20
 
-# FOLDER TREE (có thể thêm layoutHandle.h/cpp nếu phần xử lí layout quá dài)
-printer/
-  ├── Printer.h/cpp
-  ├── WinSpooler.h/cpp
-  └── WinPrinter.h/cpp
+# OUTPUT:
+- controller/
++ print/
+++ Printer.cpp/h
 
-# CONFIG:
-struct ConfigData {
-    std::string printer     = "Microsoft Print to PDF";
-    std::string paper       = "A4";
-    std::string scale       = "Fit to page (keep aspect ratio)";
-    std::string orientation = "Auto";
-    ...
-};
+# INPUT:
+- config/ConfigModel.h
+- printer/Printer.h
+- ui/PrintWindow.h
 
 
 # EXPORT FUNCTION:
-- void printer::Init(config::ConfigData& cfg)
-- int printer::PrintSimplex(string path, string& error)
-- int printer::PrintDuplex(string frontPath, string backPath, string& error)
-- void printer::ShutDown()
+- void controller::print::Init(config::ConfigData& cfg, string& tempDir, atomic<bool>& cancelFlag, atomic<bool>& pauseFlag, ui:PrintWindow& win)
+- void controller::print::Run()
+- void printer::Destroy()
 
 
 
 # IDEA:
-- khi được gọi Init, Printer sẽ:
+- Init():
 + lưu tham số lại
-+ không làm gì thêm
++ thạo 1 theard mới và chạy mọi thứ ở đây
 
-- khi được gọi Print(), Printer sẽ:
-+ lấy file bmp từ path
-+ xử lí layout (scale + đổi hết sang Portrait):
-++ tạo 1 bmp trống với tỉ lệ paper + dpi printer + Portrait (nhớ sử lí để né unprintable)
-++ Xét orientation
-+++ if (orientation == "Portrait")
-++++ skip
-+++ if (orientation == "Landscape")
-++++ xoay bmp gốc 90 độ
-+++ if (orientation == "Auto")
-++++ nếu w bmp gốc > h bmp gốc -> xoay 90 độ, không thì skip
-++ scale lại bmp gốc vào bmp mới (nhớ sử lí để né unprintable):
-+++ scale = "No Scale" -> chỉ đưa vào canvas, không scale
-+++ scale = "Fit to page (keep aspect ratio)" -> scale nhưng giữ ratio
-+++ scale = "Fill page (ignore aspect ratio)" -> fill canvas, không quan tâm ratio
-+ đẩy máy in với paper = cfg.paper và orientation = "Portrait" (ép printer in giống 1:1 nhất có thể):
-++ tạo Job:
-+++ đẩy ảnh vào (đẩy 2 cái nếu PrintDuplex và 1 nếu PrintSimplex)
-+++ chờ flag từ printer hoặc spooler (chọn cách cân bằng giữa chính xác, đơn giản):
-++++ nếu thành công -> return 0 error = ""
-++++ nếu fail -> return 1 v error 
+- Run():
++ chạy printer::Init(...)
++ lấy pages (số trang cần in) bằng cách:
+++ lấy name của tất cả file .bmp trong tempDir
+++ mỗi name sẽ có dạng "${page}-d.bmp" hoặc "${page}-i.bmp"
+++ tách page của từng file và lấy max -> đó là pages 
++ win.SetPrintProcessLabel(L"Printing...")
++ win.SetPrintProcess(pages, 0)
++ win.SetPrintProcessColor("green")
++ xét cfg.printMode:
+
+++ cfg.printMode == "Simplex":
++++ loop từ 1 đến pages:
+++++ gọi printer::PrintSimplex(string path, string& error) // này là hàm block
+++++ sau khi xong lấy error:
++++++ win.SetPrintProcess(pages, page vừa in xong)
++++++ nếu error == empty -> continue
++++++ nếu error != empty:
++++++++ win.SetPrintProcessColor("red")
++++++++ tạo messengebox với winapi ghi ra error và cho user 2 options:
+++++++++ skip:
++++++++++ win.SetPrintProcessColor("green")
++++++++++ continue
+++++++++ cancel -> bật cở cancelFlag + return
 
 
+++ cfg.printMode == "Duplex" (lúc này code trước đảm bảo pages là chẵn):
++++ loop từ 1 đến pages với +=2: 
+++++ gọi printer::PrintDuplex( pathI, pathI+1, error)
+++++ xử lí error/Process giống Simplex
 
-+ win.SetResourceProcessLabel(L"Rendering resources...");
-+ win.SetResourceProcessColor("green");
-+ win.SetResourceProcess(tổng số trang cần render, 0);
-+ chạy renderer::Init()
-+ chạy renderer::Render hết range trong từng file trong cfg.files để render từng file với quy tắc đặt tên targetPath như sau:
-++ bắt đầu từ 1, đặt tên các file tăng dần với đuôi .bmp và phải đảm bảo tên luôn liền mạch
-++ ví dụ: "tempDir/1.bmp", "tempDir/2.bmp", ...
-+ sau khi các trang chạy xong sẽ được gọi cb, lúc đó hãy trong mỗi cb sẽ:
-++ xem pages trả về có error không (nếu có thì error != empty)
-+++ nếu error:
-++++ win.SetResourceProcessColor("red");
-++++ chạy 1 messengebox bằng winapi log lỗi ra và cho user chọn:
-+++++ 'skip this page' -> skip + win.SetResourceProcessColor("green") + win.SetResourceProcess(tổng số page còn lại, số page đã render thành công);
-+++++ 'cancel' -> sẽ set cancelFlag = true + return
-+++ nếu không error:
-++++ win.SetResourceProcess(tổng số page còn lại, số page đã render thành công);
-+ sau khi tất cả cb đã được trả về mà không có cancel giữa chùng thì return 
+++ cfg.printMode == "Manual Duplex (Flip On Long Side)" (lúc này code trước đảm bảo pages là chẵn, code đảm bảo printMode khớp hoàn toàn với string cho sẵn):
++++ chạy loop 1:
+++++ for (int i = 1; i < pages; i+=2) // For page lẻ
+++++++ gọi printer::PrintSimplex(path, error)
+++++++ xử lí error.process giống Simplex
++++ gọi lệnh yêu cầu lật:
+++++ win.SetPrintProcessColor("yellow")
+++++ win.SetAllowPause(false)
+++++ win.SetAllowContinue(true)
+++++ win.SetNotification(L"Wait for flit") // bạn có thể chỉnh câu yêu cầu lại sao cho rõ nghĩa hơn
+++++ Set pauseFlag = true
+++++ block đến khi pauseFlag được set lại thành false
++++ chạy loop 2:
+++++ for (int i = 2; i <= pages; i+=2) // For page chẵn
+++++++ gọi printer::PrintSimplex(path, error)
+++++++ xử lí error.process giống Simplex
 
-- ShutDown():
-+ gọi renderer::ShutDown()
+++ cfg.printMode == "Manual Duplex (Flip On Short Side)" (lúc này code trước đảm bảo pages là chẵn, code đảm bảo printMode khớp hoàn toàn với string cho sẵn):
++++ chạy loop 1:
+++++ for (int i = 1; i < pages; i+=2) // For page lẻ
+++++++ gọi printer::PrintSimplex(path, error)
+++++++ xử lí error.process giống Simplex
++++ gọi lệnh yêu cầu lật:
+++++ win.SetPrintProcessColor("yellow")
+++++ win.SetAllowPause(false)
+++++ win.SetAllowContinue(true)
+++++ win.SetNotification(L"Wait for flit") // bạn có thể chỉnh câu yêu cầu lại sao cho rõ nghĩa hơn
+++++ Set pauseFlag = true
+++++ block đến khi pauseFlag được set lại thành false
+++++ win.SetPrintProcessColor("green")
+++++ win.SetAllowContinue(false)
+++++ win.SetAllowPause(true)
+
++++ chạy loop 2:
+++++ for (int i = pages; i >= 2; i-=2) // For page chẵn nhưng ngược
+++++++ gọi printer::PrintSimplex(path, error)
+++++++ xử lí error.process giống Simplex
+
+- Destroy():
++ safe shutdown theard ngay
++ gọi printer::ShutDown()
 + cleanup nếu cần
 
 - *note: 
-+ renderer::Count chạy theo kiểu async, tức gọi xong nó sẽ tự đẩy qua cho theard khác rồi trả quyền ngay
-+ ShutDown() chỉ được dùng từ bên ngoài, không tự gọi destroy trong controller::print::Printer
++ nhớ thêm check pauseFlag giữ các loop để khi pauseFlag == true thì:
+++ phải block ngay chỗ đó
+++ win.SetPrintProcessColor("yellow")
+++ win.SetAllowPause(false)
+++ win.SetAllowContinue(true)
+++ (có thể đợi printer::Print chạy xong rồi block cũng được, không cẩn tuyệt đối)
+++ khi được thả pause thì:
++++ win.SetPrintProcessColor("green")
++++ win.SetAllowPause(true)
++++ win.SetAllowContinue(false)
+
+
+
+
 
 # RULE:
 - code đơn giản, không quá overskill, tận dụng cpp20 để làm code đơn giản hơn
@@ -93,27 +127,6 @@ struct ConfigData {
 - nếu thiếu thông tin hay có mơ hổ logic, hãy hỏi tôi trước khi thực hiện bất cứ yêu cầu nào bên trên
 
 # INPUT CODE:
-### renderer/Printer.h:
-#pragma once
-
-#include <functional>
-#include <string>
-
-namespace renderer {
-
-using RenderCallback = std::function<void(std::string error)>;
-
-void Init(int dpi);
-void Render(const std::string& srcPath,
-            const std::string& targetPath,
-            int page = 1,
-            RenderCallback callback = {});
-void Shutdown();
-
-} // namespace renderer
-
-
-
 ### config/ConfigModel.h:
 #pragma once
 #include <string>
@@ -139,10 +152,98 @@ struct ConfigData {
     std::string orientation = "Auto";
     std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
 
-    // {top, right, bottom, left}
-    float margin[4] = {1, 1, 1, 1};
-
     std::vector<FileData> files;
+};
+
+}
+
+
+
+### printer/Printer.h:
+#pragma once
+
+#include <string>
+#include "config/ConfigModel.h"
+
+namespace printer {
+
+void Init(config::ConfigData& cfg);
+int PrintSimplex(std::string path, std::string& error);
+int PrintDuplex(std::string frontPath, std::string backPath, std::string& error);
+void ShutDown();
+
+} // namespace printer
+
+
+
+
+### ui/PrintWindow.h:
+#pragma once
+
+#include "ui/BaseWindow.h"
+#include <string>
+#include <functional>
+
+namespace ui {
+    
+class PrintWindow : public BaseWindow {
+public:
+    bool CreateWindowInstance();
+
+    void SetResourceProcess(int target, int current);
+    void SetResourceProcessLabel(const std::wstring& content);
+    void SetResourceProcessColor(const std::string& color);
+
+    void SetPrintProcess(int target, int current);
+    void SetPrintProcessLabel(const std::wstring& content);
+    void SetPrintProcessColor(const std::string& color);
+
+    void SetAllowPause(bool allow = true);
+    void SetAllowContinue(bool allow = true);
+    void SetNotification(const std::wstring& content = L"");
+
+    void OnPause(std::function<void()> cb);
+    void OnContinue(std::function<void()> cb);
+    void OnCancel(std::function<void()> cb);
+
+protected:
+    LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) override;
+
+private:
+    HWND m_btnPause = nullptr;
+    HWND m_btnContinue = nullptr;
+    HWND m_btnCancel = nullptr;
+    HWND m_lblNotification = nullptr;
+
+    HFONT m_font = nullptr;
+    HFONT m_fontSmall = nullptr;
+
+    int m_resTarget = 0;
+    int m_resCurrent = 0;
+
+    int m_printTarget = 0;
+    int m_printCurrent = 0;
+
+    std::wstring m_resLabel = L"Rendering resources...";
+    std::wstring m_printLabel = L"Printing...";
+    std::wstring m_notification = L"";
+
+    COLORREF m_resColor = RGB(255,255,0);
+    COLORREF m_printColor = RGB(0,255,0);
+
+    bool m_allowPause = true;
+    bool m_allowContinue = true;
+
+    std::function<void()> m_cbPause;
+    std::function<void()> m_cbContinue;
+    std::function<void()> m_cbCancel;
+
+private:
+    void OnCreate();
+    void OnCommand(WPARAM wParam);
+    void OnPaint();
+
+    COLORREF ParseColor(const std::string& color);
 };
 
 }

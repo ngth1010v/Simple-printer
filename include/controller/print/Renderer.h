@@ -23,9 +23,12 @@ public:
 
     void Run();
     void Destroy();
+    bool IsDone() const { return done_.load(std::memory_order_relaxed); }
+    
 
 private:
     std::string BuildTargetPath(const std::string& inputPath, int index) const;
+    std::atomic<bool> done_ = false;
 
 private:
     config::ConfigData* cfg_ = nullptr;

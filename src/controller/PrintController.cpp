@@ -1,6 +1,7 @@
 #include "controller/PrintController.h"
 #include "controller/print/Counter.h"
 #include "controller/print/Renderer.h"
+#include "controller/print/Printer.h"
 #include "platform/WinUtils.h"
 
 #include "ui/PrintWindow.h"
@@ -12,6 +13,8 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+#include <iostream>
 
 namespace controller {
 namespace fs = std::filesystem;
@@ -72,10 +75,12 @@ int PrintController::Run() {
     // Init flag
     std::atomic<bool> runFlag{false};
     std::atomic<bool> cancelFlag{false};
+    std::atomic<bool> pauseFlag{false};
     bool printing = false;
 
     controller::print::Counter::Init(m_cfg, runFlag, cancelFlag);
     controller::print::Renderer renderer;
+    controller::print::Printer printer;
     
 
 
@@ -99,16 +104,33 @@ int PrintController::Run() {
         win.OnCancel([&]() {
             cancelFlag.store(true, std::memory_order_relaxed);
         });
+        
+        win.OnPause([&]() {
+            pauseFlag.store(true, std::memory_order_relaxed);
+        });
+        
+        win.OnContinue([&]() {
+            pauseFlag.store(false, std::memory_order_relaxed);
+        });
     }
 
     
 
     //===================================================
     // Message loop
+    bool renderDoneHandled = false;
     MSG msg = {};
-    while (GetMessage(&msg, nullptr, 0, 0)) {
 
+    while (true) {
 
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) {
+                goto END_LOOP;
+            }
+
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
 
         //===================================================
         // CANCLE
@@ -116,38 +138,47 @@ int PrintController::Run() {
             PostQuitMessage(0);
         }
 
-
         //===================================================
         // DONE COUNTER
         if (runFlag.load(std::memory_order_relaxed) && !printing) {
             printing = true;
 
-            // Cleanup Counter
             win.SetNotification(L"Working on it...");
             win.SetAllowPause(true);
             controller::print::Counter::Destroy();
 
-
-            // Start render
             int dpiX = 300;
             int dpiY = 300;
             if (!platform::GetPrinterDPI(m_cfg.printer, dpiX, dpiY)) {
                 dpiX = 300;
                 dpiY = 300;
             }
-            renderer.Init(m_cfg, tempFolder.string(), std::max(dpiX, dpiY), cancelFlag, win );
+
+            renderer.Init(m_cfg, tempFolder.string(), std::max(dpiX, dpiY), cancelFlag, win);
             renderer.Run();
         }
-        
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+
+        //===================================================
+        // RENDER DONE
+        if (printing && renderer.IsDone() && !renderDoneHandled) {
+            renderDoneHandled = true;
+
+            win.SetNotification(L"Start printing...");
+
+            printer.Init(m_cfg, tempFolder.string(), cancelFlag, pauseFlag, win);
+        }
+
+        Sleep(1); // cực quan trọng: tránh ăn 100% CPU
     }
+
+    END_LOOP:
     
     
     //===================================================
     // Clean up 
     controller::print::Counter::Destroy();
     renderer.Destroy();
+    printer.Destroy();
 
     std::error_code ec;
     fs::remove_all(tempFolder, ec);
