@@ -25,7 +25,7 @@ public:
     void Destroy();
 
 private:
-    std::string BuildTargetPath(int index) const;
+    std::string BuildTargetPath(const std::string& inputPath, int index) const;
 
 private:
     config::ConfigData* cfg_ = nullptr;

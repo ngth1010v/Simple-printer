@@ -3,6 +3,8 @@
 #include <windows.h>
 #include <sstream>
 #include <iostream>
+#include <filesystem>
+#include <algorithm>
 
 #include "renderer/Renderer.h"
 
@@ -61,7 +63,7 @@ void Renderer::Run() {
         for (int p = from; p <= to; ++p) {
             if (cancelFlag_->load(std::memory_order_relaxed)) return;
 
-            std::string target = BuildTargetPath(index++);
+            std::string target = BuildTargetPath(f.path, index++);
 
             renderer::Render(
                 f.path,
@@ -115,9 +117,23 @@ void Renderer::Run() {
     }
 }
 
-std::string Renderer::BuildTargetPath(int index) const {
+std::string Renderer::BuildTargetPath(const std::string& inputPath, int index) const {
+    std::filesystem::path p(inputPath);
+
+    std::string ext = p.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+    std::string suffix;
+
+    if (ext == ".pdf" || ext == ".docx") {
+        suffix = "-d.bmp";
+    } else {
+        suffix = "-i.bmp";
+    }
+
     std::ostringstream oss;
-    oss << tempDir_ << "/" << index << ".bmp";
+    oss << tempDir_ << "/" << index << suffix;
+
     return oss.str();
 }
 
