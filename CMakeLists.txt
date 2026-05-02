@@ -27,6 +27,7 @@ file(GLOB SOURCES
     "src/controller/print/*.cpp"
     "src/counter/*.cpp"
     "src/platform/*.cpp"
+    "src/printer/*.cpp"
     "src/renderer/*.cpp"
     "src/ui/*.cpp"
     "src/ui/home/*.cpp"

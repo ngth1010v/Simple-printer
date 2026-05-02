@@ -1,173 +1,150 @@
-#TASKS:
-- từ code có sẳn bên dưới, hảy viết cho tôi thêm hàm để lấy DPI nhận tham số là string name của máy in
+# TASKS:
+- viết cho tôi 6 file như dưới để từ path .bmp và config sẽ đẩy ra máy in và in
+
+# ENV:
+- urtc64 + ninja + cpp20
+
+# FOLDER TREE (có thể thêm layoutHandle.h/cpp nếu phần xử lí layout quá dài)
+printer/
+  ├── Printer.h/cpp
+  ├── WinSpooler.h/cpp
+  └── WinPrinter.h/cpp
+
+# CONFIG:
+struct ConfigData {
+    std::string printer     = "Microsoft Print to PDF";
+    std::string paper       = "A4";
+    std::string scale       = "Fit to page (keep aspect ratio)";
+    std::string orientation = "Auto";
+    ...
+};
+
+
+# EXPORT FUNCTION:
+- void printer::Init(config::ConfigData& cfg)
+- int printer::PrintSimplex(string path, string& error)
+- int printer::PrintDuplex(string frontPath, string backPath, string& error)
+- void printer::ShutDown()
+
+
+
+# IDEA:
+- khi được gọi Init, Printer sẽ:
++ lưu tham số lại
++ không làm gì thêm
+
+- khi được gọi Print(), Printer sẽ:
++ lấy file bmp từ path
++ xử lí layout (scale + đổi hết sang Portrait):
+++ tạo 1 bmp trống với tỉ lệ paper + dpi printer + Portrait (nhớ sử lí để né unprintable)
+++ Xét orientation
++++ if (orientation == "Portrait")
+++++ skip
++++ if (orientation == "Landscape")
+++++ xoay bmp gốc 90 độ
++++ if (orientation == "Auto")
+++++ nếu w bmp gốc > h bmp gốc -> xoay 90 độ, không thì skip
+++ scale lại bmp gốc vào bmp mới (nhớ sử lí để né unprintable):
++++ scale = "No Scale" -> chỉ đưa vào canvas, không scale
++++ scale = "Fit to page (keep aspect ratio)" -> scale nhưng giữ ratio
++++ scale = "Fill page (ignore aspect ratio)" -> fill canvas, không quan tâm ratio
++ đẩy máy in với paper = cfg.paper và orientation = "Portrait" (ép printer in giống 1:1 nhất có thể):
+++ tạo Job:
++++ đẩy ảnh vào (đẩy 2 cái nếu PrintDuplex và 1 nếu PrintSimplex)
++++ chờ flag từ printer hoặc spooler (chọn cách cân bằng giữa chính xác, đơn giản):
+++++ nếu thành công -> return 0 error = ""
+++++ nếu fail -> return 1 v error 
+
+
+
++ win.SetResourceProcessLabel(L"Rendering resources...");
++ win.SetResourceProcessColor("green");
++ win.SetResourceProcess(tổng số trang cần render, 0);
++ chạy renderer::Init()
++ chạy renderer::Render hết range trong từng file trong cfg.files để render từng file với quy tắc đặt tên targetPath như sau:
+++ bắt đầu từ 1, đặt tên các file tăng dần với đuôi .bmp và phải đảm bảo tên luôn liền mạch
+++ ví dụ: "tempDir/1.bmp", "tempDir/2.bmp", ...
++ sau khi các trang chạy xong sẽ được gọi cb, lúc đó hãy trong mỗi cb sẽ:
+++ xem pages trả về có error không (nếu có thì error != empty)
++++ nếu error:
+++++ win.SetResourceProcessColor("red");
+++++ chạy 1 messengebox bằng winapi log lỗi ra và cho user chọn:
++++++ 'skip this page' -> skip + win.SetResourceProcessColor("green") + win.SetResourceProcess(tổng số page còn lại, số page đã render thành công);
++++++ 'cancel' -> sẽ set cancelFlag = true + return
++++ nếu không error:
+++++ win.SetResourceProcess(tổng số page còn lại, số page đã render thành công);
++ sau khi tất cả cb đã được trả về mà không có cancel giữa chùng thì return 
+
+- ShutDown():
++ gọi renderer::ShutDown()
++ cleanup nếu cần
+
+- *note: 
++ renderer::Count chạy theo kiểu async, tức gọi xong nó sẽ tự đẩy qua cho theard khác rồi trả quyền ngay
++ ShutDown() chỉ được dùng từ bên ngoài, không tự gọi destroy trong controller::print::Printer
 
 # RULE:
-- chỉ cần chỉ tôi thêm code / không cần code hết lại
+- code đơn giản, không quá overskill, tận dụng cpp20 để làm code đơn giản hơn
+- tối ưu cho cpu yếu
+- mọi function (ngoại trừ utils nhỏ phục vụ cho cpp) đều phải được bọc namespace hoặc class: controller::print::Printer 
+- code full 2 file tôi yêu cầu
 
 # NOTE:
-- nếu chó thắc mắc / thiếu thông tin, hãy hỏi kĩ tôi trước khi code
+- nếu thiếu thông tin hay có mơ hổ logic, hãy hỏi tôi trước khi thực hiện bất cứ yêu cầu nào bên trên
 
-# CODE:
-### WinPrinter.h:
+# INPUT CODE:
+### renderer/Printer.h:
+#pragma once
+
+#include <functional>
+#include <string>
+
+namespace renderer {
+
+using RenderCallback = std::function<void(std::string error)>;
+
+void Init(int dpi);
+void Render(const std::string& srcPath,
+            const std::string& targetPath,
+            int page = 1,
+            RenderCallback callback = {});
+void Shutdown();
+
+} // namespace renderer
+
+
+
+### config/ConfigModel.h:
 #pragma once
 #include <string>
 #include <vector>
 
-namespace platform {
-namespace printer {
+namespace config {
 
-std::vector<std::string> GetPrinters();
+struct FileData {
+    std::string path;
+    int pages = 0;
+    int fromRange;
+    int toRange;
+    bool loaded = false;
+};
 
-std::vector<std::string> GetSupportedPapers(const std::string& printerName);
+struct ConfigData {
+    std::string printer     = "Microsoft Print to PDF";
+    int         copies      = 1;
 
-}
-}
+    std::string printMode   = "Simplex";
+    std::string paper       = "A4";
+    std::string scale       = "Fit to page (keep aspect ratio)";
+    std::string orientation = "Auto";
+    std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
 
+    // {top, right, bottom, left}
+    float margin[4] = {1, 1, 1, 1};
 
+    std::vector<FileData> files;
+};
 
-### WinPrinter.cpp:
-#include "platform/WinPrinter.h"
-#include <windows.h>
-#include <winspool.h>
-#include <vector>
-#include <string>
-#include <unordered_map>
-
-namespace platform {
-namespace printer {
-
-// ===== UTF16 -> UTF8 =====
-static std::string WStringToString(const std::wstring& w)
-{
-    if (w.empty()) return {};
-
-    int size = WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), nullptr, 0, nullptr, nullptr);
-    std::string result(size, 0);
-
-    WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), result.data(), size, nullptr, nullptr);
-    return result;
-}
-
-// ===== UTF8 -> UTF16 =====
-static std::wstring StringToWString(const std::string& s)
-{
-    if (s.empty()) return {};
-
-    int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0);
-    std::wstring result(size, 0);
-
-    MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), result.data(), size);
-    return result;
-}
-
-// ===== Paper map (giống Word ~90%) =====
-static std::string MapPaperName(WORD paperId, const std::wstring& driverName)
-{
-    static const std::unordered_map<WORD, std::string> map = {
-        {DMPAPER_A3, "A3"},
-        {DMPAPER_A4, "A4"},
-        {DMPAPER_A5, "A5"},
-        {DMPAPER_A6, "A6"},
-        {DMPAPER_LETTER, "Letter"},
-        {DMPAPER_LEGAL, "Legal"},
-        {DMPAPER_EXECUTIVE, "Executive"},
-        {DMPAPER_B4, "B4"},
-        {DMPAPER_B5, "B5"},
-    };
-
-    auto it = map.find(paperId);
-    if (it != map.end())
-        return it->second;
-
-    // fallback driver name
-    return WStringToString(driverName);
-}
-
-// ============================================================
-// GetPrinters
-// ============================================================
-std::vector<std::string> GetPrinters()
-{
-    std::vector<std::string> result;
-
-    DWORD needed = 0;
-    DWORD returned = 0;
-
-    EnumPrintersW(PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
-                  nullptr, 2,
-                  nullptr, 0,
-                  &needed, &returned);
-
-    if (needed == 0)
-        return result;
-
-    std::vector<BYTE> buffer(needed);
-
-    if (!EnumPrintersW(PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
-                       nullptr, 2,
-                       buffer.data(), needed,
-                       &needed, &returned))
-        return result;
-
-    PRINTER_INFO_2W* printers = reinterpret_cast<PRINTER_INFO_2W*>(buffer.data());
-
-    for (DWORD i = 0; i < returned; ++i) {
-        if (printers[i].pPrinterName) {
-            result.push_back(WStringToString(printers[i].pPrinterName));
-        }
-    }
-
-    return result;
-}
-
-// ============================================================
-// GetSupportedPapers
-// ============================================================
-std::vector<std::string> GetSupportedPapers(const std::string& printerName)
-{
-    std::vector<std::string> result;
-
-    std::wstring wPrinter = StringToWString(printerName);
-
-    int count = DeviceCapabilitiesW(
-        wPrinter.c_str(),
-        nullptr,
-        DC_PAPERS,
-        nullptr,
-        nullptr
-    );
-
-    if (count <= 0)
-        return result;
-
-    std::vector<WORD> paperIds(count);
-    std::vector<wchar_t> paperNames(count * 64); // mỗi name tối đa 64 wchar
-
-    DeviceCapabilitiesW(
-        wPrinter.c_str(),
-        nullptr,
-        DC_PAPERS,
-        reinterpret_cast<LPWSTR>(paperIds.data()),
-        nullptr
-    );
-
-    DeviceCapabilitiesW(
-        wPrinter.c_str(),
-        nullptr,
-        DC_PAPERNAMES,
-        paperNames.data(),
-        nullptr
-    );
-
-    for (int i = 0; i < count; ++i) {
-        std::wstring name(&paperNames[i * 64]);
-        result.push_back(MapPaperName(paperIds[i], name));
-    }
-
-    return result;
-}
-
-}
 }
 
 

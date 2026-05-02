@@ -123,7 +123,7 @@ int PrintController::Run() {
             printing = true;
 
             // Cleanup Counter
-            win.SetNotification(L"");
+            win.SetNotification(L"Working on it...");
             win.SetAllowPause(true);
             controller::print::Counter::Destroy();
 
