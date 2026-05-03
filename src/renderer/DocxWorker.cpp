@@ -543,6 +543,56 @@ struct ComInitGuard {
     }
 };
 
+template <class F>
+class ScopeExit {
+public:
+    explicit ScopeExit(F f) : f_(std::move(f)), active_(true) {}
+    ~ScopeExit() { if (active_) f_(); }
+
+    ScopeExit(const ScopeExit&) = delete;
+    ScopeExit& operator=(const ScopeExit&) = delete;
+
+    void dismiss() { active_ = false; }
+
+private:
+    F f_;
+    bool active_;
+};
+
+template <class F>
+ScopeExit<F> MakeScopeExit(F f) {
+    return ScopeExit<F>(std::move(f));
+}
+
+bool GetLongProperty(IDispatch* disp, const wchar_t* name, long* out, std::string& error) {
+    if (!disp || !out) {
+        error = "invalid argument";
+        return false;
+    }
+
+    VARIANT result;
+    VariantInit(&result);
+
+    std::vector<VARIANT> args;
+    if (!Invoke(disp, name, DISPATCH_PROPERTYGET, args, &result, error)) {
+        VariantClear(&result);
+        return false;
+    }
+
+    if (result.vt == VT_I4) {
+        *out = result.lVal;
+    } else if (result.vt == VT_INT) {
+        *out = result.intVal;
+    } else {
+        error = "property is not integer";
+        VariantClear(&result);
+        return false;
+    }
+
+    VariantClear(&result);
+    return true;
+}
+
 } // namespace
 
 DocxWorker::DocxWorker() {
@@ -596,9 +646,6 @@ void DocxWorker::Stop() {
         queue_.swap(empty);
     }
 
-    CloseCurrentPdf();
-    CloseWordApp();
-
     std::error_code ec;
     std::filesystem::remove_all(tempDirWide_, ec);
 }
@@ -646,7 +693,45 @@ void DocxWorker::CloseWordApp() {
     }
 
     std::string error;
-    CallQuit(wordApp_, error);
+
+    IDispatch* documents = nullptr;
+    if (GetDispatchProperty(wordApp_, L"Documents", &documents, error)) {
+        long count = 0;
+        if (GetLongProperty(documents, L"Count", &count, error)) {
+            for (long i = count; i >= 1; --i) {
+                VARIANT indexVar;
+                VariantInit(&indexVar);
+                indexVar = MakeLongVariant(i);
+
+                VARIANT itemResult;
+                VariantInit(&itemResult);
+
+                std::vector<VARIANT> args;
+                args.push_back(indexVar);
+
+                if (Invoke(documents, L"Item", DISPATCH_PROPERTYGET, args, &itemResult, error)) {
+                    if (itemResult.vt == VT_DISPATCH && itemResult.pdispVal) {
+                        IDispatch* doc = itemResult.pdispVal;
+                        std::string closeErr;
+                        CallCloseDocument(doc, closeErr);
+                        doc->Release();
+                    }
+                }
+
+                VariantClear(&itemResult);
+                VariantClear(&indexVar);
+            }
+        }
+
+        documents->Release();
+    }
+
+    // thử Quit thêm 1 lần nữa sau khi đã đóng hết doc
+    {
+        std::string quitError;
+        CallQuit(wordApp_, quitError);
+    }
+
     wordApp_->Release();
     wordApp_ = nullptr;
 }
@@ -746,7 +831,12 @@ bool DocxWorker::ConvertDocxToTempPdf(const std::string& srcPath,
 }
 
 void DocxWorker::ThreadMain() {
-    ComInitGuard com;
+ComInitGuard com;
+
+    auto cleanup = MakeScopeExit([this] {
+        CloseCurrentPdf();
+        CloseWordApp();
+    });
 
     while (true) {
         Task task;
@@ -788,9 +878,6 @@ void DocxWorker::ThreadMain() {
             break;
         }
     }
-
-    CloseCurrentPdf();
-    CloseWordApp();
 }
 
 void DocxWorker::ProcessTask(const Task& task) {

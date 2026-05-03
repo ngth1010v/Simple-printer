@@ -317,6 +317,89 @@ static VARIANT MakeMissing() {
     return v;
 }
 
+static bool GetLongProperty(IDispatch* obj, const wchar_t* name, long* out) {
+    if (!obj || !out) {
+        return false;
+    }
+
+    VariantHolder result;
+    HRESULT hr = GetProperty(obj, name, result.get());
+    if (FAILED(hr)) {
+        return false;
+    }
+
+    if (result.ref().vt == VT_I4) {
+        *out = result.ref().lVal;
+        return true;
+    }
+
+    if (result.ref().vt == VT_I2) {
+        *out = result.ref().iVal;
+        return true;
+    }
+
+    return false;
+}
+
+static void CloseAllWordDocuments(IDispatch* word) {
+    if (!word) {
+        return;
+    }
+
+    VariantHolder docsVar;
+    if (FAILED(GetProperty(word, L"Documents", docsVar.get())) ||
+        docsVar.ref().vt != VT_DISPATCH ||
+        !docsVar.ref().pdispVal) {
+        return;
+    }
+
+    ComPtr<IDispatch> docs(docsVar.ref().pdispVal);
+    docsVar.ref().pdispVal->AddRef();
+
+    long count = 0;
+    if (!GetLongProperty(docs.get(), L"Count", &count) || count <= 0) {
+        return;
+    }
+
+    for (long i = count; i >= 1; --i) {
+        VariantHolder idx;
+        idx.ref() = MakeI4(i);
+
+        VariantHolder itemVar;
+        HRESULT hrItem = CallMethod(docs.get(), L"Item", idx.get(), 1, itemVar.get());
+        if (FAILED(hrItem) ||
+            itemVar.ref().vt != VT_DISPATCH ||
+            !itemVar.ref().pdispVal) {
+            continue;
+        }
+
+        ComPtr<IDispatch> doc(itemVar.ref().pdispVal);
+        itemVar.ref().pdispVal->AddRef();
+
+        VariantHolder closeArg;
+        closeArg.ref() = MakeBool(false);
+        CallMethod(doc.get(), L"Close", closeArg.get(), 1, nullptr);
+    }
+}
+
+template <typename F>
+class ScopeExit {
+public:
+    explicit ScopeExit(F f) : m_f(std::move(f)) {}
+    ~ScopeExit() { m_f(); }
+
+    ScopeExit(const ScopeExit&) = delete;
+    ScopeExit& operator=(const ScopeExit&) = delete;
+
+private:
+    F m_f;
+};
+
+template <typename F>
+static ScopeExit<F> MakeScopeExit(F f) {
+    return ScopeExit<F>(std::move(f));
+}
+
 } // namespace
 
 DocxWorker::DocxWorker() {}
@@ -436,6 +519,20 @@ void DocxWorker::WorkerLoop() {
         return;
     }
 
+    struct WordCleanupGuard {
+        ComPtr<IDispatch>& wordRef;
+
+        ~WordCleanupGuard() {
+            if (wordRef) {
+                VariantHolder quitArg;
+                quitArg.ref() = MakeBool(false);
+                CallMethod(wordRef.get(), L"Quit", quitArg.get(), 1, nullptr);
+                wordRef.reset();
+                CoFreeUnusedLibraries();
+            }
+        }
+    } wordCleanup{word};
+
     while (true) {
         Task task;
 
@@ -478,11 +575,6 @@ void DocxWorker::WorkerLoop() {
             ComPtr<IDispatch> docs(docsVar.ref().pdispVal);
             docsVar.ref().pdispVal->AddRef();
 
-            // Word.Documents.Open(FileName, ConfirmConversions, ReadOnly)
-            // rgvarg is reversed:
-            //   [0] = ReadOnly
-            //   [1] = ConfirmConversions (missing)
-            //   [2] = FileName
             VARIANT args[3];
             for (int i = 0; i < 3; ++i) {
                 VariantInit(&args[i]);
@@ -515,6 +607,20 @@ void DocxWorker::WorkerLoop() {
             ComPtr<IDispatch> doc(docVar.ref().pdispVal);
             docVar.ref().pdispVal->AddRef();
 
+            struct DocCloseGuard {
+                IDispatch* doc = nullptr;
+
+                ~DocCloseGuard() {
+                    if (!doc) {
+                        return;
+                    }
+
+                    VariantHolder closeArg;
+                    closeArg.ref() = MakeBool(false);
+                    CallMethod(doc, L"Close", closeArg.get(), 1, nullptr);
+                }
+            } closeGuard{doc.get()};
+
             VariantHolder statArg;
             statArg.ref() = MakeI4(2); // wdStatisticPages
 
@@ -530,14 +636,6 @@ void DocxWorker::WorkerLoop() {
                 error = "ComputeStatistics returned unexpected type";
             }
 
-            {
-                VariantHolder closeArg;
-                closeArg.ref() = MakeBool(false);
-                CallMethod(doc.get(), L"Close", closeArg.get(), 1, nullptr);
-            }
-
-            doc.reset();
-
         } while (false);
 
         if (pages <= 0 && error.empty()) {
@@ -546,16 +644,6 @@ void DocxWorker::WorkerLoop() {
 
         SafeInvokeCallback(task.cb, pages, error);
     }
-
-    {
-        VariantHolder quitArg;
-        quitArg.ref() = MakeBool(false);
-        CallMethod(word.get(), L"Quit", quitArg.get(), 1, nullptr);
-    }
-
-    word.reset();
-    CoFreeUnusedLibraries();
 }
-
 
 } // namespace counter
