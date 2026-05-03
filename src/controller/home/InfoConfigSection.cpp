@@ -18,6 +18,7 @@ void InfoConfigSectionController::Reload()
 {
     // ===== total files =====
     const int totalFiles = static_cast<int>(m_cfg.files.size());
+    const int copies = static_cast<int>(m_cfg.copies);
 
     // ===== total pages in ranges =====
     const int totalRangePages = CalcTotalPagesInRanges();
@@ -26,13 +27,18 @@ void InfoConfigSectionController::Reload()
     std::string pagesToPrintStr = "0";
 
     if (m_cfg.printMode == "Simplex") {
-        pagesToPrintStr = std::to_string(totalRangePages);
+        pagesToPrintStr = std::to_string(totalRangePages * copies);
     } else {
-        // duplex → phải chẵn
-        if (totalRangePages % 2 == 0 || totalRangePages == 1) {
-            pagesToPrintStr = std::to_string(totalRangePages);
-        } else {
-            pagesToPrintStr = std::to_string(totalRangePages) + " + 1";
+
+        if (copies == 1 && totalRangePages == 1){
+            pagesToPrintStr = "1";      
+        }
+        else {
+            if (totalRangePages % 2 == 0) {
+                pagesToPrintStr = std::to_string(totalRangePages * copies);
+            } else {
+                pagesToPrintStr = std::to_string(totalRangePages * copies) + " + " + std::to_string(copies);
+            }
         }
     }
 
@@ -45,6 +51,7 @@ void InfoConfigSectionController::Reload()
         // ceil(total / 2)
         sheetsRequired = (totalRangePages + 1) / 2;
     }
+    sheetsRequired *= copies;
     
     // ===== set UI =====
     m_win.m_info.SetTotalFilesValue(std::to_string(totalFiles));

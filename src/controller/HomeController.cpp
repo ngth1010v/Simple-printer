@@ -30,18 +30,19 @@ int HomeController::Run()
     counter::Init();
 
 
-
-    // ===== BASIC =====
-    controller::home::BasicConfigSectionController basic(win, m_cfg);
-    basic.Init();
-    basic.Bind();
-
-
     // ===== INFO =====
     controller::home::InfoConfigSectionController info(win, m_cfg);
     info.Init();
     
     
+    // ===== BASIC =====
+    controller::home::BasicConfigSectionController basic(win, m_cfg);
+    basic.Init([&]() {
+        info.Reload();
+    });
+    basic.Bind();
+
+
     // ===== ADVANCE =====
     controller::home::AdvangeConfigSectionController adv(win, m_cfg);
     adv.Init([&]() {

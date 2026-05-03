@@ -85,12 +85,18 @@ static void BasicCopiesUiUpdate(HomeWindow& win, config::ConfigData& cfg, const 
 
 using namespace controller::home;
 
+void BasicConfigSectionController::Fire(const BasicConfigSectionController::ChangeCallback& cb) {
+    if (cb) cb();
+}
+
 BasicConfigSectionController::BasicConfigSectionController(HomeWindow& win, config::ConfigData& cfg)
     : m_win(win), m_cfg(cfg) {
 }
 
-void BasicConfigSectionController::Init()
+void BasicConfigSectionController::Init(ChangeCallback cb)
 {
+    m_cb = std::move(cb);
+
     BasicPrinterUiInit(m_win, m_cfg);
     BasicCopiesUiInit(m_win, m_cfg);
 }
@@ -99,9 +105,11 @@ void BasicConfigSectionController::Bind()
 {
     m_win.m_basic.OnPrinterChange([&](const std::string& v) {
         BasicPrinterUiUpdate(m_win, m_cfg, v);
+        Fire(m_cb);
     });
 
     m_win.m_basic.OnCopiesChange([&](const std::string& v) {
         BasicCopiesUiUpdate(m_win, m_cfg, v);
+        Fire(m_cb);
     });
 }
