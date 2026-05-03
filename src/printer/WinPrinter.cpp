@@ -238,7 +238,7 @@ bool IsLandscapeByConfig(const std::string& orientation, const BmpImage& src) {
 }
 
 bool IsNoScale(const std::string& scale) {
-    return scale == "No scale";
+    return scale == "No Scale";
 }
 
 bool IsFillScale(const std::string& scale) {
