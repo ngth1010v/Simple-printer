@@ -11,6 +11,9 @@
 #include <string>
 #include <thread>
 
+#include <fstream>
+#include <cstdint>
+
 #include <iostream>
 
 namespace controller::print {
@@ -161,6 +164,100 @@ std::string ResolvePagePath(
     return {};
 }
 
+#pragma pack(push, 1)
+struct BmpFileHeader {
+    std::uint16_t bfType = 0x4D42; // "BM"
+    std::uint32_t bfSize = 0;
+    std::uint16_t bfReserved1 = 0;
+    std::uint16_t bfReserved2 = 0;
+    std::uint32_t bfOffBits = 0;
+};
+#pragma pack(pop)
+
+constexpr const char* kEmptyBmpName = "empty.bmp";
+
+bool IsDuplexLikeMode(const std::string& mode) {
+    return mode == "Duplex" ||
+           mode == "Manual Duplex (Flip On Long Edge)" ||
+           mode == "Manual Duplex (Flip On Short Edge)";
+}
+
+bool NeedPadBlankPage(const std::string& mode, int pages) {
+    return pages > 1 && IsDuplexLikeMode(mode) && (pages % 2 == 1);
+}
+
+std::string EmptyBmpPath(const std::string& tempDir) {
+    fs::path p = fs::u8path(tempDir);
+    p /= kEmptyBmpName;
+    return p.string();
+}
+
+bool CreateEmptyBmpFile(const std::string& tempDir, std::string& outPath, std::string& error) {
+    const fs::path filePath = fs::u8path(EmptyBmpPath(tempDir));
+    outPath = filePath.string();
+
+    try {
+        if (fs::exists(filePath)) {
+            return true;
+        }
+
+        if (!fs::exists(filePath.parent_path())) {
+            fs::create_directories(filePath.parent_path());
+        }
+    } catch (...) {
+        error = "Failed to prepare folder for empty.bmp";
+        return false;
+    }
+
+    // 1x1 white BMP, đủ hợp lệ để printer::BuildPageImage scale lên
+    BmpFileHeader fileHeader{};
+    BITMAPINFOHEADER infoHeader{};
+
+    fileHeader.bfOffBits = static_cast<std::uint32_t>(sizeof(BmpFileHeader) + sizeof(BITMAPINFOHEADER));
+    fileHeader.bfSize = fileHeader.bfOffBits + 4; // 1 pixel BGRA
+
+    infoHeader.biSize = sizeof(BITMAPINFOHEADER);
+    infoHeader.biWidth = 1;
+    infoHeader.biHeight = 1; // bottom-up
+    infoHeader.biPlanes = 1;
+    infoHeader.biBitCount = 32;
+    infoHeader.biCompression = BI_RGB;
+    infoHeader.biSizeImage = 4;
+
+    const std::uint32_t whitePixel = 0xFFFFFFFFu;
+
+    std::ofstream out(filePath, std::ios::binary);
+    if (!out) {
+        error = "Failed to create empty.bmp";
+        return false;
+    }
+
+    out.write(reinterpret_cast<const char*>(&fileHeader), sizeof(fileHeader));
+    out.write(reinterpret_cast<const char*>(&infoHeader), sizeof(infoHeader));
+    out.write(reinterpret_cast<const char*>(&whitePixel), sizeof(whitePixel));
+
+    if (!out) {
+        error = "Failed to write empty.bmp";
+        return false;
+    }
+
+    return true;
+}
+
+std::string ResolvePagePathOrEmpty(
+    const std::string& tempDir,
+    int page,
+    int actualPages,
+    char preferSuffix,
+    char fallbackSuffix,
+    const std::string& emptyBmpPath
+) {
+    if (page > actualPages) {
+        return emptyBmpPath;
+    }
+    return ResolvePagePath(tempDir, page, preferSuffix, fallbackSuffix);
+}
+
 } // namespace
 
 void Printer::Init(
@@ -191,8 +288,8 @@ void Printer::Init(
 
 void Printer::Run() {
     auto* const cancelFlag = m_state.cancelFlag;
-    auto* const pauseFlag   = m_state.pauseFlag;
-    auto* const win         = m_state.win;
+    auto* const pauseFlag  = m_state.pauseFlag;
+    auto* const win        = m_state.win;
 
     if (!cancelFlag || !pauseFlag || !win) {
         return;
@@ -267,81 +364,102 @@ void Printer::Run() {
 
         if (ret == IDOK) {
             win->SetPrintProcessColor("green");
-            return true; // skip page
+            return true;
         }
 
         cancelFlag->store(true, std::memory_order_relaxed);
         return false;
     };
 
-    auto PrintSimplexOnePage = [&](int page, int totalPages, char preferSuffix, char fallbackSuffix) -> bool {
-        if (!WaitIfPaused()) {
-            return false;
-        }
+    auto CreateEmptyBmpFile = [&](const std::string& tempDir, std::string& outPath, std::string& error) -> bool {
+        fs::path filePath = fs::u8path(tempDir);
+        filePath /= "empty.bmp";
+        outPath = filePath.string();
 
-        const std::string path = ResolvePagePath(m_state.tempDir, page, preferSuffix, fallbackSuffix);
-        std::string error;
-
-        if (path.empty()) {
-            error = "Missing bitmap file for page " + std::to_string(page);
-        } else {
-            printer::PrintSimplex(path, error);
-        }
-
-        if (!HandlePrintError(error, page, totalPages)) {
-            return false;
-        }
-
-        win->SetPrintProcess(totalPages, page);
-        return !IsCancelled();
-    };
-
-    auto PrintDuplexPair = [&](int firstPage, int secondPage, int totalPages) -> bool {
-        if (!WaitIfPaused()) {
-            return false;
-        }
-
-        const std::string frontPath = ResolvePagePath(m_state.tempDir, firstPage, 'd', 'i');
-        const std::string backPath  = ResolvePagePath(m_state.tempDir, secondPage, 'i', 'd');
-
-        std::string error;
-
-        if (frontPath.empty()) {
-            error = "Missing bitmap file for page " + std::to_string(firstPage);
-        } else if (backPath.empty()) {
-            error = "Missing bitmap file for page " + std::to_string(secondPage);
-        } else {
-            printer::PrintDuplex(frontPath, backPath, error);
-        }
-
-        if (!HandlePrintError(error, secondPage, totalPages)) {
-            return false;
-        }
-
-        win->SetPrintProcess(totalPages, secondPage);
-        return !IsCancelled();
-    };
-
-    auto WaitForManualFlip = [&](const std::wstring& note) -> bool {
-        win->SetPrintProcessColor("yellow");
-        win->SetAllowPause(false);
-        win->SetAllowContinue(true);
-        win->SetNotification(note);
-
-        pauseFlag->store(true, std::memory_order_relaxed);
-
-        while (IsPaused()) {
-            if (IsCancelled()) {
-                return false;
+        try {
+            if (fs::exists(filePath)) {
+                return true;
             }
-            ::Sleep(30);
-        }
 
-        if (IsCancelled()) {
+            if (!fs::exists(filePath.parent_path())) {
+                fs::create_directories(filePath.parent_path());
+            }
+        } catch (...) {
+            error = "Failed to prepare folder for empty.bmp";
             return false;
         }
 
-        RestoreNormalUI();
+#pragma pack(push, 1)
+        struct BmpFileHeader {
+            WORD  bfType;
+            DWORD bfSize;
+            WORD  bfReserved1;
+            WORD  bfReserved2;
+            DWORD bfOffBits;
+        };
+
+        struct BmpInfoHeader {
+            DWORD biSize;
+            LONG  biWidth;
+            LONG  biHeight;
+            WORD  biPlanes;
+            WORD  biBitCount;
+            DWORD biCompression;
+            DWORD biSizeImage;
+            LONG  biXPelsPerMeter;
+            LONG  biYPelsPerMeter;
+            DWORD biClrUsed;
+            DWORD biClrImportant;
+        };
+#pragma pack(pop)
+
+        BmpFileHeader fh{};
+        BmpInfoHeader ih{};
+
+        fh.bfType = 0x4D42; // "BM"
+        fh.bfOffBits = sizeof(BmpFileHeader) + sizeof(BmpInfoHeader);
+        fh.bfSize = fh.bfOffBits + 4; // 1 pixel BGRA
+
+        ih.biSize = sizeof(BmpInfoHeader);
+        ih.biWidth = 1;
+        ih.biHeight = 1; // bottom-up
+        ih.biPlanes = 1;
+        ih.biBitCount = 32;
+        ih.biCompression = BI_RGB;
+        ih.biSizeImage = 4;
+
+        const DWORD whitePixel = 0xFFFFFFFFu;
+
+        HANDLE hFile = ::CreateFileW(
+            filePath.c_str(),
+            GENERIC_WRITE,
+            0,
+            nullptr,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr
+        );
+
+        if (hFile == INVALID_HANDLE_VALUE) {
+            error = "Failed to create empty.bmp";
+            return false;
+        }
+
+        bool ok = true;
+        DWORD written = 0;
+
+        ok = ok && ::WriteFile(hFile, &fh, sizeof(fh), &written, nullptr) && written == sizeof(fh);
+        ok = ok && ::WriteFile(hFile, &ih, sizeof(ih), &written, nullptr) && written == sizeof(ih);
+        ok = ok && ::WriteFile(hFile, &whitePixel, sizeof(whitePixel), &written, nullptr) && written == sizeof(whitePixel);
+
+        ::CloseHandle(hFile);
+
+        if (!ok) {
+            ::DeleteFileW(filePath.c_str());
+            error = "Failed to write empty.bmp";
+            return false;
+        }
+
         return true;
     };
 
@@ -349,21 +467,116 @@ void Printer::Run() {
         printer::Init(m_state.cfg);
 
         const int pages = CountPagesInTempDir(m_state.tempDir);
+        const std::string mode = m_state.cfg.printMode;
+
+        const bool isDuplexLike =
+            mode == "Duplex" ||
+            mode == "Manual Duplex (Flip On Long Edge)" ||
+            mode == "Manual Duplex (Flip On Short Edge)";
+
+        const bool padBlankPage = (pages > 1) && isDuplexLike && ((pages % 2) == 1);
+        const int jobPages = padBlankPage ? (pages + 1) : pages;
+
+        std::string emptyBmpPath;
+        if (padBlankPage) {
+            std::string createError;
+            if (!CreateEmptyBmpFile(m_state.tempDir, emptyBmpPath, createError)) {
+                win->SetPrintProcessColor("red");
+                win->SetNotification(Utf8ToWide(createError));
+                return;
+            }
+        }
+
+        auto ResolvePagePathOrEmpty = [&](int page, char preferSuffix, char fallbackSuffix) -> std::string {
+            if (page > pages) {
+                return emptyBmpPath;
+            }
+            return ResolvePagePath(m_state.tempDir, page, preferSuffix, fallbackSuffix);
+        };
+
+        auto PrintSimplexOnePage = [&](int page, int totalPages, char preferSuffix, char fallbackSuffix) -> bool {
+            if (!WaitIfPaused()) {
+                return false;
+            }
+
+            const std::string path = ResolvePagePathOrEmpty(page, preferSuffix, fallbackSuffix);
+            std::string error;
+
+            if (path.empty()) {
+                error = "Missing bitmap file for page " + std::to_string(page);
+            } else {
+                printer::PrintSimplex(path, error);
+            }
+
+            if (!HandlePrintError(error, page, totalPages)) {
+                return false;
+            }
+
+            win->SetPrintProcess(totalPages, page);
+            return !IsCancelled();
+        };
+
+        auto PrintDuplexPair = [&](int firstPage, int secondPage, int totalPages) -> bool {
+            if (!WaitIfPaused()) {
+                return false;
+            }
+
+            const std::string frontPath = ResolvePagePathOrEmpty(firstPage, 'd', 'i');
+            const std::string backPath  = ResolvePagePathOrEmpty(secondPage, 'i', 'd');
+
+            std::string error;
+
+            if (frontPath.empty()) {
+                error = "Missing bitmap file for page " + std::to_string(firstPage);
+            } else if (backPath.empty()) {
+                error = "Missing bitmap file for page " + std::to_string(secondPage);
+            } else {
+                printer::PrintDuplex(frontPath, backPath, error);
+            }
+
+            if (!HandlePrintError(error, secondPage, totalPages)) {
+                return false;
+            }
+
+            win->SetPrintProcess(totalPages, secondPage);
+            return !IsCancelled();
+        };
+
+        auto WaitForManualFlip = [&](const std::wstring& note) -> bool {
+            win->SetPrintProcessColor("yellow");
+            win->SetAllowPause(false);
+            win->SetAllowContinue(true);
+            win->SetNotification(note);
+
+            pauseFlag->store(true, std::memory_order_relaxed);
+
+            while (IsPaused()) {
+                if (IsCancelled()) {
+                    return false;
+                }
+                ::Sleep(30);
+            }
+
+            if (IsCancelled()) {
+                return false;
+            }
+
+            RestoreNormalUI();
+            return true;
+        };
 
         win->SetPrintProcessLabel(L"Printing...");
         win->SetPrintProcessColor("green");
         win->SetAllowPause(true);
         win->SetAllowContinue(false);
         win->SetNotification(L"");
-        win->SetPrintProcess(pages, 0);
+        win->SetPrintProcess(jobPages, 0);
 
         if (pages <= 0) {
             win->SetPrintProcessColor("red");
             win->SetNotification(L"No bitmap pages found in the temp folder.");
             return;
         }
-
-        const std::string mode = m_state.cfg.printMode;
 
         if (mode == "Simplex") {
             for (int page = 1; page <= pages; ++page) {
@@ -377,23 +590,23 @@ void Printer::Run() {
             }
         }
         else if (mode == "Duplex") {
-            for (int page = 1; page <= pages; page += 2) {
+            for (int page = 1; page <= jobPages; page += 2) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintDuplexPair(page, page + 1, pages)) {
+                if (!PrintDuplexPair(page, page + 1, jobPages)) {
                     return;
                 }
             }
         }
         else if (mode == "Manual Duplex (Flip On Long Edge)") {
-            for (int page = 1; page < pages; page += 2) {
+            for (int page = 1; page <= jobPages; page += 2) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, pages, 'd', 'i')) {
+                if (!PrintSimplexOnePage(page, jobPages, 'd', 'i')) {
                     return;
                 }
             }
@@ -402,23 +615,23 @@ void Printer::Run() {
                 return;
             }
 
-            for (int page = 2; page <= pages; page += 2) {
+            for (int page = 2; page <= jobPages; page += 2) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, pages, 'i', 'd')) {
+                if (!PrintSimplexOnePage(page, jobPages, 'i', 'd')) {
                     return;
                 }
             }
         }
         else if (mode == "Manual Duplex (Flip On Short Edge)") {
-            for (int page = 1; page < pages; page += 2) {
+            for (int page = 1; page <= jobPages; page += 2) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, pages, 'd', 'i')) {
+                if (!PrintSimplexOnePage(page, jobPages, 'd', 'i')) {
                     return;
                 }
             }
@@ -427,18 +640,17 @@ void Printer::Run() {
                 return;
             }
 
-            for (int page = pages; page >= 2; page -= 2) {
+            for (int page = jobPages; page >= 2; page -= 2) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, pages, 'i', 'd')) {
+                if (!PrintSimplexOnePage(page, jobPages, 'i', 'd')) {
                     return;
                 }
             }
         }
         else {
-            // Fallback an toàn: in simplex
             for (int page = 1; page <= pages; ++page) {
                 if (IsCancelled()) {
                     return;
@@ -461,6 +673,7 @@ void Printer::Run() {
         cancelFlag->store(true, std::memory_order_relaxed);
     }
 }
+
 
 void Printer::Destroy() {
     std::thread workerToJoin;
