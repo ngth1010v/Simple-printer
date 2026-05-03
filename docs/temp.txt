@@ -1,165 +1,23 @@
 # TASKS:
-- viết cho tôi 2 file Printer.cpp/h để quản lí việc đẩy từ bmp sang máy in và cập nhật vào UI
+- code dưới hiện tại đang in ổn nhưng đang có vấn đề với in 1 trang quá 'trắng', hãy check và chỉ tôi cách fix
 
-# ENV:
-- urtc64 + ninja + cpp20
-
-# OUTPUT:
-- controller/
-+ print/
-++ Printer.cpp/h
+# PROBLEM:
+- khi in 1 page chỉ full trắng hoặc gần trắng -> printer tự skip (dù với Microsoft print to pdf thì vẫn save ra file trắng bình thường)
 
 # INPUT:
-- config/ConfigModel.h
-- printer/Printer.h
-- ui/PrintWindow.h
-
-
-# EXPORT FUNCTION:
-- void controller::print::Init(config::ConfigData& cfg, string& tempDir, atomic<bool>& cancelFlag, atomic<bool>& pauseFlag, ui:PrintWindow& win)
-- void controller::print::Run()
-- void printer::Destroy()
-
-
-
-# IDEA:
-- Init():
-+ lưu tham số lại
-+ thạo 1 theard mới và chạy mọi thứ ở đây
-
-- Run():
-+ chạy printer::Init(...)
-+ lấy pages (số trang cần in) bằng cách:
-++ lấy name của tất cả file .bmp trong tempDir
-++ mỗi name sẽ có dạng "${page}-d.bmp" hoặc "${page}-i.bmp"
-++ tách page của từng file và lấy max -> đó là pages 
-+ win.SetPrintProcessLabel(L"Printing...")
-+ win.SetPrintProcess(pages, 0)
-+ win.SetPrintProcessColor("green")
-+ xét cfg.printMode:
-
-++ cfg.printMode == "Simplex":
-+++ loop từ 1 đến pages:
-++++ gọi printer::PrintSimplex(string path, string& error) // này là hàm block
-++++ sau khi xong lấy error:
-+++++ win.SetPrintProcess(pages, page vừa in xong)
-+++++ nếu error == empty -> continue
-+++++ nếu error != empty:
-+++++++ win.SetPrintProcessColor("red")
-+++++++ tạo messengebox với winapi ghi ra error và cho user 2 options:
-++++++++ skip:
-+++++++++ win.SetPrintProcessColor("green")
-+++++++++ continue
-++++++++ cancel -> bật cở cancelFlag + return
-
-
-++ cfg.printMode == "Duplex" (lúc này code trước đảm bảo pages là chẵn):
-+++ loop từ 1 đến pages với +=2: 
-++++ gọi printer::PrintDuplex( pathI, pathI+1, error)
-++++ xử lí error/Process giống Simplex
-
-++ cfg.printMode == "Manual Duplex (Flip On Long Side)" (lúc này code trước đảm bảo pages là chẵn, code đảm bảo printMode khớp hoàn toàn với string cho sẵn):
-+++ chạy loop 1:
-++++ for (int i = 1; i < pages; i+=2) // For page lẻ
-++++++ gọi printer::PrintSimplex(path, error)
-++++++ xử lí error.process giống Simplex
-+++ gọi lệnh yêu cầu lật:
-++++ win.SetPrintProcessColor("yellow")
-++++ win.SetAllowPause(false)
-++++ win.SetAllowContinue(true)
-++++ win.SetNotification(L"Wait for flit") // bạn có thể chỉnh câu yêu cầu lại sao cho rõ nghĩa hơn
-++++ Set pauseFlag = true
-++++ block đến khi pauseFlag được set lại thành false
-+++ chạy loop 2:
-++++ for (int i = 2; i <= pages; i+=2) // For page chẵn
-++++++ gọi printer::PrintSimplex(path, error)
-++++++ xử lí error.process giống Simplex
-
-++ cfg.printMode == "Manual Duplex (Flip On Short Side)" (lúc này code trước đảm bảo pages là chẵn, code đảm bảo printMode khớp hoàn toàn với string cho sẵn):
-+++ chạy loop 1:
-++++ for (int i = 1; i < pages; i+=2) // For page lẻ
-++++++ gọi printer::PrintSimplex(path, error)
-++++++ xử lí error.process giống Simplex
-+++ gọi lệnh yêu cầu lật:
-++++ win.SetPrintProcessColor("yellow")
-++++ win.SetAllowPause(false)
-++++ win.SetAllowContinue(true)
-++++ win.SetNotification(L"Wait for flit") // bạn có thể chỉnh câu yêu cầu lại sao cho rõ nghĩa hơn
-++++ Set pauseFlag = true
-++++ block đến khi pauseFlag được set lại thành false
-++++ win.SetPrintProcessColor("green")
-++++ win.SetAllowContinue(false)
-++++ win.SetAllowPause(true)
-
-+++ chạy loop 2:
-++++ for (int i = pages; i >= 2; i-=2) // For page chẵn nhưng ngược
-++++++ gọi printer::PrintSimplex(path, error)
-++++++ xử lí error.process giống Simplex
-
-- Destroy():
-+ safe shutdown theard ngay
-+ gọi printer::ShutDown()
-+ cleanup nếu cần
-
-- *note: 
-+ nhớ thêm check pauseFlag giữ các loop để khi pauseFlag == true thì:
-++ phải block ngay chỗ đó
-++ win.SetPrintProcessColor("yellow")
-++ win.SetAllowPause(false)
-++ win.SetAllowContinue(true)
-++ (có thể đợi printer::Print chạy xong rồi block cũng được, không cẩn tuyệt đối)
-++ khi được thả pause thì:
-+++ win.SetPrintProcessColor("green")
-+++ win.SetAllowPause(true)
-+++ win.SetAllowContinue(false)
-
-
-
-
-
-# RULE:
-- code đơn giản, không quá overskill, tận dụng cpp20 để làm code đơn giản hơn
-- tối ưu cho cpu yếu
-- mọi function (ngoại trừ utils nhỏ phục vụ cho cpp) đều phải được bọc namespace hoặc class: controller::print::Printer 
-- code full 2 file tôi yêu cầu
+- Printer.h/cpp
+- WinPrinter.h/cpp
+- WinSpooler.h/cpp
 
 # NOTE:
-- nếu thiếu thông tin hay có mơ hổ logic, hãy hỏi tôi trước khi thực hiện bất cứ yêu cầu nào bên trên
+- chỉ chi tiết chỗ fix + code fix
+- nếu không có 1 phương pháp nào để dức điểm chuyện này thì hãy fix bằng cách:
++ tự detect file quá 'trắng'
++ tự thêm 1 vài (hoặc 1 cụm) pixel vào gốc dưới phải của trang (vẫn đảm bảo trong printable area)
++ các limit - setting cho việc nãy sẽ được để ở đầu .cpp
 
-# INPUT CODE:
-### config/ConfigModel.h:
-#pragma once
-#include <string>
-#include <vector>
-
-namespace config {
-
-struct FileData {
-    std::string path;
-    int pages = 0;
-    int fromRange;
-    int toRange;
-    bool loaded = false;
-};
-
-struct ConfigData {
-    std::string printer     = "Microsoft Print to PDF";
-    int         copies      = 1;
-
-    std::string printMode   = "Simplex";
-    std::string paper       = "A4";
-    std::string scale       = "Fit to page (keep aspect ratio)";
-    std::string orientation = "Auto";
-    std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
-
-    std::vector<FileData> files;
-};
-
-}
-
-
-
-### printer/Printer.h:
+# CODE:
+### Printer.h:
 #pragma once
 
 #include <string>
@@ -177,75 +35,908 @@ void ShutDown();
 
 
 
-### ui/PrintWindow.h:
-#pragma once
+### Printer.cpp:
+#include "printer/Printer.h"
 
-#include "ui/BaseWindow.h"
-#include <string>
-#include <functional>
+#include "printer/WinPrinter.h"
+#include "printer/WinSpooler.h"
 
-namespace ui {
-    
-class PrintWindow : public BaseWindow {
-public:
-    bool CreateWindowInstance();
+#include <mutex>
+#include <utility>
+#include <vector>
 
-    void SetResourceProcess(int target, int current);
-    void SetResourceProcessLabel(const std::wstring& content);
-    void SetResourceProcessColor(const std::string& color);
+namespace printer {
+namespace {
 
-    void SetPrintProcess(int target, int current);
-    void SetPrintProcessLabel(const std::wstring& content);
-    void SetPrintProcessColor(const std::string& color);
-
-    void SetAllowPause(bool allow = true);
-    void SetAllowContinue(bool allow = true);
-    void SetNotification(const std::wstring& content = L"");
-
-    void OnPause(std::function<void()> cb);
-    void OnContinue(std::function<void()> cb);
-    void OnCancel(std::function<void()> cb);
-
-protected:
-    LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) override;
-
-private:
-    HWND m_btnPause = nullptr;
-    HWND m_btnContinue = nullptr;
-    HWND m_btnCancel = nullptr;
-    HWND m_lblNotification = nullptr;
-
-    HFONT m_font = nullptr;
-    HFONT m_fontSmall = nullptr;
-
-    int m_resTarget = 0;
-    int m_resCurrent = 0;
-
-    int m_printTarget = 0;
-    int m_printCurrent = 0;
-
-    std::wstring m_resLabel = L"Rendering resources...";
-    std::wstring m_printLabel = L"Printing...";
-    std::wstring m_notification = L"";
-
-    COLORREF m_resColor = RGB(255,255,0);
-    COLORREF m_printColor = RGB(0,255,0);
-
-    bool m_allowPause = true;
-    bool m_allowContinue = true;
-
-    std::function<void()> m_cbPause;
-    std::function<void()> m_cbContinue;
-    std::function<void()> m_cbCancel;
-
-private:
-    void OnCreate();
-    void OnCommand(WPARAM wParam);
-    void OnPaint();
-
-    COLORREF ParseColor(const std::string& color);
+struct State {
+    config::ConfigData cfg;
+    bool initialized = false;
+    std::mutex mtx;
 };
 
+State& GetState() {
+    static State s;
+    return s;
 }
+
+int PrintInternal(const std::vector<std::string>& paths, bool duplex, std::string& error) {
+    State& state = GetState();
+
+    config::ConfigData cfgCopy;
+    {
+        std::lock_guard<std::mutex> lock(state.mtx);
+        if (!state.initialized) {
+            error = "printer::Init() has not been called.";
+            return 1;
+        }
+        cfgCopy = state.cfg;
+    }
+
+    HDC hdc = nullptr;
+    PrinterPageInfo pageInfo{};
+
+    if (!OpenPrinterDc(cfgCopy.printer, cfgCopy.paper, duplex, hdc, pageInfo, error)) {
+        return 1;
+    }
+
+    std::vector<BmpImage> pages;
+    pages.reserve(paths.size());
+
+    for (const auto& path : paths) {
+        BmpImage page;
+        if (!BuildPageImage(
+                path,
+                cfgCopy.orientation,
+                cfgCopy.scale,
+                pageInfo.horzRes,
+                pageInfo.vertRes,
+                page,
+                error)) {
+            if (hdc != nullptr) {
+                DeleteDC(hdc);
+            }
+            return 1;
+        }
+        pages.emplace_back(std::move(page));
+    }
+
+    const bool ok = PrintBitmapPages(hdc, pages, error);
+
+    if (hdc != nullptr) {
+        DeleteDC(hdc);
+    }
+
+    return ok ? 0 : 1;
+}
+
+} // namespace
+
+void Init(config::ConfigData& cfg) {
+    State& state = GetState();
+    std::lock_guard<std::mutex> lock(state.mtx);
+    state.cfg = cfg;
+    state.initialized = true;
+}
+
+int PrintSimplex(std::string path, std::string& error) {
+    return PrintInternal(std::vector<std::string>{std::move(path)}, false, error);
+}
+
+int PrintDuplex(std::string frontPath, std::string backPath, std::string& error) {
+    return PrintInternal(std::vector<std::string>{std::move(frontPath), std::move(backPath)}, true, error);
+}
+
+void ShutDown() {
+    State& state = GetState();
+    std::lock_guard<std::mutex> lock(state.mtx);
+    state.cfg = config::ConfigData{};
+    state.initialized = false;
+}
+
+} // namespace printer
+
+
+
+
+### WinPrinter.h:
+#pragma once
+
+#include <cstdint>
+#include <string>
+#include <vector>
+
+namespace printer {
+
+struct BmpImage {
+    int width = 0;
+    int height = 0;
+    std::vector<std::uint32_t> pixels; // 32-bit BGRA in little-endian memory
+};
+
+bool BuildPageImage(
+    const std::string& bmpPath,
+    const std::string& orientation,
+    const std::string& scale,
+    int pageWidth,
+    int pageHeight,
+    BmpImage& outPage,
+    std::string& error
+);
+
+} // namespace printer
+
+
+
+
+### WinPrinter.cpp:
+#include "printer/WinPrinter.h"
+
+#include <windows.h>
+
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <cstring>
+#include <string>
+#include <utility>
+
+namespace printer {
+namespace {
+
+std::wstring Utf8ToWide(const std::string& s) {
+    if (s.empty()) {
+        return {};
+    }
+
+    const int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
+    if (sizeNeeded <= 0) {
+        return {};
+    }
+
+    std::wstring out(static_cast<std::size_t>(sizeNeeded - 1), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, out.data(), sizeNeeded);
+    return out;
+}
+
+std::string ToLowerAscii(std::string s) {
+    for (char& ch : s) {
+        ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+    }
+    return s;
+}
+
+std::string NormalizeKey(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (unsigned char ch : s) {
+        if (std::isalnum(ch)) {
+            out.push_back(static_cast<char>(std::tolower(ch)));
+        }
+    }
+    return out;
+}
+
+bool LoadBitmap32(const std::string& bmpPath, BmpImage& out, std::string& error) {
+    const std::wstring wPath = Utf8ToWide(bmpPath);
+    if (wPath.empty()) {
+        error = "Failed to convert BMP path to wide string.";
+        return false;
+    }
+
+    HBITMAP hBitmap = static_cast<HBITMAP>(
+        LoadImageW(nullptr, wPath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION));
+
+    if (hBitmap == nullptr) {
+        error = "LoadImageW failed for BMP: " + bmpPath;
+        return false;
+    }
+
+    BITMAP bm{};
+    if (GetObjectW(hBitmap, sizeof(bm), &bm) == 0) {
+        DeleteObject(hBitmap);
+        error = "GetObjectW failed for BMP: " + bmpPath;
+        return false;
+    }
+
+    if (bm.bmWidth <= 0 || bm.bmHeight <= 0) {
+        DeleteObject(hBitmap);
+        error = "Invalid BMP size.";
+        return false;
+    }
+
+    out.width = bm.bmWidth;
+    out.height = bm.bmHeight;
+    out.pixels.assign(static_cast<std::size_t>(out.width) * static_cast<std::size_t>(out.height), 0);
+
+    BITMAPINFO bmi{};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = out.width;
+    bmi.bmiHeader.biHeight = -out.height; // top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    HDC screenDc = GetDC(nullptr);
+    if (screenDc == nullptr) {
+        DeleteObject(hBitmap);
+        error = "GetDC failed.";
+        return false;
+    }
+
+    const int scanLines = GetDIBits(
+        screenDc,
+        hBitmap,
+        0,
+        static_cast<UINT>(out.height),
+        out.pixels.data(),
+        &bmi,
+        DIB_RGB_COLORS);
+
+    ReleaseDC(nullptr, screenDc);
+    DeleteObject(hBitmap);
+
+    if (scanLines == 0) {
+        error = "GetDIBits failed for BMP: " + bmpPath;
+        return false;
+    }
+
+    return true;
+}
+
+bool Rotate90Clockwise(const BmpImage& src, BmpImage& dst) {
+    if (src.width <= 0 || src.height <= 0 || src.pixels.empty()) {
+        return false;
+    }
+
+    dst.width = src.height;
+    dst.height = src.width;
+    dst.pixels.assign(static_cast<std::size_t>(dst.width) * static_cast<std::size_t>(dst.height), 0);
+
+    for (int y = 0; y < src.height; ++y) {
+        const int srcRow = y * src.width;
+        for (int x = 0; x < src.width; ++x) {
+            const int dstX = src.height - 1 - y;
+            const int dstY = x;
+            dst.pixels[static_cast<std::size_t>(dstY) * static_cast<std::size_t>(dst.width) + static_cast<std::size_t>(dstX)] =
+                src.pixels[static_cast<std::size_t>(srcRow + x)];
+        }
+    }
+
+    return true;
+}
+
+bool ScaleNearest(const BmpImage& src, int dstWidth, int dstHeight, BmpImage& dst) {
+    if (src.width <= 0 || src.height <= 0 || src.pixels.empty() || dstWidth <= 0 || dstHeight <= 0) {
+        return false;
+    }
+
+    dst.width = dstWidth;
+    dst.height = dstHeight;
+    dst.pixels.assign(static_cast<std::size_t>(dstWidth) * static_cast<std::size_t>(dstHeight), 0);
+
+    for (int y = 0; y < dstHeight; ++y) {
+        const int sy = std::min(src.height - 1, static_cast<int>((static_cast<long long>(y) * src.height) / dstHeight));
+        const std::size_t dstRow = static_cast<std::size_t>(y) * static_cast<std::size_t>(dstWidth);
+        const std::size_t srcRow = static_cast<std::size_t>(sy) * static_cast<std::size_t>(src.width);
+
+        for (int x = 0; x < dstWidth; ++x) {
+            const int sx = std::min(src.width - 1, static_cast<int>((static_cast<long long>(x) * src.width) / dstWidth));
+            dst.pixels[dstRow + static_cast<std::size_t>(x)] = src.pixels[srcRow + static_cast<std::size_t>(sx)];
+        }
+    }
+
+    return true;
+}
+
+void ClearWhite(BmpImage& img) {
+    img.pixels.assign(static_cast<std::size_t>(img.width) * static_cast<std::size_t>(img.height), 0xFFFFFFFFu);
+}
+
+void BlitClipped(BmpImage& dst, const BmpImage& src, int dstX, int dstY) {
+    if (dst.width <= 0 || dst.height <= 0 || src.width <= 0 || src.height <= 0) {
+        return;
+    }
+
+    int srcX = 0;
+    int srcY = 0;
+    int copyWidth = src.width;
+    int copyHeight = src.height;
+
+    if (dstX < 0) {
+        srcX = -dstX;
+        copyWidth -= srcX;
+        dstX = 0;
+    }
+
+    if (dstY < 0) {
+        srcY = -dstY;
+        copyHeight -= srcY;
+        dstY = 0;
+    }
+
+    if (dstX + copyWidth > dst.width) {
+        copyWidth = dst.width - dstX;
+    }
+
+    if (dstY + copyHeight > dst.height) {
+        copyHeight = dst.height - dstY;
+    }
+
+    if (copyWidth <= 0 || copyHeight <= 0) {
+        return;
+    }
+
+    for (int row = 0; row < copyHeight; ++row) {
+        const std::size_t dstOffset = static_cast<std::size_t>(dstY + row) * static_cast<std::size_t>(dst.width) + static_cast<std::size_t>(dstX);
+        const std::size_t srcOffset = static_cast<std::size_t>(srcY + row) * static_cast<std::size_t>(src.width) + static_cast<std::size_t>(srcX);
+
+        std::memcpy(
+            &dst.pixels[dstOffset],
+            &src.pixels[srcOffset],
+            static_cast<std::size_t>(copyWidth) * sizeof(std::uint32_t));
+    }
+}
+
+std::string NormalizeMode(std::string s) {
+    s = ToLowerAscii(std::move(s));
+    std::string out;
+    out.reserve(s.size());
+    for (char ch : s) {
+        if (std::isalnum(static_cast<unsigned char>(ch))) {
+            out.push_back(ch);
+        }
+    }
+    return out;
+}
+
+bool IsLandscapeByConfig(const std::string& orientation, const BmpImage& src) {
+    if (orientation == "Alway Landscape") {
+        return true;
+    }
+
+    if (orientation == "Alway Portrait") {
+        return false;
+    }
+
+    // Auto
+    return src.width > src.height;
+}
+
+bool IsNoScale(const std::string& scale) {
+    return scale == "No scale";
+}
+
+bool IsFillScale(const std::string& scale) {
+    return scale == "Fill page (ignore aspect ratio)";
+}
+
+} // namespace
+
+bool BuildPageImage(
+    const std::string& bmpPath,
+    const std::string& orientation,
+    const std::string& scale,
+    int pageWidth,
+    int pageHeight,
+    BmpImage& outPage,
+    std::string& error) {
+    if (pageWidth <= 0 || pageHeight <= 0) {
+        error = "Invalid page size.";
+        return false;
+    }
+
+    BmpImage source;
+    if (!LoadBitmap32(bmpPath, source, error)) {
+        return false;
+    }
+
+    BmpImage working = source;
+    if (IsLandscapeByConfig(orientation, source)) {
+        BmpImage rotated;
+        if (!Rotate90Clockwise(source, rotated)) {
+            error = "Failed to rotate source BMP.";
+            return false;
+        }
+        working = std::move(rotated);
+    }
+
+    outPage.width = pageWidth;
+    outPage.height = pageHeight;
+    ClearWhite(outPage);
+
+    if (working.width <= 0 || working.height <= 0 || working.pixels.empty()) {
+        error = "Source BMP is empty.";
+        return false;
+    }
+
+    if (IsNoScale(scale)) {
+        const int dstX = (pageWidth - working.width) / 2;
+        const int dstY = (pageHeight - working.height) / 2;
+        BlitClipped(outPage, working, dstX, dstY);
+        return true;
+    }
+
+    const double safeRatio = 0.95;
+    const int safeWidth = std::max(1, static_cast<int>(std::floor(static_cast<double>(pageWidth) * safeRatio)));
+    const int safeHeight = std::max(1, static_cast<int>(std::floor(static_cast<double>(pageHeight) * safeRatio)));
+
+    BmpImage rendered;
+
+    if (IsFillScale(scale)) {
+        if (!ScaleNearest(working, safeWidth, safeHeight, rendered)) {
+            error = "Failed to scale BMP.";
+            return false;
+        }
+    } else {
+        const double scaleX = static_cast<double>(safeWidth) / static_cast<double>(working.width);
+        const double scaleY = static_cast<double>(safeHeight) / static_cast<double>(working.height);
+        const double factor = std::min(scaleX, scaleY);
+
+        int dstWidth = static_cast<int>(std::lround(static_cast<double>(working.width) * factor));
+        int dstHeight = static_cast<int>(std::lround(static_cast<double>(working.height) * factor));
+
+        dstWidth = std::max(1, dstWidth);
+        dstHeight = std::max(1, dstHeight);
+
+        if (!ScaleNearest(working, dstWidth, dstHeight, rendered)) {
+            error = "Failed to scale BMP.";
+            return false;
+        }
+    }
+
+    const int dstX = (pageWidth - rendered.width) / 2;
+    const int dstY = (pageHeight - rendered.height) / 2;
+    BlitClipped(outPage, rendered, dstX, dstY);
+    return true;
+}
+
+} // namespace printer
+
+
+
+
+### WinSpooler.h:
+#pragma once
+
+#include <string>
+#include <vector>
+
+#include <windows.h>
+
+#include "WinPrinter.h"
+
+namespace printer {
+
+struct PrinterPageInfo {
+    int horzRes = 0;
+    int vertRes = 0;
+    int physicalOffsetX = 0;
+    int physicalOffsetY = 0;
+    int dpiX = 0;
+    int dpiY = 0;
+};
+
+bool PrinterSupportsDuplex(const std::string& printerName, std::string& error);
+
+bool OpenPrinterDc(
+    const std::string& printerName,
+    const std::string& paper,
+    bool duplex,
+    HDC& hdc,
+    PrinterPageInfo& info,
+    std::string& error
+);
+
+bool PrintBitmapPages(
+    HDC hdc,
+    const std::vector<BmpImage>& pages,
+    std::string& error
+);
+
+} // namespace printer
+
+
+
+
+### WinSpooler.cpp:
+#include "printer/WinSpooler.h"
+
+#include <windows.h>
+#include <winspool.h>
+
+#include <algorithm>
+#include <cctype>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace printer {
+namespace {
+
+struct PrinterHandle {
+    HANDLE handle = nullptr;
+
+    ~PrinterHandle() {
+        if (handle != nullptr) {
+            ClosePrinter(handle);
+        }
+    }
+};
+
+struct DevModeDeleter {
+    void operator()(DEVMODEW* p) const noexcept {
+        if (p != nullptr) {
+            HeapFree(GetProcessHeap(), 0, p);
+        }
+    }
+};
+
+using DevModePtr = std::unique_ptr<DEVMODEW, DevModeDeleter>;
+
+std::wstring Utf8ToWide(const std::string& s) {
+    if (s.empty()) {
+        return {};
+    }
+
+    const int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
+    if (sizeNeeded <= 0) {
+        return {};
+    }
+
+    std::wstring out(static_cast<std::size_t>(sizeNeeded - 1), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, out.data(), sizeNeeded);
+    return out;
+}
+
+std::string WideToUtf8(const std::wstring& s) {
+    if (s.empty()) {
+        return {};
+    }
+
+    const int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (sizeNeeded <= 0) {
+        return {};
+    }
+
+    std::string out(static_cast<std::size_t>(sizeNeeded - 1), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, out.data(), sizeNeeded, nullptr, nullptr);
+    return out;
+}
+
+std::string NormalizeKey(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (unsigned char ch : s) {
+        if (std::isalnum(ch)) {
+            out.push_back(static_cast<char>(std::tolower(ch)));
+        }
+    }
+    return out;
+}
+
+std::string AliasForPaperId(WORD paperId) {
+    switch (paperId) {
+    case DMPAPER_LETTER: return "letter";
+    case DMPAPER_LEGAL: return "legal";
+    case DMPAPER_A3: return "a3";
+    case DMPAPER_A4: return "a4";
+    case DMPAPER_A5: return "a5";
+    case DMPAPER_B4: return "b4";
+    case DMPAPER_B5: return "b5";
+    case DMPAPER_EXECUTIVE: return "executive";
+    case DMPAPER_TABLOID: return "tabloid";
+    case DMPAPER_LEDGER: return "ledger";
+    case DMPAPER_STATEMENT: return "statement";
+    case DMPAPER_FOLIO: return "folio";
+    case DMPAPER_QUARTO: return "quarto";
+    case DMPAPER_10X14: return "10x14";
+    default: return {};
+    }
+}
+
+struct PaperEntry {
+    WORD id = 0;
+    std::wstring name;
+};
+
+std::vector<PaperEntry> QuerySupportedPapers(const std::wstring& printerName) {
+    std::vector<PaperEntry> result;
+
+    const int count = DeviceCapabilitiesW(
+        printerName.c_str(),
+        nullptr,
+        DC_PAPERS,
+        nullptr,
+        nullptr);
+
+    if (count <= 0) {
+        return result;
+    }
+
+    std::vector<WORD> paperIds(static_cast<std::size_t>(count));
+    std::vector<wchar_t> paperNames(static_cast<std::size_t>(count) * 64u, L'\0');
+
+    DeviceCapabilitiesW(
+        printerName.c_str(),
+        nullptr,
+        DC_PAPERS,
+        reinterpret_cast<LPWSTR>(paperIds.data()),
+        nullptr);
+
+    DeviceCapabilitiesW(
+        printerName.c_str(),
+        nullptr,
+        DC_PAPERNAMES,
+        paperNames.data(),
+        nullptr);
+
+    result.reserve(static_cast<std::size_t>(count));
+
+    for (int i = 0; i < count; ++i) {
+        const wchar_t* namePtr = &paperNames[static_cast<std::size_t>(i) * 64u];
+        result.push_back(PaperEntry{paperIds[static_cast<std::size_t>(i)], std::wstring(namePtr)});
+    }
+
+    return result;
+}
+
+bool ResolvePaperId(const std::wstring& printerName, const std::string& paper, WORD& paperId, std::string& error) {
+    const std::string normalizedInput = NormalizeKey(paper);
+    const auto supported = QuerySupportedPapers(printerName);
+
+    if (supported.empty()) {
+        error = "Failed to query supported papers for printer.";
+        return false;
+    }
+
+    for (const auto& entry : supported) {
+        const std::string exactName = NormalizeKey(WideToUtf8(entry.name));
+        if (!exactName.empty() && exactName == normalizedInput) {
+            paperId = entry.id;
+            return true;
+        }
+
+        const std::string alias = NormalizeKey(AliasForPaperId(entry.id));
+        if (!alias.empty() && alias == normalizedInput) {
+            paperId = entry.id;
+            return true;
+        }
+    }
+
+    error = "Paper not supported by printer: " + paper;
+    return false;
+}
+
+bool CreateValidatedDevMode(
+    const std::wstring& printerName,
+    WORD paperId,
+    bool duplex,
+    DevModePtr& outDm,
+    std::string& error) {
+    PrinterHandle printerHandle;
+    if (!OpenPrinterW(const_cast<LPWSTR>(printerName.c_str()), &printerHandle.handle, nullptr)) {
+        error = "OpenPrinterW failed.";
+        return false;
+    }
+
+    const LONG needed = DocumentPropertiesW(nullptr, printerHandle.handle, const_cast<LPWSTR>(printerName.c_str()), nullptr, nullptr, 0);
+    if (needed <= 0) {
+        error = "DocumentPropertiesW size query failed.";
+        return false;
+    }
+
+    DevModePtr dm(static_cast<DEVMODEW*>(HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, static_cast<SIZE_T>(needed))));
+    if (!dm) {
+        error = "HeapAlloc failed for DEVMODE.";
+        return false;
+    }
+
+    const LONG getDefault = DocumentPropertiesW(nullptr, printerHandle.handle, const_cast<LPWSTR>(printerName.c_str()), dm.get(), nullptr, DM_OUT_BUFFER);
+    if (getDefault != IDOK) {
+        error = "DocumentPropertiesW default query failed.";
+        return false;
+    }
+
+    dm->dmFields |= DM_ORIENTATION | DM_PAPERSIZE;
+    dm->dmOrientation = DMORIENT_PORTRAIT;
+    dm->dmPaperSize = paperId;
+
+    if (duplex) {
+        dm->dmFields |= DM_DUPLEX;
+        dm->dmDuplex = DMDUP_VERTICAL;
+    }
+
+    const LONG validate = DocumentPropertiesW(
+        nullptr,
+        printerHandle.handle,
+        const_cast<LPWSTR>(printerName.c_str()),
+        dm.get(),
+        dm.get(),
+        DM_IN_BUFFER | DM_OUT_BUFFER);
+
+    if (validate != IDOK) {
+        error = "Printer rejected the selected paper/orientation/duplex settings.";
+        return false;
+    }
+
+    outDm = std::move(dm);
+    return true;
+}
+
+bool DrawPageToPrinter(HDC hdc, const BmpImage& page, std::string& error) {
+    if (page.width <= 0 || page.height <= 0 || page.pixels.empty()) {
+        error = "Empty rendered page.";
+        return false;
+    }
+
+    BITMAPINFO bmi{};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = page.width;
+    bmi.bmiHeader.biHeight = -page.height; // top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    const int drawn = StretchDIBits(
+        hdc,
+        0,
+        0,
+        page.width,
+        page.height,
+        0,
+        0,
+        page.width,
+        page.height,
+        page.pixels.data(),
+        &bmi,
+        DIB_RGB_COLORS,
+        SRCCOPY);
+
+    if (drawn == GDI_ERROR) {
+        error = "StretchDIBits failed.";
+        return false;
+    }
+
+    return true;
+}
+
+} // namespace
+
+bool PrinterSupportsDuplex(const std::string& printerName, std::string& error) {
+    const std::wstring wPrinter = Utf8ToWide(printerName);
+    if (wPrinter.empty()) {
+        error = "Failed to convert printer name.";
+        return false;
+    }
+
+    const int duplexCap = DeviceCapabilitiesW(wPrinter.c_str(), nullptr, DC_DUPLEX, nullptr, nullptr);
+    if (duplexCap <= 0) {
+        error = "Printer does not support duplex printing.";
+        return false;
+    }
+
+    return true;
+}
+
+bool OpenPrinterDc(
+    const std::string& printerName,
+    const std::string& paper,
+    bool duplex,
+    HDC& hdc,
+    PrinterPageInfo& info,
+    std::string& error) {
+    hdc = nullptr;
+    info = {};
+
+    const std::wstring wPrinter = Utf8ToWide(printerName);
+    if (wPrinter.empty()) {
+        error = "Failed to convert printer name.";
+        return false;
+    }
+
+    WORD paperId = 0;
+    if (!ResolvePaperId(wPrinter, paper, paperId, error)) {
+        return false;
+    }
+
+    if (duplex) {
+        std::string duplexError;
+        if (!PrinterSupportsDuplex(printerName, duplexError)) {
+            error = duplexError;
+            return false;
+        }
+    }
+
+    DevModePtr dm;
+    if (!CreateValidatedDevMode(wPrinter, paperId, duplex, dm, error)) {
+        return false;
+    }
+
+    hdc = CreateDCW(L"WINSPOOL", wPrinter.c_str(), nullptr, dm.get());
+    if (hdc == nullptr) {
+        error = "CreateDCW failed for printer.";
+        return false;
+    }
+
+    info.horzRes = GetDeviceCaps(hdc, HORZRES);
+    info.vertRes = GetDeviceCaps(hdc, VERTRES);
+    info.physicalOffsetX = GetDeviceCaps(hdc, PHYSICALOFFSETX);
+    info.physicalOffsetY = GetDeviceCaps(hdc, PHYSICALOFFSETY);
+    info.dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
+    info.dpiY = GetDeviceCaps(hdc, LOGPIXELSY);
+
+    if (info.horzRes <= 0 || info.vertRes <= 0) {
+        DeleteDC(hdc);
+        hdc = nullptr;
+        error = "Failed to read printer page size.";
+        return false;
+    }
+
+    return true;
+}
+
+bool PrintBitmapPages(
+    HDC hdc,
+    const std::vector<BmpImage>& pages,
+    std::string& error) {
+    if (hdc == nullptr) {
+        error = "Invalid printer DC.";
+        return false;
+    }
+
+    if (pages.empty()) {
+        error = "No pages to print.";
+        return false;
+    }
+
+    DOCINFOW di{};
+    di.cbSize = sizeof(di);
+    di.lpszDocName = L"Bmp Print Job";
+
+    const int started = StartDocW(hdc, &di);
+    if (started <= 0) {
+        error = "StartDocW failed.";
+        return false;
+    }
+
+    bool jobOk = true;
+
+    for (const auto& page : pages) {
+        if (StartPage(hdc) <= 0) {
+            error = "StartPage failed.";
+            jobOk = false;
+            break;
+        }
+
+        if (!DrawPageToPrinter(hdc, page, error)) {
+            jobOk = false;
+            EndPage(hdc);
+            break;
+        }
+
+        if (EndPage(hdc) <= 0) {
+            error = "EndPage failed.";
+            jobOk = false;
+            break;
+        }
+    }
+
+    if (!jobOk) {
+        AbortDoc(hdc);
+        return false;
+    }
+
+    if (EndDoc(hdc) <= 0) {
+        error = "EndDoc failed.";
+        return false;
+    }
+
+    return true;
+}
+
+} // namespace printer
+
+
 
 

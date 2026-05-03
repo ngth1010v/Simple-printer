@@ -22,4 +22,7 @@ bool BuildPageImage(
     std::string& error
 );
 
+// NEW
+void EnsureNotBlankPage(BmpImage& page);
+
 } // namespace printer

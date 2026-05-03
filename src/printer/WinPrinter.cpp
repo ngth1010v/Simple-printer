@@ -12,6 +12,12 @@
 namespace printer {
 namespace {
 
+constexpr double kWhiteLumaThreshold = 252.0;     // pixel >= ngưỡng này xem là trắng
+constexpr double kWhiteRatioThreshold = 0.9995;    // nếu > 99.95% pixel trắng -> coi là quá trắng
+constexpr int kAnchorMarginPx = 4;                 // cách mép phải/dưới bao nhiêu px
+constexpr int kAnchorSizePx = 2;                   // cụm pixel chèn vào
+constexpr std::uint32_t kAnchorColor = 0xFF000000u; // đen đậm, chắc chắn không bị skip
+
 std::wstring Utf8ToWide(const std::string& s) {
     if (s.empty()) {
         return {};
@@ -239,7 +245,59 @@ bool IsFillScale(const std::string& scale) {
     return scale == "Fill page (ignore aspect ratio)";
 }
 
+double GetLuma(std::uint32_t p) {
+    const int b = static_cast<int>(p & 0xFFu);
+    const int g = static_cast<int>((p >> 8) & 0xFFu);
+    const int r = static_cast<int>((p >> 16) & 0xFFu);
+    return 0.114 * static_cast<double>(b)
+         + 0.587 * static_cast<double>(g)
+         + 0.299 * static_cast<double>(r);
+}
+
+bool IsTooWhite(const BmpImage& img) {
+    if (img.width <= 0 || img.height <= 0 || img.pixels.empty()) {
+        return false;
+    }
+
+    const std::size_t total = img.pixels.size();
+    std::size_t whiteCount = 0;
+
+    for (std::uint32_t p : img.pixels) {
+        if (GetLuma(p) >= kWhiteLumaThreshold) {
+            ++whiteCount;
+        }
+    }
+
+    const double whiteRatio = static_cast<double>(whiteCount) / static_cast<double>(total);
+    return whiteRatio >= kWhiteRatioThreshold;
+}
+
+void AddAnchorMark(BmpImage& img) {
+    if (img.width <= 0 || img.height <= 0 || img.pixels.empty()) {
+        return;
+    }
+
+    const int markW = std::min(kAnchorSizePx, img.width);
+    const int markH = std::min(kAnchorSizePx, img.height);
+
+    const int startX = std::max(0, img.width - kAnchorMarginPx - markW);
+    const int startY = std::max(0, img.height - kAnchorMarginPx - markH);
+
+    for (int y = 0; y < markH; ++y) {
+        const std::size_t row = static_cast<std::size_t>(startY + y) * static_cast<std::size_t>(img.width);
+        for (int x = 0; x < markW; ++x) {
+            img.pixels[row + static_cast<std::size_t>(startX + x)] = kAnchorColor;
+        }
+    }
+}
+
 } // namespace
+
+void EnsureNotBlankPage(BmpImage& page) {
+    if (IsTooWhite(page)) {
+        AddAnchorMark(page);
+    }
+}
 
 bool BuildPageImage(
     const std::string& bmpPath,
@@ -316,6 +374,8 @@ bool BuildPageImage(
     const int dstX = (pageWidth - rendered.width) / 2;
     const int dstY = (pageHeight - rendered.height) / 2;
     BlitClipped(outPage, rendered, dstX, dstY);
+
+    EnsureNotBlankPage(outPage);
     return true;
 }
 
