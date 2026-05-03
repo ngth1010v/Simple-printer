@@ -29,7 +29,7 @@ void InfoConfigSectionController::Reload()
         pagesToPrintStr = std::to_string(totalRangePages);
     } else {
         // duplex → phải chẵn
-        if (totalRangePages % 2 == 0) {
+        if (totalRangePages % 2 == 0 || totalRangePages == 1) {
             pagesToPrintStr = std::to_string(totalRangePages);
         } else {
             pagesToPrintStr = std::to_string(totalRangePages) + " + 1";
