@@ -44,6 +44,7 @@ void Write(const std::string& path, const ConfigData& data)
     
     // ===== Basic =====
     WriteString("Basic", "printer", data.printer, path);
+    WriteInt   ("Basic", "copies",  data.copies,  path);
 
     // ===== Advance =====
     WriteString("Advance", "printMode",   data.printMode,   path);

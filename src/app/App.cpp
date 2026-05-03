@@ -8,6 +8,7 @@
 
 #include <windows.h> 
 #include <string>
+#include <iostream>
 
 // helper: bỏ quote nếu có
 static std::string StripQuotes(const std::string& s)
@@ -38,7 +39,8 @@ int App::Run()
 
     // Config
     auto cfg = config::Parse("./config.ini", files.size() == 0);
-    {
+    if (files.size() > 0){
+        cfg.copies = 1;
         for (const auto& f : files)
         {
             std::string path = StripQuotes(f);
@@ -57,7 +59,7 @@ int App::Run()
             cfg.files.push_back(fd);
         }
     }
-
+    std::cout << "[DEBUG] " << cfg.printer << '\n';
 
 
     // ===== UI MODE =====

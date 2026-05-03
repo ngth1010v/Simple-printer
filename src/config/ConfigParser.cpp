@@ -46,6 +46,7 @@ ConfigData Parse(const std::string& path, bool keepFiles)
 
     // ===== Basic =====
     data.printer = ReadString("Basic", "printer", data.printer, path);
+    data.copies = ReadInt("Basic", "copies", data.copies, path);
 
     // ===== Advance =====
     data.printMode   = ReadString("Advance", "printMode",   data.printMode,   path);
