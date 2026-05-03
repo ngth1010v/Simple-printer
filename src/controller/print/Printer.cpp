@@ -494,7 +494,8 @@ void Printer::Run() {
             return ResolvePagePath(m_state.tempDir, page, preferSuffix, fallbackSuffix);
         };
 
-        auto PrintSimplexOnePage = [&](int page, int totalPages, char preferSuffix, char fallbackSuffix) -> bool {
+
+        auto PrintSimplexOnePage = [&](int page, int totalPages, int completedPages, char preferSuffix, char fallbackSuffix) -> bool {
             if (!WaitIfPaused()) {
                 return false;
             }
@@ -512,11 +513,11 @@ void Printer::Run() {
                 return false;
             }
 
-            win->SetPrintProcess(totalPages, page);
+            win->SetPrintProcess(totalPages, completedPages);
             return !IsCancelled();
         };
 
-        auto PrintDuplexPair = [&](int firstPage, int secondPage, int totalPages) -> bool {
+        auto PrintDuplexPair = [&](int firstPage, int secondPage, int totalPages, int completedPages) -> bool {
             if (!WaitIfPaused()) {
                 return false;
             }
@@ -538,7 +539,7 @@ void Printer::Run() {
                 return false;
             }
 
-            win->SetPrintProcess(totalPages, secondPage);
+            win->SetPrintProcess(totalPages, completedPages);
             return !IsCancelled();
         };
 
@@ -572,6 +573,7 @@ void Printer::Run() {
         win->SetNotification(L"");
         win->SetPrintProcess(jobPages, 0);
 
+
         if (pages <= 0) {
             win->SetPrintProcessColor("red");
             win->SetNotification(L"No bitmap pages found in the temp folder.");
@@ -579,34 +581,41 @@ void Printer::Run() {
         }
 
         if (mode == "Simplex") {
+            int printedCount = 0;
             for (int page = 1; page <= pages; ++page) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, pages, 'd', 'i')) {
+                if (!PrintSimplexOnePage(page, pages, ++printedCount, 'd', 'i')) {
                     return;
                 }
             }
         }
         else if (mode == "Duplex") {
+            int printedCount = 0;
+
             for (int page = 1; page <= jobPages; page += 2) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintDuplexPair(page, page + 1, jobPages)) {
+                if (!PrintDuplexPair(page, page + 1, jobPages, printedCount + 2)) {
                     return;
                 }
+
+                printedCount += 2;
             }
         }
         else if (mode == "Manual Duplex (Flip On Long Edge)") {
+            int printedCount = 0;
+
             for (int page = 1; page <= jobPages; page += 2) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, jobPages, 'd', 'i')) {
+                if (!PrintSimplexOnePage(page, jobPages, ++printedCount, 'd', 'i')) {
                     return;
                 }
             }
@@ -620,18 +629,20 @@ void Printer::Run() {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, jobPages, 'i', 'd')) {
+                if (!PrintSimplexOnePage(page, jobPages, ++printedCount, 'i', 'd')) {
                     return;
                 }
             }
         }
         else if (mode == "Manual Duplex (Flip On Short Edge)") {
+            int printedCount = 0;
+
             for (int page = 1; page <= jobPages; page += 2) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, jobPages, 'd', 'i')) {
+                if (!PrintSimplexOnePage(page, jobPages, ++printedCount, 'd', 'i')) {
                     return;
                 }
             }
@@ -645,18 +656,19 @@ void Printer::Run() {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, jobPages, 'i', 'd')) {
+                if (!PrintSimplexOnePage(page, jobPages, ++printedCount, 'i', 'd')) {
                     return;
                 }
             }
         }
         else {
+            int printedCount = 0;
             for (int page = 1; page <= pages; ++page) {
                 if (IsCancelled()) {
                     return;
                 }
 
-                if (!PrintSimplexOnePage(page, pages, 'd', 'i')) {
+                if (!PrintSimplexOnePage(page, pages, ++printedCount, 'd', 'i')) {
                     return;
                 }
             }
