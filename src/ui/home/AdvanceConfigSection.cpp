@@ -9,13 +9,11 @@ using namespace ui::home;
 #define ID_BTN_PAPER          4102
 #define ID_BTN_SCALE          4103
 #define ID_BTN_ORIENTATION    4104
-#define ID_BTN_COLLATE        4105
 
 #define ID_MENU_PRINT_MODE    5101
 #define ID_MENU_PAPER         5201
 #define ID_MENU_SCALE         5301
 #define ID_MENU_ORIENTATION   5401
-#define ID_MENU_COLLATE       5501
 
 namespace {
 
@@ -162,14 +160,12 @@ void AdvanceConfigSection::Create(HWND parent, HFONT font) {
     m_btnPaper       = createBtn(ID_BTN_PAPER,        X + PAPER_INPUT_X,        Y + PAPER_INPUT_Y);
     m_btnScale       = createBtn(ID_BTN_SCALE,        X + SCALE_INPUT_X,        Y + SCALE_INPUT_Y);
     m_btnOrientation = createBtn(ID_BTN_ORIENTATION,  X + ORIENTATION_INPUT_X,  Y + ORIENTATION_INPUT_Y);
-    m_btnCollate     = createBtn(ID_BTN_COLLATE,      X + COLLATE_INPUT_X,      Y + COLLATE_INPUT_Y);
 
     HWND ctrls[] = {
         m_btnPrintMode,
         m_btnPaper,
         m_btnScale,
         m_btnOrientation,
-        m_btnCollate
     };
 
     for (HWND h : ctrls) {
@@ -197,7 +193,6 @@ void AdvanceConfigSection::Resize(int parentWidth) {
     moveBtn(m_btnPaper,       X + PAPER_INPUT_X,       Y + PAPER_INPUT_Y);
     moveBtn(m_btnScale,       X + SCALE_INPUT_X,       Y + SCALE_INPUT_Y);
     moveBtn(m_btnOrientation, X + ORIENTATION_INPUT_X, Y + ORIENTATION_INPUT_Y);
-    moveBtn(m_btnCollate,     X + COLLATE_INPUT_X,     Y + COLLATE_INPUT_Y);
 }
 
 static void SetOptionsImpl(
@@ -313,26 +308,6 @@ void AdvanceConfigSection::SetOrientationValue(const std::string& value) {
 
 void AdvanceConfigSection::OnOrientationChange(std::function<void(const std::string&)> cb) {
     m_cbOrientation = cb;
-}
-
-void AdvanceConfigSection::SetCollateOptions(const std::vector<std::string>& options) {
-    SetOptionsImpl(m_collateOptions, m_selCollate, options);
-    if (m_btnCollate) InvalidateRect(m_btnCollate, nullptr, TRUE);
-}
-
-void AdvanceConfigSection::SetCollateValue(const std::string& value) {
-    std::wstring wv = ToWide(value);
-    for (int i = 0; i < (int)m_collateOptions.size(); ++i) {
-        if (m_collateOptions[i] == wv) {
-            m_selCollate = i;
-            if (m_btnCollate) InvalidateRect(m_btnCollate, nullptr, TRUE);
-            return;
-        }
-    }
-}
-
-void AdvanceConfigSection::OnCollateChange(std::function<void(const std::string&)> cb) {
-    m_cbCollate = cb;
 }
 
 void AdvanceConfigSection::SetPrintModeImage(const std::string& path) {
@@ -510,41 +485,6 @@ void AdvanceConfigSection::HandleCommand(WPARAM wParam) {
         return;
     }
 
-    if (id == ID_BTN_COLLATE) {
-        if (m_collateOptions.empty()) return;
-
-        HMENU menu = CreatePopupMenu();
-        if (!menu) return;
-
-        for (size_t i = 0; i < m_collateOptions.size(); ++i) {
-            AppendMenuW(menu, MF_STRING, ID_MENU_COLLATE + (UINT)i, m_collateOptions[i].c_str());
-        }
-
-        RECT rc{};
-        GetWindowRect(m_btnCollate, &rc);
-
-        int cmd = TrackPopupMenu(
-            menu,
-            TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD | TPM_NONOTIFY,
-            rc.left,
-            rc.bottom,
-            0,
-            m_parent,
-            nullptr
-        );
-
-        DestroyMenu(menu);
-
-        if (cmd >= ID_MENU_COLLATE &&
-            cmd < ID_MENU_COLLATE + (int)m_collateOptions.size()) {
-            m_selCollate = cmd - ID_MENU_COLLATE;
-            InvalidateRect(m_btnCollate, nullptr, TRUE);
-            if (m_cbCollate) {
-                m_cbCollate(ToNarrow(m_collateOptions[m_selCollate]));
-            }
-        }
-        return;
-    }
 }
 
 void AdvanceConfigSection::HandleDrawItem(const DRAWITEMSTRUCT* dis) {
@@ -581,8 +521,6 @@ void AdvanceConfigSection::HandleDrawItem(const DRAWITEMSTRUCT* dis) {
         if (m_selScale >= 0 && m_selScale < (int)m_scaleOptions.size()) text = m_scaleOptions[m_selScale];
     } else if (btn == m_btnOrientation) {
         if (m_selOrientation >= 0 && m_selOrientation < (int)m_orientationOptions.size()) text = m_orientationOptions[m_selOrientation];
-    } else if (btn == m_btnCollate) {
-        if (m_selCollate >= 0 && m_selCollate < (int)m_collateOptions.size()) text = m_collateOptions[m_selCollate];
     }
 
     RECT textRc = rc;
@@ -640,13 +578,11 @@ void AdvanceConfigSection::OnPaint(HDC hdc) {
     drawLabel(L"Paper",       PAPER_LABEL_X,       PAPER_LABEL_Y);
     drawLabel(L"Scale",       SCALE_LABEL_X,       SCALE_LABEL_Y);
     drawLabel(L"Orientation", ORIENTATION_LABEL_X, ORIENTATION_LABEL_Y);
-    drawLabel(L"Collate",     COLLATE_LABEL_X,     COLLATE_LABEL_Y);
 
     DrawInputChrome(hdc, m_parent, m_btnPrintMode,   (GetFocus() == m_btnPrintMode));
     DrawInputChrome(hdc, m_parent, m_btnPaper,       (GetFocus() == m_btnPaper));
     DrawInputChrome(hdc, m_parent, m_btnScale,       (GetFocus() == m_btnScale));
     DrawInputChrome(hdc, m_parent, m_btnOrientation, (GetFocus() == m_btnOrientation));
-    DrawInputChrome(hdc, m_parent, m_btnCollate,     (GetFocus() == m_btnCollate));
 
     if (m_printModeBmp) {
         HDC mem = CreateCompatibleDC(hdc);

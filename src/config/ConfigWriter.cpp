@@ -50,7 +50,6 @@ void Write(const std::string& path, const ConfigData& data)
     WriteString("Advance", "paper",       data.paper,       path);
     WriteString("Advance", "scale",       data.scale,       path);
     WriteString("Advance", "orientation", data.orientation, path);
-    WriteString("Advance", "collate",     data.collate,     path);
 
 
     // ===== Files =====

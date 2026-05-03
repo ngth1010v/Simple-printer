@@ -26,11 +26,6 @@ orientation=Portrait
 ++ "Protrait"
 ++ "Landscape"
 
-collate=Collated (1,2,3 | 1,2,3 | 1,2,3)
-+ là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):
-++ "Collated (1,2,3 | 1,2,3 | 1,2,3)"
-++ "Uncollated (1,1,1 | 2,2,2 | 3,3,3)"
-
 [Margin]
 mode=Respect document layout
 + là dạng select, chứa 1 trong các giá trị sau đây (không gổm quote):

@@ -20,7 +20,6 @@ struct ConfigData {
     std::string paper       = "A4";
     std::string scale       = "Fit to page (keep aspect ratio)";
     std::string orientation = "Auto";
-    std::string collate     = "Collated (1,2,3 | 1,2,3 | 1,2,3)";
 
     std::vector<FileData> files;
 };

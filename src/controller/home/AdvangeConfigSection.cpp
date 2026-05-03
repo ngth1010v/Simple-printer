@@ -117,20 +117,6 @@ static void AdvOrientationUpdate(config::ConfigData& cfg, const std::string& v) 
     cfg.orientation = v;
 }
 
-static void AdvCollateInit(HomeWindow& win, config::ConfigData& cfg) {
-    std::vector<std::string> options = {
-        "Collated (1,2,3 | 1,2,3 | 1,2,3)",
-        "Uncollated (1,1,1 | 2,2,2 | 3,3,3)"
-    };
-
-    win.m_adv.SetCollateOptions(options);
-    win.m_adv.SetCollateValue(cfg.collate);
-}
-
-static void AdvCollateUpdate(config::ConfigData& cfg, const std::string& v) {
-    cfg.collate = v;
-}
-
 
 
 }
@@ -153,7 +139,6 @@ void AdvangeConfigSectionController::Init(ChangeCallback cb)
     AdvPaperInit(m_win, m_cfg);
     AdvScaleInit(m_win, m_cfg);
     AdvOrientationInit(m_win, m_cfg);
-    AdvCollateInit(m_win, m_cfg);
 }
 
 void AdvangeConfigSectionController::Bind()
@@ -175,11 +160,6 @@ void AdvangeConfigSectionController::Bind()
 
     m_win.m_adv.OnOrientationChange([&](const std::string& v) {
         AdvOrientationUpdate(m_cfg, v);
-        Fire(m_cb);
-    });
-
-    m_win.m_adv.OnCollateChange([&](const std::string& v) {
-        AdvCollateUpdate(m_cfg, v);
         Fire(m_cb);
     });
 }

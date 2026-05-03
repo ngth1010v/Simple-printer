@@ -52,7 +52,6 @@ ConfigData Parse(const std::string& path, bool keepFiles)
     data.paper       = ReadString("Advance", "paper",       data.paper,       path);
     data.scale       = ReadString("Advance", "scale",       data.scale,       path);
     data.orientation = ReadString("Advance", "orientation", data.orientation, path);
-    data.collate     = ReadString("Advance", "collate",     data.collate,     path);
 
 
     // ===== Files =====
