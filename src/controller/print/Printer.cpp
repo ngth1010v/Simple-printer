@@ -398,7 +398,7 @@ void Printer::Run() {
                 }
             }
 
-            if (!WaitForManualFlip(L"Flip the paper on the long side, then press Continue.")) {
+            if (!WaitForManualFlip(L"Flip the paper on the long edge.")) {
                 return;
             }
 
@@ -423,7 +423,7 @@ void Printer::Run() {
                 }
             }
 
-            if (!WaitForManualFlip(L"Flip the paper on the short side, then press Continue.")) {
+            if (!WaitForManualFlip(L"Flip the paper on the short edge.")) {
                 return;
             }
 
