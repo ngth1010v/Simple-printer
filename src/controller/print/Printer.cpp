@@ -468,6 +468,7 @@ void Printer::Run() {
 
         const int pages = CountPagesInTempDir(m_state.tempDir);
         const std::string mode = m_state.cfg.printMode;
+        const int copies = std::max(1, m_state.cfg.copies);
 
         const bool isDuplexLike =
             mode == "Duplex" ||
@@ -475,7 +476,12 @@ void Printer::Run() {
             mode == "Manual Duplex (Flip On Short Edge)";
 
         const bool padBlankPage = (pages > 1) && isDuplexLike && ((pages % 2) == 1);
-        const int jobPages = padBlankPage ? (pages + 1) : pages;
+        const int pagesPerCopy  = padBlankPage ? (pages + 1) : pages;
+        const int totalJobPages = pagesPerCopy * copies;
+
+
+        // const bool padBlankPage = (pages > 1) && isDuplexLike && ((pages % 2) == 1);
+        // const int jobPages = padBlankPage ? (pages + 1) : pages;
 
         std::string emptyBmpPath;
         if (padBlankPage) {
@@ -571,7 +577,7 @@ void Printer::Run() {
         win->SetAllowPause(true);
         win->SetAllowContinue(false);
         win->SetNotification(L"");
-        win->SetPrintProcess(jobPages, 0);
+        win->SetPrintProcess(totalJobPages, 0);
 
 
         if (pages <= 0) {
@@ -582,94 +588,116 @@ void Printer::Run() {
 
         if (mode == "Simplex") {
             int printedCount = 0;
-            for (int page = 1; page <= pages; ++page) {
-                if (IsCancelled()) {
-                    return;
-                }
 
-                if (!PrintSimplexOnePage(page, pages, ++printedCount, 'd', 'i')) {
-                    return;
+            for (int copy = 0; copy < copies; ++copy) {
+                for (int page = 1; page <= pages; ++page) {
+                    if (IsCancelled()) {
+                        return;
+                    }
+
+                    if (!PrintSimplexOnePage(page, totalJobPages, ++printedCount, 'd', 'i')) {
+                        return;
+                    }
                 }
             }
         }
         else if (mode == "Duplex") {
             int printedCount = 0;
 
-            for (int page = 1; page <= jobPages; page += 2) {
-                if (IsCancelled()) {
-                    return;
-                }
+            for (int copy = 0; copy < copies; ++copy) {
+                for (int page = 1; page <= pagesPerCopy; page += 2) {
+                    if (IsCancelled()) {
+                        return;
+                    }
 
-                if (!PrintDuplexPair(page, page + 1, jobPages, printedCount + 2)) {
-                    return;
-                }
+                    if (!PrintDuplexPair(page, page + 1, totalJobPages, printedCount + 2)) {
+                        return;
+                    }
 
-                printedCount += 2;
+                    printedCount += 2;
+                }
             }
         }
         else if (mode == "Manual Duplex (Flip On Long Edge)") {
             int printedCount = 0;
 
-            for (int page = 1; page <= jobPages; page += 2) {
-                if (IsCancelled()) {
-                    return;
-                }
+            // Phase 1: in toàn bộ trang lẻ của tất cả copies
+            for (int copy = 0; copy < copies; ++copy) {
+                for (int page = 1; page <= pagesPerCopy; page += 2) {
+                    if (IsCancelled()) {
+                        return;
+                    }
 
-                if (!PrintSimplexOnePage(page, jobPages, ++printedCount, 'd', 'i')) {
-                    return;
+                    if (!PrintSimplexOnePage(page, totalJobPages, ++printedCount, 'd', 'i')) {
+                        return;
+                    }
                 }
             }
 
+            // Chỉ flip 1 lần duy nhất cho cả job
             if (!WaitForManualFlip(L"Flip the paper on the long edge.")) {
                 return;
             }
 
-            for (int page = 2; page <= jobPages; page += 2) {
-                if (IsCancelled()) {
-                    return;
-                }
+            // Phase 2: in toàn bộ trang chẵn của tất cả copies
+            for (int copy = 0; copy < copies; ++copy) {
+                for (int page = 2; page <= pagesPerCopy; page += 2) {
+                    if (IsCancelled()) {
+                        return;
+                    }
 
-                if (!PrintSimplexOnePage(page, jobPages, ++printedCount, 'i', 'd')) {
-                    return;
+                    if (!PrintSimplexOnePage(page, totalJobPages, ++printedCount, 'i', 'd')) {
+                        return;
+                    }
                 }
             }
         }
         else if (mode == "Manual Duplex (Flip On Short Edge)") {
             int printedCount = 0;
 
-            for (int page = 1; page <= jobPages; page += 2) {
-                if (IsCancelled()) {
-                    return;
-                }
+            // Phase 1: in toàn bộ trang lẻ của tất cả copies
+            for (int copy = 0; copy < copies; ++copy) {
+                for (int page = 1; page <= pagesPerCopy; page += 2) {
+                    if (IsCancelled()) {
+                        return;
+                    }
 
-                if (!PrintSimplexOnePage(page, jobPages, ++printedCount, 'd', 'i')) {
-                    return;
+                    if (!PrintSimplexOnePage(page, totalJobPages, ++printedCount, 'd', 'i')) {
+                        return;
+                    }
                 }
             }
 
+            // Chỉ flip 1 lần duy nhất cho cả job
             if (!WaitForManualFlip(L"Flip the paper on the short edge.")) {
                 return;
             }
 
-            for (int page = jobPages; page >= 2; page -= 2) {
-                if (IsCancelled()) {
-                    return;
-                }
+            // Phase 2: in toàn bộ trang chẵn của tất cả copies, nhưng đi ngược trong từng copy
+            for (int copy = 0; copy < copies; ++copy) {
+                for (int page = pagesPerCopy; page >= 2; page -= 2) {
+                    if (IsCancelled()) {
+                        return;
+                    }
 
-                if (!PrintSimplexOnePage(page, jobPages, ++printedCount, 'i', 'd')) {
-                    return;
+                    if (!PrintSimplexOnePage(page, totalJobPages, ++printedCount, 'i', 'd')) {
+                        return;
+                    }
                 }
             }
         }
         else {
             int printedCount = 0;
-            for (int page = 1; page <= pages; ++page) {
-                if (IsCancelled()) {
-                    return;
-                }
 
-                if (!PrintSimplexOnePage(page, pages, ++printedCount, 'd', 'i')) {
-                    return;
+            for (int copy = 0; copy < copies; ++copy) {
+                for (int page = 1; page <= pages; ++page) {
+                    if (IsCancelled()) {
+                        return;
+                    }
+
+                    if (!PrintSimplexOnePage(page, totalJobPages, ++printedCount, 'd', 'i')) {
+                        return;
+                    }
                 }
             }
         }
