@@ -347,7 +347,7 @@ std::wstring BuildCommand(const std::wstring& exePath,
     return ss.str();
 }
 
-bool LaunchProcess(const std::wstring& cmdLine)
+bool LaunchProcess(const std::wstring& cmdLine, std::wstring exeDir)
 {
     std::wstring mutableCmd = cmdLine;
 
@@ -357,14 +357,14 @@ bool LaunchProcess(const std::wstring& cmdLine)
     PROCESS_INFORMATION pi{};
 
     BOOL ok = CreateProcessW(
-        nullptr,
-        mutableCmd.data(),
-        nullptr,
-        nullptr,
+        NULL,
+        &mutableCmd[0],
+        NULL,
+        NULL,
         FALSE,
         0,
-        nullptr,
-        nullptr,
+        NULL,
+        exeDir.c_str(),
         &si,
         &pi
     );
@@ -491,7 +491,7 @@ int wmain(int argc, wchar_t* argv[])
         LogLine(line);
     }
 
-    if (!LaunchProcess(cmd)) {
+    if (!LaunchProcess(cmd, exeDir)) {
         return 1;
     }
 
