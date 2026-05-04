@@ -25,7 +25,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 
-OutputBaseFilename=Simple-printer-installer
+OutputBaseFilename=SimplePrinter-Setup
 SolidCompression=yes
 WizardStyle=modern
 
