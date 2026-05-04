@@ -117,12 +117,9 @@ Installer will:
 * MSYS2 (UCRT64)
 
 ### Build
-
+Run
 ```bash
-mkdir build
-cd build
-cmake .. -G "MinGW Makefiles"
-cmake --build .
+.\build.bat
 ```
 
 ---
