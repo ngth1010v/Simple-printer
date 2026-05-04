@@ -58,9 +58,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # =========================
 # WINDOWS SETTINGS
 # =========================
-# if (WIN32 AND USE_WINDOWS_SUBSYSTEM)
-#     target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
-# endif()
+if (WIN32 AND USE_WINDOWS_SUBSYSTEM)
+    target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
+endif()
 
 # =========================
 # LINK LIBRARIES
@@ -112,3 +112,44 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     ${PDFIUM_DIR}/bin/pdfium.dll
     $<TARGET_FILE_DIR:${PROJECT_NAME}>
 )
+
+
+
+
+
+# =========================
+# LAUNCHER
+# =========================
+add_executable(SimplePrinterLauncher
+    launcher/launcher.cpp
+)
+
+# QUAN TRỌNG
+set_target_properties(SimplePrinterLauncher PROPERTIES
+    WIN32_EXECUTABLE OFF
+)
+
+target_link_options(SimplePrinterLauncher PRIVATE
+    -municode
+)
+
+target_compile_definitions(SimplePrinterLauncher PRIVATE
+    UNICODE
+    _UNICODE
+)
+
+target_compile_options(SimplePrinterLauncher PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+    -O2
+)
+
+if (MINGW)
+    target_link_options(SimplePrinterLauncher PRIVATE
+        -static
+        -static-libgcc
+        -static-libstdc++
+        -mconsole
+    )
+endif()
