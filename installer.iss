@@ -8,7 +8,7 @@
 #define MyAppExeName "SimplePrinter.exe"
 
 [Setup]
-AppId={{F8FFDA3A-DD85-4094-9F14-0BA4DADA2BBC}
+AppId={{F8FFDA3A-DD85-4094-9F14-0BA4DADA2BBC} 
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}

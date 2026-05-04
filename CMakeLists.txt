@@ -126,7 +126,7 @@ add_executable(SimplePrinterLauncher
 
 # QUAN TRỌNG
 set_target_properties(SimplePrinterLauncher PROPERTIES
-    WIN32_EXECUTABLE OFF
+    WIN32_EXECUTABLE ON
 )
 
 target_link_options(SimplePrinterLauncher PRIVATE
@@ -150,6 +150,6 @@ if (MINGW)
         -static
         -static-libgcc
         -static-libstdc++
-        -mconsole
+        # -mconsole
     )
 endif()

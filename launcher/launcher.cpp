@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <shellapi.h>
 
 #include <string>
 #include <vector>
@@ -6,7 +7,6 @@
 
 #define MUTEX_NAME L"Global\\SimplePrinterLauncherMutex"
 #define FILE_PATH  L"C:\\Temp\\SimplePrinter_args.txt"
-#define LOG_PATH   L"C:\\Temp\\SimplePrinterLauncher.log"
 
 // ===== Utils =====
 std::wstring GetExeDir()
@@ -30,84 +30,6 @@ void EnsureTempDir()
     CreateDirectoryW(L"C:\\Temp", nullptr);
 }
 
-std::wstring GetTimeStamp()
-{
-    SYSTEMTIME st{};
-    GetLocalTime(&st);
-
-    wchar_t buf[64] = {};
-    swprintf(
-        buf,
-        64,
-        L"%04u-%02u-%02u %02u:%02u:%02u.%03u",
-        st.wYear, st.wMonth, st.wDay,
-        st.wHour, st.wMinute, st.wSecond, st.wMilliseconds
-    );
-
-    return buf;
-}
-
-void AppendUtf16LineToFile(const wchar_t* path, const std::wstring& line)
-{
-    HANDLE hFile = CreateFileW(
-        path,
-        FILE_APPEND_DATA,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        nullptr,
-        OPEN_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr
-    );
-
-    if (hFile == INVALID_HANDLE_VALUE) {
-        return;
-    }
-
-    LARGE_INTEGER size{};
-    if (GetFileSizeEx(hFile, &size) && size.QuadPart == 0) {
-        // Write UTF-16 BOM once for a new file
-        const wchar_t bom = 0xFEFF;
-        DWORD written = 0;
-        WriteFile(hFile, &bom, sizeof(bom), &written, nullptr);
-    }
-
-    std::wstring text = line + L"\r\n";
-    DWORD written = 0;
-    WriteFile(
-        hFile,
-        text.data(),
-        static_cast<DWORD>(text.size() * sizeof(wchar_t)),
-        &written,
-        nullptr
-    );
-
-    CloseHandle(hFile);
-}
-
-void LogLine(const std::wstring& msg)
-{
-    std::wstring line = L"[" + GetTimeStamp() + L"] " + msg;
-
-    // Always write to UTF-16 log file
-    AppendUtf16LineToFile(LOG_PATH, line);
-
-    // Debug output for debugger
-    OutputDebugStringW((line + L"\r\n").c_str());
-
-    // Console output only if a real console exists
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hOut != INVALID_HANDLE_VALUE && hOut != nullptr) {
-        DWORD mode = 0;
-        if (GetConsoleMode(hOut, &mode)) {
-            DWORD written = 0;
-            std::wstring consoleLine = line + L"\r\n";
-            WriteConsoleW(hOut, consoleLine.c_str(),
-                          static_cast<DWORD>(consoleLine.size()),
-                          &written, nullptr);
-        }
-    }
-}
-
 bool WriteTextUtf16(const wchar_t* path, const std::wstring& text)
 {
     HANDLE hFile = CreateFileW(
@@ -128,13 +50,15 @@ bool WriteTextUtf16(const wchar_t* path, const std::wstring& text)
     DWORD written = 0;
     WriteFile(hFile, &bom, sizeof(bom), &written, nullptr);
 
-    WriteFile(
-        hFile,
-        text.data(),
-        static_cast<DWORD>(text.size() * sizeof(wchar_t)),
-        &written,
-        nullptr
-    );
+    if (!text.empty()) {
+        WriteFile(
+            hFile,
+            text.data(),
+            static_cast<DWORD>(text.size() * sizeof(wchar_t)),
+            &written,
+            nullptr
+        );
+    }
 
     CloseHandle(hFile);
     return true;
@@ -176,7 +100,6 @@ std::wstring ReadWholeUtf16File(const wchar_t* path)
     size_t count = bytesRead / sizeof(wchar_t);
     size_t start = 0;
 
-    // Strip UTF-16 BOM if present
     if (count > 0 && buf[0] == 0xFEFF) {
         start = 1;
     }
@@ -217,14 +140,27 @@ std::vector<std::wstring> SplitLines(const std::wstring& text)
     return lines;
 }
 
+std::wstring ReadAllArgsFileLocked()
+{
+    return ReadWholeUtf16File(FILE_PATH);
+}
+
+bool WriteAllArgsFileLocked(const std::wstring& text)
+{
+    return WriteTextUtf16(FILE_PATH, text);
+}
+
 bool AppendArgLocked(HANDLE hMutex, const std::wstring& arg)
 {
     if (WaitForSingleObject(hMutex, INFINITE) != WAIT_OBJECT_0) {
         return false;
     }
 
-    std::wstring line = arg + L"\r\n";
-    bool ok = WriteTextUtf16(FILE_PATH, ReadWholeUtf16File(FILE_PATH) + line);
+    std::wstring current = ReadAllArgsFileLocked();
+    current += arg;
+    current += L"\r\n";
+
+    bool ok = WriteAllArgsFileLocked(current);
 
     ReleaseMutex(hMutex);
     return ok;
@@ -238,7 +174,7 @@ std::vector<std::wstring> CollectArgsLocked(HANDLE hMutex)
         return args;
     }
 
-    std::wstring text = ReadWholeUtf16File(FILE_PATH);
+    std::wstring text = ReadAllArgsFileLocked();
     args = SplitLines(text);
 
     DeleteFileW(FILE_PATH);
@@ -328,9 +264,11 @@ std::wstring QuoteWindowsArg(const std::wstring& arg)
     return out;
 }
 
-std::wstring BuildCommand(const std::wstring& exePath,
-                          const std::vector<std::wstring>& args,
-                          bool isPrint)
+std::wstring BuildCommand(
+    const std::wstring& exePath,
+    const std::vector<std::wstring>& args,
+    bool isPrint
+)
 {
     std::wstringstream ss;
 
@@ -347,7 +285,7 @@ std::wstring BuildCommand(const std::wstring& exePath,
     return ss.str();
 }
 
-bool LaunchProcess(const std::wstring& cmdLine, std::wstring exeDir)
+bool LaunchProcess(const std::wstring& cmdLine, const std::wstring& exeDir)
 {
     std::wstring mutableCmd = cmdLine;
 
@@ -357,23 +295,19 @@ bool LaunchProcess(const std::wstring& cmdLine, std::wstring exeDir)
     PROCESS_INFORMATION pi{};
 
     BOOL ok = CreateProcessW(
-        NULL,
+        nullptr,
         &mutableCmd[0],
-        NULL,
-        NULL,
+        nullptr,
+        nullptr,
         FALSE,
         0,
-        NULL,
+        nullptr,
         exeDir.c_str(),
         &si,
         &pi
     );
 
     if (!ok) {
-        DWORD err = GetLastError();
-        std::wstringstream ss;
-        ss << L"CreateProcessW failed, err=" << err;
-        LogLine(ss.str());
         return false;
     }
 
@@ -382,16 +316,14 @@ bool LaunchProcess(const std::wstring& cmdLine, std::wstring exeDir)
     return true;
 }
 
-// ===== Entry =====
-int wmain(int argc, wchar_t* argv[])
+int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {
     EnsureTempDir();
 
-    LogLine(L"Launcher started");
-    {
-        std::wstringstream ss;
-        ss << L"argc = " << argc;
-        LogLine(ss.str());
+    int argc = 0;
+    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (!argv) {
+        return 1;
     }
 
     bool isPrint = false;
@@ -399,13 +331,6 @@ int wmain(int argc, wchar_t* argv[])
 
     for (int i = 1; i < argc; ++i) {
         std::wstring arg = argv[i] ? argv[i] : L"";
-
-        {
-            std::wstringstream ss;
-            ss << L"argv[" << i << L"] = " << arg;
-            LogLine(ss.str());
-        }
-
         if (arg == L"--print") {
             isPrint = true;
         } else if (!arg.empty()) {
@@ -413,88 +338,48 @@ int wmain(int argc, wchar_t* argv[])
         }
     }
 
-    {
-        std::wstringstream ss;
-        ss << L"isPrint = " << (isPrint ? L"true" : L"false");
-        LogLine(ss.str());
-    }
+    LocalFree(argv);
 
     if (inputArgs.empty()) {
-        LogLine(L"No file argument, exit.");
         return 0;
     }
 
     HANDLE hMutex = CreateMutexW(nullptr, FALSE, MUTEX_NAME);
     if (!hMutex) {
-        DWORD err = GetLastError();
-        std::wstringstream ss;
-        ss << L"CreateMutexW failed, err=" << err;
-        LogLine(ss.str());
         return 1;
     }
 
     DWORD mutexErr = GetLastError();
     bool isFirst = (mutexErr != ERROR_ALREADY_EXISTS);
 
-    {
-        std::wstringstream ss;
-        ss << L"isFirst = " << (isFirst ? L"true" : L"false");
-        LogLine(ss.str());
-    }
-
-    // Append all file args to shared temp file
     for (const auto& a : inputArgs) {
-        if (WaitForSingleObject(hMutex, INFINITE) != WAIT_OBJECT_0) {
-            LogLine(L"WaitForSingleObject failed while appending.");
+        if (!AppendArgLocked(hMutex, a)) {
             CloseHandle(hMutex);
             return 1;
         }
-
-        std::wstring current = ReadWholeUtf16File(FILE_PATH);
-        current += a;
-        current += L"\r\n";
-        WriteTextUtf16(FILE_PATH, current);
-
-        ReleaseMutex(hMutex);
     }
 
     if (!isFirst) {
-        LogLine(L"Secondary instance -> exit.");
         CloseHandle(hMutex);
         return 0;
     }
 
-    // Leader waits a short quiet period so other instances can append
     WaitForFileQuiet(120, 1000);
 
     std::vector<std::wstring> args = CollectArgsLocked(hMutex);
     CloseHandle(hMutex);
 
-    {
-        std::wstringstream ss;
-        ss << L"Collected args count = " << args.size();
-        LogLine(ss.str());
-    }
-
     if (args.empty()) {
-        LogLine(L"No collected args, exit.");
         return 0;
     }
 
     std::wstring exeDir = GetExeDir();
     std::wstring printerExe = exeDir + L"\\SimplePrinter.exe";
-
     std::wstring cmd = BuildCommand(printerExe, args, isPrint);
-
-    {
-        std::wstring line = L"CMD = " + cmd;
-        LogLine(line);
-    }
 
     if (!LaunchProcess(cmd, exeDir)) {
         return 1;
     }
 
-    LogLine(L"Launcher finished.");
     return 0;
 }
