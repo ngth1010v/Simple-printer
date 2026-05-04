@@ -1,9 +1,0 @@
-# TASKS:
-- viết cho tôi full launcher.cpp để gom các tham số từ "%1" trong file explor rồi gọi SimplePrinter.exe để truyền tham số vào
-
-
-
-
-
-
-
