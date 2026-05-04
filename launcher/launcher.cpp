@@ -380,6 +380,6 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
     if (!LaunchProcess(cmd, exeDir)) {
         return 1;
     }
-
+ 
     return 0;
 }
