@@ -6,7 +6,7 @@ namespace Layout {
 
     // ===== WINDOW =====
     constexpr int MIN_WIDTH             = 470;
-    constexpr int MIN_HEIGHT            = 477;
+    constexpr int MIN_HEIGHT            = 517;
 
     constexpr int MARGIN                = 5;
     constexpr int SECTION_MARGIN        = 10;
@@ -81,7 +81,7 @@ namespace Layout {
         constexpr int X = MARGIN;
         constexpr int Y = BasicSection::Y + BasicSection::H + SECTION_GAP;
         constexpr int W = 250;
-        constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 4 - ROW_GAP + IMAGE_H + INPUT_GAP;
+        constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 5 - ROW_GAP + IMAGE_H + INPUT_GAP;
         
         constexpr int INPUT_W = W - 2 * SECTION_MARGIN;
 
@@ -116,6 +116,13 @@ namespace Layout {
 
         constexpr int ORIENTATION_INPUT_X = SECTION_MARGIN;
         constexpr int ORIENTATION_INPUT_Y = ORIENTATION_LABEL_Y + LABEL_H + INPUT_GAP;
+
+        // Skip blank page
+        constexpr int SKIP_BLANK_PAGE_LABEL_X = SECTION_MARGIN;
+        constexpr int SKIP_BLANK_PAGE_LABEL_Y = ORIENTATION_INPUT_Y + INPUT_H + ROW_GAP;
+
+        constexpr int SKIP_BLANK_PAGE_INPUT_X = SECTION_MARGIN;
+        constexpr int SKIP_BLANK_PAGE_INPUT_Y = SKIP_BLANK_PAGE_LABEL_Y + LABEL_H + INPUT_GAP;
     }
 
 

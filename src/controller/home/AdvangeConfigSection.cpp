@@ -117,6 +117,33 @@ static void AdvOrientationUpdate(config::ConfigData& cfg, const std::string& v) 
     cfg.orientation = v;
 }
 
+static void AdvSkipBlankPageInit(HomeWindow& win, config::ConfigData& cfg) {
+    std::vector<std::string> options = {
+        "Yes",
+        "No"
+    };
+
+    win.m_adv.SetSkipBlankPageOptions(options);
+
+    bool match = false;
+    for (auto& o : options) {
+        if (o == cfg.skipBlankPage) {
+            match = true;
+            break;
+        }
+    }
+
+    if (!match) {
+        cfg.skipBlankPage = "Yes";
+    }
+
+    win.m_adv.SetSkipBlankPageValue(cfg.skipBlankPage);
+}
+
+static void AdvSkipBlankPageUpdate(config::ConfigData& cfg, const std::string& v) {
+    cfg.skipBlankPage = v;
+}
+
 
 
 }
@@ -139,6 +166,7 @@ void AdvangeConfigSectionController::Init(ChangeCallback cb)
     AdvPaperInit(m_win, m_cfg);
     AdvScaleInit(m_win, m_cfg);
     AdvOrientationInit(m_win, m_cfg);
+    AdvSkipBlankPageInit(m_win, m_cfg);
 }
 
 void AdvangeConfigSectionController::Bind()
@@ -160,6 +188,11 @@ void AdvangeConfigSectionController::Bind()
 
     m_win.m_adv.OnOrientationChange([&](const std::string& v) {
         AdvOrientationUpdate(m_cfg, v);
+        Fire(m_cb);
+    });
+
+    m_win.m_adv.OnSkipBlankPageChange([&](const std::string& v) {
+        AdvSkipBlankPageUpdate(m_cfg, v);
         Fire(m_cb);
     });
 }
