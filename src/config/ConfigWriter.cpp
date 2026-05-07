@@ -47,10 +47,11 @@ void Write(const std::string& path, const ConfigData& data)
     WriteInt   ("Basic", "copies",  data.copies,  path);
 
     // ===== Advance =====
-    WriteString("Advance", "printMode",   data.printMode,   path);
-    WriteString("Advance", "paper",       data.paper,       path);
-    WriteString("Advance", "scale",       data.scale,       path);
-    WriteString("Advance", "orientation", data.orientation, path);
+    WriteString("Advance", "printMode",     data.printMode,     path);
+    WriteString("Advance", "paper",         data.paper,         path);
+    WriteString("Advance", "scale",         data.scale,         path);
+    WriteString("Advance", "orientation",   data.orientation,   path);
+    WriteString("Advance", "skipBlankPage", data.skipBlankPage, path);
 
 
     // ===== Files =====

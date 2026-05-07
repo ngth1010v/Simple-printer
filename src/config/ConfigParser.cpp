@@ -49,10 +49,11 @@ ConfigData Parse(const std::string& path, bool keepFiles)
     data.copies = ReadInt("Basic", "copies", data.copies, path);
 
     // ===== Advance =====
-    data.printMode   = ReadString("Advance", "printMode",   data.printMode,   path);
-    data.paper       = ReadString("Advance", "paper",       data.paper,       path);
-    data.scale       = ReadString("Advance", "scale",       data.scale,       path);
-    data.orientation = ReadString("Advance", "orientation", data.orientation, path);
+    data.printMode     = ReadString("Advance", "printMode",     data.printMode,     path);
+    data.paper         = ReadString("Advance", "paper",         data.paper,         path);
+    data.scale         = ReadString("Advance", "scale",         data.scale,         path);
+    data.orientation   = ReadString("Advance", "orientation",   data.orientation,   path);
+    data.skipBlankPage = ReadString("Advance", "skipBlankPage", data.skipBlankPage, path);
 
 
     // ===== Files =====

@@ -10,7 +10,7 @@ struct FileData {
     int fromRange;
     int toRange;
     bool loaded = false;
-};
+}; 
 
 struct ConfigData {
     std::string printer     = "Microsoft Print to PDF";
@@ -20,6 +20,7 @@ struct ConfigData {
     std::string paper       = "A4";
     std::string scale       = "Fit to page (keep aspect ratio)";
     std::string orientation = "Auto";
+    std::string skipBlankPage = "Yes";
 
     std::vector<FileData> files;
 };
