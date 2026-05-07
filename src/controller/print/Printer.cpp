@@ -10,11 +10,15 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <fstream>
 #include <cstdint>
 
 #include <iostream>
+
+constexpr double kWhiteLumaThreshold = 252.0; 
+constexpr double kWhiteRatioThreshold = 0.9995; 
 
 namespace controller::print {
 namespace fs = std::filesystem;
@@ -72,17 +76,28 @@ bool IsBmpFile(const fs::directory_entry& entry) {
 
 // Hỗ trợ tên dạng: 12-d.bmp hoặc 12-i.bmp
 bool ExtractPageNumber(const fs::path& filePath, int& pageOut) {
-    const std::string stem = filePath.stem().string(); // ví dụ: "12-d"
+    const std::string stem = filePath.stem().string(); // ví dụ: "12-d", "12-D", "12"
     const std::size_t dashPos = stem.find('-');
 
-    if (dashPos == std::string::npos || dashPos == 0) {
-        return false;
+    std::string pageStr = stem;
+    std::string suffix;
+
+    if (dashPos != std::string::npos) {
+        if (dashPos == 0) {
+            return false;
+        }
+
+        pageStr = stem.substr(0, dashPos);
+        suffix  = stem.substr(dashPos + 1);
+        suffix   = ToLowerCopy(suffix);
+
+        // Chỉ chấp nhận hậu tố d / i nếu có dấu '-'
+        if (suffix != "d" && suffix != "i") {
+            return false;
+        }
     }
 
-    const std::string pageStr = stem.substr(0, dashPos);
-    const std::string suffix  = stem.substr(dashPos + 1);
-
-    if (suffix != "d" && suffix != "i") {
+    if (pageStr.empty()) {
         return false;
     }
 
@@ -100,14 +115,46 @@ bool ExtractPageNumber(const fs::path& filePath, int& pageOut) {
     }
 }
 
-int CountPagesInTempDir(const std::string& tempDir) {
-    int maxPage = 0;
+#pragma pack(push, 1)
+struct BmpFileHeader {
+    std::uint16_t bfType = 0x4D42; // "BM"
+    std::uint32_t bfSize = 0;
+    std::uint16_t bfReserved1 = 0;
+    std::uint16_t bfReserved2 = 0;
+    std::uint32_t bfOffBits = 0;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct BmpInfoHeader {
+    std::uint32_t biSize = 0;
+    std::int32_t  biWidth = 0;
+    std::int32_t  biHeight = 0;
+    std::uint16_t biPlanes = 0;
+    std::uint16_t biBitCount = 0;
+    std::uint32_t biCompression = 0;
+    std::uint32_t biSizeImage = 0;
+    std::int32_t  biXPelsPerMeter = 0;
+    std::int32_t  biYPelsPerMeter = 0;
+    std::uint32_t biClrUsed = 0;
+    std::uint32_t biClrImportant = 0;
+};
+#pragma pack(pop)
+
+
+
+struct PageBmp {
+    int page = 0;
+    fs::path path;
+};
+
+std::vector<PageBmp> CollectPageBmpsInTempDir(const std::string& tempDir) {
+    std::vector<PageBmp> out;
 
     try {
-        const fs::path dirPath = fs::u8path(tempDir);
-
+        const fs::path dirPath = fs::path(tempDir);
         if (!fs::exists(dirPath) || !fs::is_directory(dirPath)) {
-            return 0;
+            return {};
         }
 
         for (const auto& entry : fs::directory_iterator(dirPath)) {
@@ -116,30 +163,121 @@ int CountPagesInTempDir(const std::string& tempDir) {
             }
 
             int page = 0;
-            if (!ExtractPageNumber(entry.path(), page)) {
-                continue;
-            }
-
-            if (page > maxPage) {
-                maxPage = page;
+            if (ExtractPageNumber(entry.path(), page)) {
+                out.push_back(PageBmp{ page, entry.path() });
             }
         }
-    } catch (...) {
-        return 0;
+
+        std::sort(out.begin(), out.end(),
+            [](const PageBmp& a, const PageBmp& b) {
+                return a.page < b.page;
+            });
+
+        out.erase(std::unique(out.begin(), out.end(),
+            [](const PageBmp& a, const PageBmp& b) {
+                return a.page == b.page;
+            }), out.end());
+    }
+    catch (...) {
+        return {};
     }
 
-    return maxPage;
+    return out;
+}
+
+
+bool IsBlankBmp(const std::string& bmpPath) {
+    std::ifstream in(fs::path(bmpPath), std::ios::binary);
+    if (!in) {
+        return false; // không đọc được thì đừng coi là blank
+    }
+
+    BmpFileHeader fileHeader{};
+    BmpInfoHeader infoHeader{};
+
+    in.read(reinterpret_cast<char*>(&fileHeader), sizeof(fileHeader));
+    in.read(reinterpret_cast<char*>(&infoHeader), sizeof(infoHeader));
+    if (!in) {
+        return false;
+    }
+
+    if (fileHeader.bfType != 0x4D42) { // "BM"
+        return false;
+    }
+
+    if (infoHeader.biPlanes != 1 || infoHeader.biCompression != BI_RGB) {
+        return false;
+    }
+
+    if (infoHeader.biBitCount != 24 && infoHeader.biBitCount != 32) {
+        return false;
+    }
+
+    if (infoHeader.biWidth <= 0 || infoHeader.biHeight == 0) {
+        return false;
+    }
+
+    const int width  = infoHeader.biWidth;
+    const int height = (infoHeader.biHeight < 0) ? -infoHeader.biHeight : infoHeader.biHeight;
+
+    const std::size_t bytesPerPixel = static_cast<std::size_t>(infoHeader.biBitCount / 8);
+    const std::size_t rowBytes = ((static_cast<std::size_t>(width) * infoHeader.biBitCount + 31) / 32) * 4;
+
+    std::vector<unsigned char> row(rowBytes);
+
+    in.seekg(static_cast<std::streamoff>(fileHeader.bfOffBits), std::ios::beg);
+    if (!in) {
+        return false;
+    }
+
+    // Chỉ cần có đủ số pixel tối thiểu "không trắng" là coi như không blank.
+    // Ngưỡng này an toàn hơn whiteRatio > 0.9995.
+    constexpr double kDarkLumaThreshold = 245.0;
+    constexpr std::size_t kMinDarkPixels = 32;
+    constexpr double kDarkPixelRatio = 0.00002; // 0.002%
+
+    const std::size_t totalPixels = static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
+    const std::size_t neededDarkPixels = std::max(
+        kMinDarkPixels,
+        static_cast<std::size_t>(static_cast<double>(totalPixels) * kDarkPixelRatio)
+    );
+
+    std::size_t darkPixels = 0;
+
+    for (int y = 0; y < height; ++y) {
+        in.read(reinterpret_cast<char*>(row.data()), static_cast<std::streamsize>(row.size()));
+        if (!in) {
+            return false;
+        }
+
+        for (int x = 0; x < width; ++x) {
+            const unsigned char* px = row.data() + static_cast<std::size_t>(x) * bytesPerPixel;
+
+            const double b = px[0];
+            const double g = px[1];
+            const double r = px[2];
+            const double luma = 0.299 * r + 0.587 * g + 0.114 * b;
+
+            if (luma < kDarkLumaThreshold) {
+                if (++darkPixels >= neededDarkPixels) {
+                    return false; // có nội dung -> không blank
+                }
+            }
+        }
+    }
+
+    return true; // quá ít pixel tối -> blank
 }
 
 std::string BuildPagePath(const std::string& tempDir, int page, char suffix) {
-    fs::path p = fs::u8path(tempDir);
+    fs::path p = fs::path(tempDir);
     p /= std::to_string(page) + "-" + suffix + ".bmp";
     return p.string();
 }
 
 bool FileExists(const std::string& path) {
     try {
-        return fs::exists(fs::u8path(path));
+        return fs::exists(fs::path(path));
     } catch (...) {
         return false;
     }
@@ -164,15 +302,31 @@ std::string ResolvePagePath(
     return {};
 }
 
-#pragma pack(push, 1)
-struct BmpFileHeader {
-    std::uint16_t bfType = 0x4D42; // "BM"
-    std::uint32_t bfSize = 0;
-    std::uint16_t bfReserved1 = 0;
-    std::uint16_t bfReserved2 = 0;
-    std::uint32_t bfOffBits = 0;
-};
-#pragma pack(pop)
+std::vector<int> BuildPrintablePages(
+    const std::string& tempDir,
+    bool skipBlankPage
+) {
+    const std::vector<PageBmp> pages = CollectPageBmpsInTempDir(tempDir);
+
+    std::vector<int> out;
+    out.reserve(pages.size());
+
+    if (!skipBlankPage) {
+        for (const auto& item : pages) {
+            out.push_back(item.page);
+        }
+        return out;
+    }
+
+    for (const auto& item : pages) {
+        if (!IsBlankBmp(item.path.string())) {
+            out.push_back(item.page);
+        }
+    }
+
+    return out;
+}
+
 
 constexpr const char* kEmptyBmpName = "empty.bmp";
 
@@ -187,13 +341,13 @@ bool NeedPadBlankPage(const std::string& mode, int pages) {
 }
 
 std::string EmptyBmpPath(const std::string& tempDir) {
-    fs::path p = fs::u8path(tempDir);
+    fs::path p = fs::path(tempDir);
     p /= kEmptyBmpName;
     return p.string();
 }
 
 bool CreateEmptyBmpFile(const std::string& tempDir, std::string& outPath, std::string& error) {
-    const fs::path filePath = fs::u8path(EmptyBmpPath(tempDir));
+    const fs::path filePath = fs::path(EmptyBmpPath(tempDir));
     outPath = filePath.string();
 
     try {
@@ -242,20 +396,6 @@ bool CreateEmptyBmpFile(const std::string& tempDir, std::string& outPath, std::s
     }
 
     return true;
-}
-
-std::string ResolvePagePathOrEmpty(
-    const std::string& tempDir,
-    int page,
-    int actualPages,
-    char preferSuffix,
-    char fallbackSuffix,
-    const std::string& emptyBmpPath
-) {
-    if (page > actualPages) {
-        return emptyBmpPath;
-    }
-    return ResolvePagePath(tempDir, page, preferSuffix, fallbackSuffix);
 }
 
 } // namespace
@@ -371,112 +511,38 @@ void Printer::Run() {
         return false;
     };
 
-    auto CreateEmptyBmpFile = [&](const std::string& tempDir, std::string& outPath, std::string& error) -> bool {
-        fs::path filePath = fs::u8path(tempDir);
-        filePath /= "empty.bmp";
-        outPath = filePath.string();
-
-        try {
-            if (fs::exists(filePath)) {
-                return true;
-            }
-
-            if (!fs::exists(filePath.parent_path())) {
-                fs::create_directories(filePath.parent_path());
-            }
-        } catch (...) {
-            error = "Failed to prepare folder for empty.bmp";
-            return false;
-        }
-
-#pragma pack(push, 1)
-        struct BmpFileHeader {
-            WORD  bfType;
-            DWORD bfSize;
-            WORD  bfReserved1;
-            WORD  bfReserved2;
-            DWORD bfOffBits;
-        };
-
-        struct BmpInfoHeader {
-            DWORD biSize;
-            LONG  biWidth;
-            LONG  biHeight;
-            WORD  biPlanes;
-            WORD  biBitCount;
-            DWORD biCompression;
-            DWORD biSizeImage;
-            LONG  biXPelsPerMeter;
-            LONG  biYPelsPerMeter;
-            DWORD biClrUsed;
-            DWORD biClrImportant;
-        };
-#pragma pack(pop)
-
-        BmpFileHeader fh{};
-        BmpInfoHeader ih{};
-
-        fh.bfType = 0x4D42; // "BM"
-        fh.bfOffBits = sizeof(BmpFileHeader) + sizeof(BmpInfoHeader);
-        fh.bfSize = fh.bfOffBits + 4; // 1 pixel BGRA
-
-        ih.biSize = sizeof(BmpInfoHeader);
-        ih.biWidth = 1;
-        ih.biHeight = 1; // bottom-up
-        ih.biPlanes = 1;
-        ih.biBitCount = 32;
-        ih.biCompression = BI_RGB;
-        ih.biSizeImage = 4;
-
-        const DWORD whitePixel = 0xFFFFFFFFu;
-
-        HANDLE hFile = ::CreateFileW(
-            filePath.c_str(),
-            GENERIC_WRITE,
-            0,
-            nullptr,
-            CREATE_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL,
-            nullptr
-        );
-
-        if (hFile == INVALID_HANDLE_VALUE) {
-            error = "Failed to create empty.bmp";
-            return false;
-        }
-
-        bool ok = true;
-        DWORD written = 0;
-
-        ok = ok && ::WriteFile(hFile, &fh, sizeof(fh), &written, nullptr) && written == sizeof(fh);
-        ok = ok && ::WriteFile(hFile, &ih, sizeof(ih), &written, nullptr) && written == sizeof(ih);
-        ok = ok && ::WriteFile(hFile, &whitePixel, sizeof(whitePixel), &written, nullptr) && written == sizeof(whitePixel);
-
-        ::CloseHandle(hFile);
-
-        if (!ok) {
-            ::DeleteFileW(filePath.c_str());
-            error = "Failed to write empty.bmp";
-            return false;
-        }
-
-        return true;
-    };
-
     try {
         printer::Init(m_state.cfg);
 
-        const int pages = CountPagesInTempDir(m_state.tempDir);
         const std::string mode = m_state.cfg.printMode;
         const int copies = std::max(1, m_state.cfg.copies);
+
+        const bool skipBlankPage =
+            m_state.cfg.skipBlankPage == "Yes (Actual sheets may be less than calculated)";
+
+        const std::vector<int> printablePages =
+            BuildPrintablePages(m_state.tempDir, skipBlankPage);
+
+        if (printablePages.empty()) {
+            win->SetPrintProcessColor("red");
+            win->SetNotification(L"No printable pages found.");
+            return;
+        }
 
         const bool isDuplexLike =
             mode == "Duplex" ||
             mode == "Manual Duplex (Flip On Long Edge)" ||
             mode == "Manual Duplex (Flip On Short Edge)";
 
-        const bool padBlankPage = (pages > 1) && isDuplexLike && ((pages % 2) == 1);
-        const int pagesPerCopy  = padBlankPage ? (pages + 1) : pages;
+        std::vector<int> jobPages = printablePages;
+        const bool padBlankPage =
+            isDuplexLike && (jobPages.size() > 1) && ((jobPages.size() % 2) == 1);
+
+        if (padBlankPage) {
+            jobPages.push_back(0); // 0 = empty.bmp
+        }
+
+        const int pagesPerCopy  = static_cast<int>(jobPages.size());
         const int totalJobPages = pagesPerCopy * copies;
 
 
@@ -494,7 +560,7 @@ void Printer::Run() {
         }
 
         auto ResolvePagePathOrEmpty = [&](int page, char preferSuffix, char fallbackSuffix) -> std::string {
-            if (page > pages) {
+            if (page <= 0) {
                 return emptyBmpPath;
             }
             return ResolvePagePath(m_state.tempDir, page, preferSuffix, fallbackSuffix);
@@ -580,17 +646,12 @@ void Printer::Run() {
         win->SetPrintProcess(totalJobPages, 0);
 
 
-        if (pages <= 0) {
-            win->SetPrintProcessColor("red");
-            win->SetNotification(L"No bitmap pages found in the temp folder.");
-            return;
-        }
-
         if (mode == "Simplex") {
             int printedCount = 0;
 
             for (int copy = 0; copy < copies; ++copy) {
-                for (int page = 1; page <= pages; ++page) {
+                for (int i = 0; i < static_cast<int>(printablePages.size()); ++i) {
+                    const int page = printablePages[i];
                     if (IsCancelled()) {
                         return;
                     }
@@ -605,12 +666,12 @@ void Printer::Run() {
             int printedCount = 0;
 
             for (int copy = 0; copy < copies; ++copy) {
-                for (int page = 1; page <= pagesPerCopy; page += 2) {
+                for (int i = 0; i < pagesPerCopy; i += 2) {
                     if (IsCancelled()) {
                         return;
                     }
 
-                    if (!PrintDuplexPair(page, page + 1, totalJobPages, printedCount + 2)) {
+                    if (!PrintDuplexPair(jobPages[i], jobPages[i + 1], totalJobPages, printedCount + 2)) {
                         return;
                     }
 
@@ -623,7 +684,8 @@ void Printer::Run() {
 
             // Phase 1: in toàn bộ trang lẻ của tất cả copies
             for (int copy = 0; copy < copies; ++copy) {
-                for (int page = 1; page <= pagesPerCopy; page += 2) {
+                for (int i = 0; i < pagesPerCopy; i += 2) {
+                    const int page = jobPages[i];
                     if (IsCancelled()) {
                         return;
                     }
@@ -635,13 +697,16 @@ void Printer::Run() {
             }
 
             // Chỉ flip 1 lần duy nhất cho cả job
-            if (!WaitForManualFlip(L"Flip the paper on the long edge.")) {
-                return;
+            if (pagesPerCopy > 1){
+                if (!WaitForManualFlip(L"Flip the paper on the long edge.")) {
+                    return;
+                }
             }
 
             // Phase 2: in toàn bộ trang chẵn của tất cả copies
             for (int copy = 0; copy < copies; ++copy) {
-                for (int page = 2; page <= pagesPerCopy; page += 2) {
+                for (int i = 1; i < pagesPerCopy; i += 2) {
+                    const int page = jobPages[i];
                     if (IsCancelled()) {
                         return;
                     }
@@ -657,7 +722,8 @@ void Printer::Run() {
 
             // Phase 1: in toàn bộ trang lẻ của tất cả copies
             for (int copy = 0; copy < copies; ++copy) {
-                for (int page = 1; page <= pagesPerCopy; page += 2) {
+                for (int i = 0; i < pagesPerCopy; i += 2) {
+                    const int page = jobPages[i];
                     if (IsCancelled()) {
                         return;
                     }
@@ -669,13 +735,16 @@ void Printer::Run() {
             }
 
             // Chỉ flip 1 lần duy nhất cho cả job
-            if (!WaitForManualFlip(L"Flip the paper on the short edge.")) {
-                return;
+            if (pagesPerCopy > 1) {
+                if (!WaitForManualFlip(L"Flip the paper on the short edge.")) {
+                    return;
+                }
             }
 
             // Phase 2: in toàn bộ trang chẵn của tất cả copies, nhưng đi ngược trong từng copy
             for (int copy = 0; copy < copies; ++copy) {
-                for (int page = pagesPerCopy; page >= 2; page -= 2) {
+                for (int i = pagesPerCopy - 1; i >= 1; i -= 2) {
+                    const int page = jobPages[i];
                     if (IsCancelled()) {
                         return;
                     }
@@ -690,7 +759,8 @@ void Printer::Run() {
             int printedCount = 0;
 
             for (int copy = 0; copy < copies; ++copy) {
-                for (int page = 1; page <= pages; ++page) {
+                for (int i = 0; i < static_cast<int>(printablePages.size()); ++i) {
+                    const int page = printablePages[i];
                     if (IsCancelled()) {
                         return;
                     }
