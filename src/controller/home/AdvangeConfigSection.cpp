@@ -119,7 +119,7 @@ static void AdvOrientationUpdate(config::ConfigData& cfg, const std::string& v) 
 
 static void AdvSkipBlankPageInit(HomeWindow& win, config::ConfigData& cfg) {
     std::vector<std::string> options = {
-        "Yes",
+        "Yes (Actual sheets may be less than calculated)",
         "No"
     };
 
@@ -134,7 +134,7 @@ static void AdvSkipBlankPageInit(HomeWindow& win, config::ConfigData& cfg) {
     }
 
     if (!match) {
-        cfg.skipBlankPage = "Yes";
+        cfg.skipBlankPage = "Yes (Actual sheets may be less than calculated)";
     }
 
     win.m_adv.SetSkipBlankPageValue(cfg.skipBlankPage);

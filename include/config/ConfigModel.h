@@ -20,7 +20,7 @@ struct ConfigData {
     std::string paper       = "A4";
     std::string scale       = "Fit to page (keep aspect ratio)";
     std::string orientation = "Auto";
-    std::string skipBlankPage = "Yes";
+    std::string skipBlankPage = "Yes (Actual sheets may be less than calculated)";
 
     std::vector<FileData> files;
 };
