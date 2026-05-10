@@ -291,6 +291,23 @@ void AddAnchorMark(BmpImage& img) {
     }
 }
 
+bool IsDocumentBmpPath(const std::string& bmpPath) {
+    std::string s = ToLowerAscii(bmpPath);
+
+    const std::string suffix1 = "-d.bmp";
+    const std::string suffix2 = "_d.bmp"; // nếu sau này bạn có thể dùng kiểu khác
+
+    if (s.size() >= suffix1.size() && s.compare(s.size() - suffix1.size(), suffix1.size(), suffix1) == 0) {
+        return true;
+    }
+
+    if (s.size() >= suffix2.size() && s.compare(s.size() - suffix2.size(), suffix2.size(), suffix2) == 0) {
+        return true;
+    }
+
+    return false;
+}
+
 } // namespace
 
 void EnsureNotBlankPage(BmpImage& page) {
@@ -343,7 +360,12 @@ bool BuildPageImage(
         return true;
     }
 
-    const double safeRatio = 0.95;
+    const bool isDocumentBmp = IsDocumentBmpPath(bmpPath);
+
+    // -i: giữ margin an toàn như cũ
+    // -d: không trừ printable margin
+    const double safeRatio = isDocumentBmp ? 1.0 : 0.95;
+
     const int safeWidth = std::max(1, static_cast<int>(std::floor(static_cast<double>(pageWidth) * safeRatio)));
     const int safeHeight = std::max(1, static_cast<int>(std::floor(static_cast<double>(pageHeight) * safeRatio)));
 
