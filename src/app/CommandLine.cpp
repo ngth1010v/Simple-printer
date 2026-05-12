@@ -1,85 +1,87 @@
 #include "app/CommandLine.h"
 
-#include <map>
+#include <filesystem>
 #include <algorithm>
-#include <iostream>
+
+namespace fs = std::filesystem;
 
 namespace CommandLine {
 
     // -------------------- storage --------------------
 
-    static std::map<std::string, bool> g_flags;
-    static std::map<std::string, std::string> g_options;
-    static std::vector<std::string> g_args;
+    static bool g_isPrint = false;
+    static std::vector<std::wstring> g_files;
 
     // -------------------- helpers --------------------
 
-    static inline bool StartsWith(const std::string& s, const std::string& prefix) {
-        return s.rfind(prefix, 0) == 0;
+    static bool IsValidExtension(const fs::path& path) {
+
+        std::wstring ext = path.extension().wstring();
+
+        std::transform(
+            ext.begin(),
+            ext.end(),
+            ext.begin(),
+            ::towlower
+        );
+
+        return
+            ext == L".png"  ||
+            ext == L".jpg"  ||
+            ext == L".jpeg" ||
+            ext == L".bmp"  ||
+            ext == L".gif"  ||
+            ext == L".webp" ||
+            ext == L".tiff" ||
+            ext == L".pdf"  ||
+            ext == L".docx";
     }
 
-    static std::string NormalizeKey(const std::string& s) {
-        std::string key = s;
+    static bool IsValidFile(const std::wstring& filePath) {
 
-        if (StartsWith(key, "--"))
-            key = key.substr(2);
+        fs::path path(filePath);
 
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-        return key;
+        if (!fs::exists(path))
+            return false;
+
+        if (!fs::is_regular_file(path))
+            return false;
+
+        return IsValidExtension(path);
     }
 
     // -------------------- parse --------------------
 
-    void Parse(int argc, char** argv) {
-        g_flags.clear();
-        g_options.clear();
-        g_args.clear();
+    void Parse(int argc, wchar_t* argv[]) {
+
+        g_isPrint = false;
+        g_files.clear();
 
         for (int i = 1; i < argc; ++i) {
-            std::string arg = argv[i];
 
-            // ----- option: --key=value -----
-            if (StartsWith(arg, "--") && arg.find('=') != std::string::npos) {
-                auto pos = arg.find('=');
+            std::wstring arg = argv[i] ? argv[i] : L"";
 
-                std::string key = NormalizeKey(arg.substr(0, pos));
-                std::string value = arg.substr(pos + 1);
-
-                g_options[key] = value;
+            // --print
+            if (arg == L"--print") {
+                g_isPrint = true;
                 continue;
             }
 
-            // ----- flag: --flag -----
-            if (StartsWith(arg, "--")) {
-                std::string key = NormalizeKey(arg);
-                g_flags[key] = true;
-                continue;
+            // file
+            if (IsValidFile(arg)) {
+                g_files.push_back(fs::absolute(arg).wstring());
             }
-
-            // ----- arg -----
-            g_args.push_back(arg);
         }
     }
 
     // -------------------- query --------------------
 
-    bool HasFlag(const std::string& key) {
-        auto it = g_flags.find(key);
-        return it != g_flags.end() && it->second;
+    bool IsPrint() {
+        return g_isPrint;
     }
 
-    bool HasOption(const std::string& key) {
-        return g_options.find(key) != g_options.end();
-    }
-
-    std::string GetOption(const std::string& key, const std::string& defaultValue) {
-        auto it = g_options.find(key);
-        if (it != g_options.end()) return it->second;
-        return defaultValue;
-    }
-
-    const std::vector<std::string>& GetArgs() {
-        return g_args;
+    const std::vector<std::wstring>& GetFiles() {
+        return g_files;
     }
 
 }
