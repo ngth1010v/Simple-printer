@@ -18,14 +18,12 @@ public:
     explicit FileListViewController(HomeWindow& win, config::ConfigData& cfg);
     ~FileListViewController();
 
-    // Optional callback: HomeController can pass a no-arg lambda here.
-    // Current existing code can still call Init() with no args.
     void Init(std::function<void()> onChanged = {});
     void Bind();
 
 private:
     struct CountResultMessage {
-        std::string path;
+        std::wstring path;
         int pages = 0;
         std::string error;
     };
@@ -61,30 +59,33 @@ private:
 
     void HandleCountDone(CountResultMessage* msg);
 
-    void HandleChangeRange(const std::string& path, const std::string& fromRange, const std::string& toRange);
-    void HandleMoveUp(const std::string& path);
-    void HandleMoveDown(const std::string& path);
-    void HandleRemove(const std::string& path);
-    void HandleAdd(const std::string& pathFromUi);
+    void HandleChangeRange(const std::wstring& path, const std::string& fromRange, const std::string& toRange);
+    void HandleMoveUp(const std::wstring& path);
+    void HandleMoveDown(const std::wstring& path);
+    void HandleRemove(const std::wstring& path);
+    void HandleAdd(const std::wstring& pathFromUi);
 
-    void StartCountForPath(const std::string& path);
+    void StartCountForPath(const std::wstring& path);
     void RequestCountForItem(int index);
 
     void NotifyHomeChanged();
 
-    int FindIndexByPath(const std::string& path) const;
+    int FindIndexByPath(const std::wstring& path) const;
 
-    static bool EqualPathNoCase(const std::string& a, const std::string& b);
-    static std::string ToLowerCopy(std::string s);
+    static bool EqualPathNoCase(const std::wstring& a, const std::wstring& b);
+    static std::wstring ToLowerCopy(std::wstring s);
     static std::string TrimCopy(const std::string& s);
     static bool ParseIntStrict(const std::string& s, int& out);
 
-    static std::string BaseNameFromPath(const std::string& path);
+    static std::wstring BaseNameFromPath(const std::wstring& path);
     static std::string StatusColor(bool loaded, int pages);
 
     static ui::home::UiFileData BuildUiFromCfg(const config::FileData& f);
     static void UpdateUiFromCfg(ui::home::UiFileData& ui, const config::FileData& f);
     static void UpdateCfgFromUiStringRange(config::FileData& f, const std::string& fromRange, const std::string& toRange);
+
+    std::wstring ToWide(const std::string& s) const;
+    std::string ToNarrow(const std::wstring& ws) const;
 
     void RefreshUi();
 };

@@ -7,9 +7,9 @@
 #include <CommCtrl.h>
 #include <algorithm>
 #include <cctype>
+#include <cwctype>
 #include <memory>
 #include <utility>
-
 
 namespace controller {
 namespace home {
@@ -48,23 +48,23 @@ void FileListViewController::Init(std::function<void()> onChanged)
 
 void FileListViewController::Bind()
 {
-    m_win.m_files.OnChangeRange([this](const std::string& path, const std::string& fromRange, const std::string& toRange) {
+    m_win.m_files.OnChangeRange([this](const std::wstring& path, const std::string& fromRange, const std::string& toRange) {
         HandleChangeRange(path, fromRange, toRange);
     });
 
-    m_win.m_files.OnMoveUp([this](const std::string& path) {
+    m_win.m_files.OnMoveUp([this](const std::wstring& path) {
         HandleMoveUp(path);
     });
 
-    m_win.m_files.OnMoveDown([this](const std::string& path) {
+    m_win.m_files.OnMoveDown([this](const std::wstring& path) {
         HandleMoveDown(path);
     });
 
-    m_win.m_files.OnRemove([this](const std::string& path) {
+    m_win.m_files.OnRemove([this](const std::wstring& path) {
         HandleRemove(path);
     });
 
-    m_win.m_files.OnAdd([this](const std::string& path) {
+    m_win.m_files.OnAdd([this](const std::wstring& path) {
         HandleAdd(path);
     });
 }
@@ -116,8 +116,6 @@ LRESULT CALLBACK FileListViewController::SubclassProc(
         return ::DefSubclassProc(hwnd, msg, wParam, lParam);
     }
 
-
-
     return ::DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
@@ -155,7 +153,7 @@ void FileListViewController::HandleCountDone(CountResultMessage* msg)
 }
 
 void FileListViewController::HandleChangeRange(
-    const std::string& path,
+    const std::wstring& path,
     const std::string& fromRange,
     const std::string& toRange)
 {
@@ -175,13 +173,11 @@ void FileListViewController::HandleChangeRange(
 
     bool valid = true;
 
-    // ===== VALIDATE =====
     if (!okFrom || !okTo) {
         valid = false;
     }
 
     if (valid) {
-        // pages == 0 → cho phép 0,0
         if (cfgFile.pages == 0) {
             if (!(fromVal == 0 && toVal == 0)) {
                 valid = false;
@@ -194,7 +190,6 @@ void FileListViewController::HandleChangeRange(
         }
     }
 
-    // ===== APPLY =====
     if (valid) {
         cfgFile.fromRange = fromVal;
         cfgFile.toRange   = toVal;
@@ -205,13 +200,12 @@ void FileListViewController::HandleChangeRange(
         m_win.m_files.Set(m_files);
         NotifyHomeChanged();
     } else {
-        // ❗ rollback UI về giá trị đúng từ cfg
         UpdateUiFromCfg(uiFile, cfgFile);
         m_win.m_files.Set(m_files);
     }
 }
 
-void FileListViewController::HandleMoveUp(const std::string& path)
+void FileListViewController::HandleMoveUp(const std::wstring& path)
 {
     const int index = FindIndexByPath(path);
     if (index <= 0 || index >= static_cast<int>(m_files.size()) || index >= static_cast<int>(m_cfg.files.size())) {
@@ -225,7 +219,7 @@ void FileListViewController::HandleMoveUp(const std::string& path)
     NotifyHomeChanged();
 }
 
-void FileListViewController::HandleMoveDown(const std::string& path)
+void FileListViewController::HandleMoveDown(const std::wstring& path)
 {
     const int index = FindIndexByPath(path);
     if (index < 0 || index + 1 >= static_cast<int>(m_files.size()) || index + 1 >= static_cast<int>(m_cfg.files.size())) {
@@ -239,7 +233,7 @@ void FileListViewController::HandleMoveDown(const std::string& path)
     NotifyHomeChanged();
 }
 
-void FileListViewController::HandleRemove(const std::string& path)
+void FileListViewController::HandleRemove(const std::wstring& path)
 {
     const int index = FindIndexByPath(path);
     if (index < 0 || index >= static_cast<int>(m_files.size()) || index >= static_cast<int>(m_cfg.files.size())) {
@@ -253,14 +247,18 @@ void FileListViewController::HandleRemove(const std::string& path)
     NotifyHomeChanged();
 }
 
-void FileListViewController::HandleAdd(const std::string& pathFromUi)
+void FileListViewController::HandleAdd(const std::wstring& pathFromUi)
 {
-    std::vector<std::string> paths;
+    std::vector<std::wstring> paths;
 
     if (!pathFromUi.empty()) {
         paths.push_back(pathFromUi);
     } else {
-        paths = platform::OpenFilePicker();
+        const auto picked = platform::OpenFilePicker();
+        paths.reserve(picked.size());
+        for (const auto& p : picked) {
+            paths.push_back(ToWide(p));
+        }
     }
 
     if (paths.empty()) {
@@ -304,9 +302,11 @@ void FileListViewController::HandleAdd(const std::string& pathFromUi)
     }
 }
 
-void FileListViewController::StartCountForPath(const std::string& path)
+void FileListViewController::StartCountForPath(const std::wstring& path)
 {
-    counter::Count(path, [this, path](int pages, const std::string& error) {
+    const std::string narrowPath = ToNarrow(path);
+
+    counter::Count(narrowPath, [this, path](int pages, const std::string& error) {
         auto* payload = new CountResultMessage{};
         payload->path = path;
         payload->pages = pages;
@@ -324,7 +324,6 @@ void FileListViewController::RequestCountForItem(int index)
         return;
     }
 
-    // Only count once for files that are still marked unloaded.
     if (m_cfg.files[index].loaded) {
         return;
     }
@@ -336,18 +335,15 @@ void FileListViewController::NotifyHomeChanged()
 {
     if (!m_onChanged) return;
 
-    // đảm bảo chạy trên UI thread
     if (GetCurrentThreadId() == GetWindowThreadProcessId(m_notifyHwnd, nullptr)) {
         m_onChanged();
     } else {
-        // dispatch về UI thread
         auto cb = new std::function<void()>(m_onChanged);
-
         PostMessage(m_notifyHwnd, WM_APP + 999, 0, (LPARAM)cb);
     }
 }
 
-int FileListViewController::FindIndexByPath(const std::string& path) const
+int FileListViewController::FindIndexByPath(const std::wstring& path) const
 {
     for (int i = 0; i < static_cast<int>(m_files.size()); ++i) {
         if (EqualPathNoCase(m_files[i].path, path)) {
@@ -357,15 +353,15 @@ int FileListViewController::FindIndexByPath(const std::string& path) const
     return -1;
 }
 
-bool FileListViewController::EqualPathNoCase(const std::string& a, const std::string& b)
+bool FileListViewController::EqualPathNoCase(const std::wstring& a, const std::wstring& b)
 {
     return ToLowerCopy(a) == ToLowerCopy(b);
 }
 
-std::string FileListViewController::ToLowerCopy(std::string s)
+std::wstring FileListViewController::ToLowerCopy(std::wstring s)
 {
-    for (char& c : s) {
-        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    for (wchar_t& c : s) {
+        c = static_cast<wchar_t>(std::towlower(c));
     }
     return s;
 }
@@ -406,10 +402,10 @@ bool FileListViewController::ParseIntStrict(const std::string& s, int& out)
     }
 }
 
-std::string FileListViewController::BaseNameFromPath(const std::string& path)
+std::wstring FileListViewController::BaseNameFromPath(const std::wstring& path)
 {
-    const size_t slash = path.find_last_of("/\\");
-    if (slash == std::string::npos) {
+    const size_t slash = path.find_last_of(L"/\\");
+    if (slash == std::wstring::npos) {
         return path;
     }
     return path.substr(slash + 1);
@@ -432,8 +428,39 @@ std::string FileListViewController::StatusColor(bool loaded, int pages)
 ui::home::UiFileData FileListViewController::BuildUiFromCfg(const config::FileData& f)
 {
     ui::home::UiFileData ui;
+
     ui.path = f.path;
-    ui.name = BaseNameFromPath(f.path);
+
+    {
+        const std::wstring ws = BaseNameFromPath(f.path);
+
+        int size = ::WideCharToMultiByte(
+            CP_UTF8,
+            0,
+            ws.data(),
+            static_cast<int>(ws.size()),
+            nullptr,
+            0,
+            nullptr,
+            nullptr
+        );
+
+        if (size > 0) {
+            ui.name.resize(size);
+
+            ::WideCharToMultiByte(
+                CP_UTF8,
+                0,
+                ws.data(),
+                static_cast<int>(ws.size()),
+                ui.name.data(),
+                size,
+                nullptr,
+                nullptr
+            );
+        }
+    }
+
     ui.statusColor = StatusColor(f.loaded, f.pages);
 
     if (f.loaded && f.pages > 0) {
@@ -459,7 +486,39 @@ ui::home::UiFileData FileListViewController::BuildUiFromCfg(const config::FileDa
 void FileListViewController::UpdateUiFromCfg(ui::home::UiFileData& ui, const config::FileData& f)
 {
     ui.path = f.path;
-    ui.name = BaseNameFromPath(f.path);
+
+    {
+        const std::wstring ws = BaseNameFromPath(f.path);
+
+        int size = ::WideCharToMultiByte(
+            CP_UTF8,
+            0,
+            ws.data(),
+            static_cast<int>(ws.size()),
+            nullptr,
+            0,
+            nullptr,
+            nullptr
+        );
+
+        if (size > 0) {
+            ui.name.resize(size);
+
+            ::WideCharToMultiByte(
+                CP_UTF8,
+                0,
+                ws.data(),
+                static_cast<int>(ws.size()),
+                ui.name.data(),
+                size,
+                nullptr,
+                nullptr
+            );
+        } else {
+            ui.name.clear();
+        }
+    }
+
     ui.statusColor = StatusColor(f.loaded, f.pages);
 
     if (f.loaded && f.pages > 0) {
@@ -492,6 +551,45 @@ void FileListViewController::UpdateCfgFromUiStringRange(config::FileData& f, con
     if (ParseIntStrict(toRange, toValue)) {
         f.toRange = toValue;
     }
+}
+
+std::wstring FileListViewController::ToWide(const std::string& s) const
+{
+    if (s.empty()) {
+        return {};
+    }
+
+    int size = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s.data(), static_cast<int>(s.size()), nullptr, 0);
+    if (size <= 0) {
+        size = ::MultiByteToWideChar(CP_ACP, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
+        if (size <= 0) {
+            return {};
+        }
+
+        std::wstring out(size, L'\0');
+        ::MultiByteToWideChar(CP_ACP, 0, s.data(), static_cast<int>(s.size()), out.data(), size);
+        return out;
+    }
+
+    std::wstring out(size, L'\0');
+    ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s.data(), static_cast<int>(s.size()), out.data(), size);
+    return out;
+}
+
+std::string FileListViewController::ToNarrow(const std::wstring& ws) const
+{
+    if (ws.empty()) {
+        return {};
+    }
+
+    int size = ::WideCharToMultiByte(CP_UTF8, 0, ws.data(), static_cast<int>(ws.size()), nullptr, 0, nullptr, nullptr);
+    if (size <= 0) {
+        return {};
+    }
+
+    std::string out(size, '\0');
+    ::WideCharToMultiByte(CP_UTF8, 0, ws.data(), static_cast<int>(ws.size()), out.data(), size, nullptr, nullptr);
+    return out;
 }
 
 void FileListViewController::RefreshUi()
