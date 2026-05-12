@@ -1,7 +1,50 @@
 #include "config/ConfigWriter.h"
+
 #include <windows.h>
 
 namespace config {
+
+static std::string GetConfigPath()
+{
+    return "config.ini";
+}
+
+static std::string WStringToUtf8(const std::wstring& str)
+{
+    if (str.empty()) {
+        return "";
+    }
+
+    int size = WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        str.c_str(),
+        -1,
+        nullptr,
+        0,
+        nullptr,
+        nullptr
+    );
+
+    if (size <= 0) {
+        return "";
+    }
+
+    std::string result(size - 1, '\0');
+
+    WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        str.c_str(),
+        -1,
+        &result[0],
+        size,
+        nullptr,
+        nullptr
+    );
+
+    return result;
+}
 
 static void WriteString(
     const char* section,
@@ -24,6 +67,7 @@ static void WriteInt(
     const std::string& path)
 {
     char buffer[64];
+
     wsprintfA(buffer, "%d", value);
 
     WritePrivateProfileStringA(
@@ -34,46 +78,136 @@ static void WriteInt(
     );
 }
 
-void Write(const std::string& path, const ConfigData& data)
+void Write(const ConfigData& data)
 {
-    WritePrivateProfileStringA("Basic",     NULL, NULL, path.c_str());
-    WritePrivateProfileStringA("Advance",   NULL, NULL, path.c_str());
-    WritePrivateProfileStringA("Margin",    NULL, NULL, path.c_str());
-    WritePrivateProfileStringA("Files",     NULL, NULL, path.c_str());
+    std::string path = GetConfigPath();
 
-    
+    WritePrivateProfileStringA(
+        "Basic",
+        NULL,
+        NULL,
+        path.c_str()
+    );
+
+    WritePrivateProfileStringA(
+        "Advance",
+        NULL,
+        NULL,
+        path.c_str()
+    );
+
+    WritePrivateProfileStringA(
+        "Margin",
+        NULL,
+        NULL,
+        path.c_str()
+    );
+
+    WritePrivateProfileStringA(
+        "Files",
+        NULL,
+        NULL,
+        path.c_str()
+    );
+
     // ===== Basic =====
-    WriteString("Basic", "printer", data.printer, path);
-    WriteInt   ("Basic", "copies",  data.copies,  path);
+    WriteString(
+        "Basic",
+        "printer",
+        data.printer,
+        path
+    );
+
+    WriteInt(
+        "Basic",
+        "copies",
+        data.copies,
+        path
+    );
 
     // ===== Advance =====
-    WriteString("Advance", "printMode",     data.printMode,     path);
-    WriteString("Advance", "paper",         data.paper,         path);
-    WriteString("Advance", "scale",         data.scale,         path);
-    WriteString("Advance", "orientation",   data.orientation,   path);
-    WriteString("Advance", "skipBlankPage", data.skipBlankPage, path);
+    WriteString(
+        "Advance",
+        "printMode",
+        data.printMode,
+        path
+    );
 
+    WriteString(
+        "Advance",
+        "paper",
+        data.paper,
+        path
+    );
+
+    WriteString(
+        "Advance",
+        "scale",
+        data.scale,
+        path
+    );
+
+    WriteString(
+        "Advance",
+        "orientation",
+        data.orientation,
+        path
+    );
+
+    WriteString(
+        "Advance",
+        "skipBlankPage",
+        data.skipBlankPage,
+        path
+    );
 
     // ===== Files =====
     if (!data.files.empty()) {
-        WriteInt("Files", "count", (int)data.files.size(), path);
+        WriteInt(
+            "Files",
+            "count",
+            (int)data.files.size(),
+            path
+        );
 
         for (int i = 0; i < (int)data.files.size(); ++i) {
             char key[64];
 
             wsprintfA(key, "path%d", i);
-            WriteString("Files", key, data.files[i].path, path);
+
+            WriteString(
+                "Files",
+                key,
+                WStringToUtf8(data.files[i].path),
+                path
+            );
 
             wsprintfA(key, "fromRange%d", i);
-            WriteInt("Files", key, data.files[i].fromRange, path);
+
+            WriteInt(
+                "Files",
+                key,
+                data.files[i].fromRange,
+                path
+            );
 
             wsprintfA(key, "toRange%d", i);
-            WriteInt("Files", key, data.files[i].toRange, path);
+
+            WriteInt(
+                "Files",
+                key,
+                data.files[i].toRange,
+                path
+            );
         }
     }
     else {
-        // nếu muốn sạch file cũ (optional):
-        WritePrivateProfileStringA("Files", NULL, NULL, path.c_str());
+        WritePrivateProfileStringA(
+            "Files",
+            NULL,
+            NULL,
+            path.c_str()
+        );
     }
 }
 

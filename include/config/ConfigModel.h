@@ -5,7 +5,7 @@
 namespace config {
 
 struct FileData {
-    std::string path;
+    std::wstring path;
     int pages = 0;
     int fromRange;
     int toRange;

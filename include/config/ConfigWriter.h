@@ -4,6 +4,6 @@
 
 namespace config {
 
-void Write(const std::string& path, const ConfigData& data);
+void Write(const ConfigData& data);
 
 }
