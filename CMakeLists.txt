@@ -95,6 +95,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     _UNICODE
 )
 
+target_link_options(${PROJECT_NAME} PRIVATE
+    -municode
+)
+
 # =========================
 # STATIC (UCRT64 / MINGW)
 # =========================
