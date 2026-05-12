@@ -9,7 +9,7 @@ namespace ui {
 namespace home {
 
 struct UiFileData {
-    std::string path;
+    std::wstring path;
     std::string name;
     std::string statusColor;
     std::string fromRange;
@@ -25,11 +25,11 @@ public:
 
     void Set(std::vector<UiFileData> files);
 
-    void OnChangeRange(std::function<void(const std::string& path, const std::string& fromRange, const std::string& toRange)> cb);
-    void OnMoveUp(std::function<void(const std::string& path)> cb);
-    void OnMoveDown(std::function<void(const std::string& path)> cb);
-    void OnRemove(std::function<void(const std::string& path)> cb);
-    void OnAdd(std::function<void(const std::string& path)> cb);
+    void OnChangeRange(std::function<void(const std::wstring& path, const std::string& fromRange, const std::string& toRange)> cb);
+    void OnMoveUp(std::function<void(const std::wstring& path)> cb);
+    void OnMoveDown(std::function<void(const std::wstring& path)> cb);
+    void OnRemove(std::function<void(const std::wstring& path)> cb);
+    void OnAdd(std::function<void(const std::wstring& path)> cb);
 
     // Static part: section background / border / title.
     // Call this from HomeWindow::OnPaint(), like BasicConfigSection::OnPaint().
@@ -71,11 +71,11 @@ private:
     std::string m_editOriginalFrom;
     std::string m_editOriginalTo;
 
-    std::function<void(const std::string& path, const std::string& fromRange, const std::string& toRange)> m_cbChangeRange;
-    std::function<void(const std::string& path)> m_cbMoveUp;
-    std::function<void(const std::string& path)> m_cbMoveDown;
-    std::function<void(const std::string& path)> m_cbRemove;
-    std::function<void(const std::string& path)> m_cbAdd;
+    std::function<void(const std::wstring& path, const std::string& fromRange, const std::string& toRange)> m_cbChangeRange;
+    std::function<void(const std::wstring& path)> m_cbMoveUp;
+    std::function<void(const std::wstring& path)> m_cbMoveDown;
+    std::function<void(const std::wstring& path)> m_cbRemove;
+    std::function<void(const std::wstring& path)> m_cbAdd;
 
 private:
     static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);

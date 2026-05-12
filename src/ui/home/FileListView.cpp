@@ -46,9 +46,6 @@ namespace {
 
         return std::wstring(s.begin(), s.end());
     }
-
-
-
 }
 
 bool FileListView::IsOurButton(HWND hwnd) {
@@ -851,7 +848,7 @@ void FileListView::Set(std::vector<UiFileData> files) {
     m_isInternalUpdate = true;
 
     // 🔥 1. save current selected path
-    std::string selectedPath;
+    std::wstring selectedPath;
     if (m_selectedIndex >= 0 && m_selectedIndex < (int)m_files.size()) {
         selectedPath = m_files[m_selectedIndex].path;
     }
@@ -891,23 +888,23 @@ void FileListView::Set(std::vector<UiFileData> files) {
     m_isInternalUpdate = false;
 }
 
-void FileListView::OnChangeRange(std::function<void(const std::string& path, const std::string& fromRange, const std::string& toRange)> cb) {
+void FileListView::OnChangeRange(std::function<void(const std::wstring& path, const std::string& fromRange, const std::string& toRange)> cb) {
     m_cbChangeRange = std::move(cb);
 }
 
-void FileListView::OnMoveUp(std::function<void(const std::string& path)> cb) {
+void FileListView::OnMoveUp(std::function<void(const std::wstring& path)> cb) {
     m_cbMoveUp = std::move(cb);
 }
 
-void FileListView::OnMoveDown(std::function<void(const std::string& path)> cb) {
+void FileListView::OnMoveDown(std::function<void(const std::wstring& path)> cb) {
     m_cbMoveDown = std::move(cb);
 }
 
-void FileListView::OnRemove(std::function<void(const std::string& path)> cb) {
+void FileListView::OnRemove(std::function<void(const std::wstring& path)> cb) {
     m_cbRemove = std::move(cb);
 }
 
-void FileListView::OnAdd(std::function<void(const std::string& path)> cb) {
+void FileListView::OnAdd(std::function<void(const std::wstring& path)> cb) {
     m_cbAdd = std::move(cb);
 }
 
@@ -921,12 +918,12 @@ void FileListView::HandleCommand(WPARAM wParam) {
 
     if (m_selectedIndex < 0 || m_selectedIndex >= (int)m_files.size()) {
         if (id == ID_FLV_BTN_ADD && m_cbAdd) {
-            m_cbAdd("");
+            m_cbAdd(L"");
         }
         return;
     }
 
-    const std::string& path = m_files[m_selectedIndex].path;
+    const std::wstring& path = m_files[m_selectedIndex].path;
 
     if (id == ID_FLV_BTN_UP && m_cbMoveUp) {
         m_cbMoveUp(path);
