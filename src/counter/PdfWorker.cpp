@@ -1,3 +1,4 @@
+// counter/PdfWorker.cpp
 #include "counter/PdfWorker.h"
 
 #include "fpdfview.h"
@@ -32,7 +33,7 @@ void PdfWorker::Stop() {
     FPDF_DestroyLibrary();
 }
 
-void PdfWorker::Enqueue(const std::string& path, Callback cb) {
+void PdfWorker::Enqueue(const std::wstring& path, Callback cb) {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_queue.push({path, cb});
@@ -61,7 +62,10 @@ void PdfWorker::WorkerLoop() {
 }
 
 void PdfWorker::ProcessTask(Task task) {
-    FPDF_DOCUMENT doc = FPDF_LoadDocument(task.path.c_str(), nullptr);
+    FPDF_DOCUMENT doc = FPDF_LoadDocument(
+        (const char*)task.path.c_str(),
+        nullptr
+    );
 
     if (!doc) {
         task.cb(0, "Cannot open PDF");

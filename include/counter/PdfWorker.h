@@ -1,3 +1,4 @@
+// counter/PdfWorker.h
 #pragma once
 #include <string>
 #include <functional>
@@ -20,11 +21,11 @@ public:
     void Start();
     void Stop();
 
-    void Enqueue(const std::string& path, Callback cb);
+    void Enqueue(const std::wstring& path, Callback cb);
 
 private:
     struct Task {
-        std::string path;
+        std::wstring path;
         Callback cb;
     };
 

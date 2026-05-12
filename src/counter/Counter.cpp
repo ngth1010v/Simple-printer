@@ -1,22 +1,24 @@
+// counter/Counter.cpp
 #include "counter/Counter.h"
 #include "counter/PdfWorker.h"
 #include "counter/DocxWorker.h"
 
 #include <algorithm>
+#include <cwctype>
 
 namespace counter {
 
 static std::unique_ptr<PdfWorker> g_pdf;
 static std::unique_ptr<DocxWorker> g_docx;
 
-static std::string ToLower(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+static std::wstring ToLower(std::wstring s) {
+    std::transform(s.begin(), s.end(), s.begin(), ::towlower);
     return s;
 }
 
-static std::string GetExt(const std::string& path) {
-    auto pos = path.find_last_of('.');
-    if (pos == std::string::npos) return "";
+static std::wstring GetExt(const std::wstring& path) {
+    auto pos = path.find_last_of(L'.');
+    if (pos == std::wstring::npos) return L"";
     return ToLower(path.substr(pos + 1));
 }
 
@@ -40,20 +42,20 @@ void Shutdown() {
     }
 }
 
-void Count(const std::string& path, CountCallback cb) {
+void Count(const std::wstring& path, CountCallback cb) {
     auto ext = GetExt(path);
 
-    if (ext == "png" || ext == "jpg" || ext == "jpeg") {
+    if (ext == L"png" || ext == L"jpg" || ext == L"jpeg") {
         cb(1, "");
         return;
     }
 
-    if (ext == "pdf") {
+    if (ext == L"pdf") {
         g_pdf->Enqueue(path, cb);
         return;
     }
 
-    if (ext == "docx") {
+    if (ext == L"docx") {
         g_docx->Enqueue(path, cb);
         return;
     }

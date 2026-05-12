@@ -1,3 +1,4 @@
+// counter/Counter.h
 #pragma once
 #include <string>
 #include <functional>
@@ -8,7 +9,7 @@ namespace counter {
 using CountCallback = std::function<void(int pages, const std::string& error)>;
 
 void Init();
-void Count(const std::string& path, CountCallback cb);
-void Shutdown(); // rename từ Close
+void Count(const std::wstring& path, CountCallback cb);
+void Shutdown();
 
 }

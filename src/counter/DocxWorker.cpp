@@ -1,3 +1,4 @@
+// counter/WordWorker.cpp
 #include "counter/DocxWorker.h"
 
 #include <windows.h>
@@ -16,20 +17,6 @@ namespace counter {
 
 namespace {
 
-// UTF-8 -> UTF-16
-static std::wstring ToW(const std::string& s) {
-    if (s.empty()) return L"";
-
-    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
-    if (len <= 0) return L"";
-
-    std::wstring w;
-    w.resize(static_cast<size_t>(len - 1));
-    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, w.data(), len);
-    return w;
-}
-
-// UTF-16 -> UTF-8
 static std::string ToA(const std::wstring& s) {
     if (s.empty()) return "";
 
@@ -38,7 +25,18 @@ static std::string ToA(const std::wstring& s) {
 
     std::string a;
     a.resize(static_cast<size_t>(len - 1));
-    WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, a.data(), len, nullptr, nullptr);
+
+    WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        s.c_str(),
+        -1,
+        a.data(),
+        len,
+        nullptr,
+        nullptr
+    );
+
     return a;
 }
 
@@ -60,14 +58,17 @@ static std::wstring GetAbsolutePathW(const std::wstring& path) {
 
 static bool FileExistsW(const std::wstring& path) {
     DWORD attr = GetFileAttributesW(path.c_str());
-    return attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY);
+    return attr != INVALID_FILE_ATTRIBUTES &&
+           !(attr & FILE_ATTRIBUTE_DIRECTORY);
 }
 
 static std::string HrToString(HRESULT hr) {
     wchar_t* msg = nullptr;
-    DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                  FORMAT_MESSAGE_FROM_SYSTEM |
-                  FORMAT_MESSAGE_IGNORE_INSERTS;
+
+    DWORD flags =
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS;
 
     DWORD n = FormatMessageW(
         flags,
@@ -91,6 +92,7 @@ static std::string HrToString(HRESULT hr) {
 
     wchar_t buf[32];
     swprintf_s(buf, L"0x%08X", static_cast<unsigned>(hr));
+
     return ToA(buf);
 }
 
@@ -98,7 +100,9 @@ template <typename T>
 class ComPtr {
 public:
     ComPtr() = default;
-    explicit ComPtr(T* p) : m_ptr(p) {}
+
+    explicit ComPtr(T* p)
+        : m_ptr(p) {}
 
     ~ComPtr() {
         reset();
@@ -107,7 +111,8 @@ public:
     ComPtr(const ComPtr&) = delete;
     ComPtr& operator=(const ComPtr&) = delete;
 
-    ComPtr(ComPtr&& other) noexcept : m_ptr(other.m_ptr) {
+    ComPtr(ComPtr&& other) noexcept
+        : m_ptr(other.m_ptr) {
         other.m_ptr = nullptr;
     }
 
@@ -117,10 +122,14 @@ public:
             m_ptr = other.m_ptr;
             other.m_ptr = nullptr;
         }
+
         return *this;
     }
 
-    T* get() const { return m_ptr; }
+    T* get() const {
+        return m_ptr;
+    }
+
     T** put() {
         reset();
         return &m_ptr;
@@ -136,11 +145,17 @@ public:
         if (m_ptr) {
             m_ptr->Release();
         }
+
         m_ptr = p;
     }
 
-    T* operator->() const { return m_ptr; }
-    explicit operator bool() const { return m_ptr != nullptr; }
+    T* operator->() const {
+        return m_ptr;
+    }
+
+    explicit operator bool() const {
+        return m_ptr != nullptr;
+    }
 
 private:
     T* m_ptr = nullptr;
@@ -159,12 +174,19 @@ public:
     VariantHolder(const VariantHolder&) = delete;
     VariantHolder& operator=(const VariantHolder&) = delete;
 
-    VARIANT* get() { return &m_var; }
-    const VARIANT* get() const { return &m_var; }
+    VARIANT* get() {
+        return &m_var;
+    }
+
+    const VARIANT* get() const {
+        return &m_var;
+    }
 
     VARIANT* operator&() = delete;
 
-    VARIANT& ref() { return m_var; }
+    VARIANT& ref() {
+        return m_var;
+    }
 
 private:
     VARIANT m_var;
@@ -173,7 +195,8 @@ private:
 struct CoInitGuard {
     bool ok = false;
 
-    explicit CoInitGuard(HRESULT hr) : ok(SUCCEEDED(hr)) {}
+    explicit CoInitGuard(HRESULT hr)
+        : ok(SUCCEEDED(hr)) {}
 
     ~CoInitGuard() {
         if (ok) {
@@ -185,24 +208,30 @@ struct CoInitGuard {
 static VARIANT MakeBool(bool v) {
     VARIANT var;
     VariantInit(&var);
+
     var.vt = VT_BOOL;
     var.boolVal = v ? VARIANT_TRUE : VARIANT_FALSE;
+
     return var;
 }
 
 static VARIANT MakeI4(long v) {
     VARIANT var;
     VariantInit(&var);
+
     var.vt = VT_I4;
     var.lVal = v;
+
     return var;
 }
 
 static VARIANT MakeBstr(const std::wstring& s) {
     VARIANT var;
     VariantInit(&var);
+
     var.vt = VT_BSTR;
     var.bstrVal = SysAllocString(s.c_str());
+
     return var;
 }
 
@@ -213,13 +242,27 @@ static HRESULT InvokeDispatch(
     DISPPARAMS* params,
     VARIANT* result = nullptr
 ) {
-    if (!obj || !name) return E_POINTER;
+    if (!obj || !name) {
+        return E_POINTER;
+    }
 
-    LPOLESTR names[] = { const_cast<LPOLESTR>(name) };
+    LPOLESTR names[] = {
+        const_cast<LPOLESTR>(name)
+    };
+
     DISPID dispid = 0;
 
-    HRESULT hr = obj->GetIDsOfNames(IID_NULL, names, 1, LOCALE_USER_DEFAULT, &dispid);
-    if (FAILED(hr)) return hr;
+    HRESULT hr = obj->GetIDsOfNames(
+        IID_NULL,
+        names,
+        1,
+        LOCALE_USER_DEFAULT,
+        &dispid
+    );
+
+    if (FAILED(hr)) {
+        return hr;
+    }
 
     return obj->Invoke(
         dispid,
@@ -233,12 +276,26 @@ static HRESULT InvokeDispatch(
     );
 }
 
-static HRESULT GetProperty(IDispatch* obj, const wchar_t* name, VARIANT* result) {
+static HRESULT GetProperty(
+    IDispatch* obj,
+    const wchar_t* name,
+    VARIANT* result
+) {
     DISPPARAMS params{};
-    return InvokeDispatch(obj, name, DISPATCH_PROPERTYGET, &params, result);
+    return InvokeDispatch(
+        obj,
+        name,
+        DISPATCH_PROPERTYGET,
+        &params,
+        result
+    );
 }
 
-static HRESULT PutProperty(IDispatch* obj, const wchar_t* name, VARIANT* value) {
+static HRESULT PutProperty(
+    IDispatch* obj,
+    const wchar_t* name,
+    VARIANT* value
+) {
     DISPID dispidPut = DISPID_PROPERTYPUT;
 
     DISPPARAMS params{};
@@ -247,26 +304,53 @@ static HRESULT PutProperty(IDispatch* obj, const wchar_t* name, VARIANT* value) 
     params.cNamedArgs = 1;
     params.rgdispidNamedArgs = &dispidPut;
 
-    return InvokeDispatch(obj, name, DISPATCH_PROPERTYPUT, &params, nullptr);
+    return InvokeDispatch(
+        obj,
+        name,
+        DISPATCH_PROPERTYPUT,
+        &params,
+        nullptr
+    );
 }
 
-static HRESULT CallMethod(IDispatch* obj, const wchar_t* name, VARIANT* args, UINT argCount, VARIANT* result = nullptr) {
+static HRESULT CallMethod(
+    IDispatch* obj,
+    const wchar_t* name,
+    VARIANT* args,
+    UINT argCount,
+    VARIANT* result = nullptr
+) {
     DISPPARAMS params{};
     params.cArgs = argCount;
     params.rgvarg = args;
 
-    return InvokeDispatch(obj, name, DISPATCH_METHOD, &params, result);
+    return InvokeDispatch(
+        obj,
+        name,
+        DISPATCH_METHOD,
+        &params,
+        result
+    );
 }
 
 static IDispatch* CreateWordApp(std::string& error) {
     CLSID clsid{};
-    HRESULT hr = CLSIDFromProgID(L"Word.Application", &clsid);
+
+    HRESULT hr = CLSIDFromProgID(
+        L"Word.Application",
+        &clsid
+    );
+
     if (FAILED(hr)) {
-        error = "CLSIDFromProgID(Word.Application) failed: " + HrToString(hr);
+        error =
+            "CLSIDFromProgID(Word.Application) failed: " +
+            HrToString(hr);
+
         return nullptr;
     }
 
     IDispatch* word = nullptr;
+
     hr = CoCreateInstance(
         clsid,
         nullptr,
@@ -276,23 +360,27 @@ static IDispatch* CreateWordApp(std::string& error) {
     );
 
     if (FAILED(hr) || !word) {
-        error = "CoCreateInstance(Word.Application) failed: " + HrToString(hr);
+        error =
+            "CoCreateInstance(Word.Application) failed: " +
+            HrToString(hr);
+
         return nullptr;
     }
 
-    // Best-effort settings, ignore failures.
     {
         VARIANT v = MakeBool(false);
         PutProperty(word, L"Visible", &v);
         VariantClear(&v);
     }
+
     {
-        VARIANT v = MakeI4(0); // wdAlertsNone
+        VARIANT v = MakeI4(0);
         PutProperty(word, L"DisplayAlerts", &v);
         VariantClear(&v);
     }
+
     {
-        VARIANT v = MakeI4(3); // msoAutomationSecurityForceDisable
+        VARIANT v = MakeI4(3);
         PutProperty(word, L"AutomationSecurity", &v);
         VariantClear(&v);
     }
@@ -300,104 +388,19 @@ static IDispatch* CreateWordApp(std::string& error) {
     return word;
 }
 
-static void SafeInvokeCallback(const DocxWorker::Callback& cb, int pages, const std::string& error) noexcept {
-    if (!cb) return;
+static void SafeInvokeCallback(
+    const DocxWorker::Callback& cb,
+    int pages,
+    const std::string& error
+) noexcept {
+    if (!cb) {
+        return;
+    }
+
     try {
         cb(pages, error);
     } catch (...) {
-        // Callback should never kill the worker thread.
     }
-}
-
-static VARIANT MakeMissing() {
-    VARIANT v;
-    VariantInit(&v);
-    v.vt = VT_ERROR;
-    v.scode = DISP_E_PARAMNOTFOUND;
-    return v;
-}
-
-static bool GetLongProperty(IDispatch* obj, const wchar_t* name, long* out) {
-    if (!obj || !out) {
-        return false;
-    }
-
-    VariantHolder result;
-    HRESULT hr = GetProperty(obj, name, result.get());
-    if (FAILED(hr)) {
-        return false;
-    }
-
-    if (result.ref().vt == VT_I4) {
-        *out = result.ref().lVal;
-        return true;
-    }
-
-    if (result.ref().vt == VT_I2) {
-        *out = result.ref().iVal;
-        return true;
-    }
-
-    return false;
-}
-
-static void CloseAllWordDocuments(IDispatch* word) {
-    if (!word) {
-        return;
-    }
-
-    VariantHolder docsVar;
-    if (FAILED(GetProperty(word, L"Documents", docsVar.get())) ||
-        docsVar.ref().vt != VT_DISPATCH ||
-        !docsVar.ref().pdispVal) {
-        return;
-    }
-
-    ComPtr<IDispatch> docs(docsVar.ref().pdispVal);
-    docsVar.ref().pdispVal->AddRef();
-
-    long count = 0;
-    if (!GetLongProperty(docs.get(), L"Count", &count) || count <= 0) {
-        return;
-    }
-
-    for (long i = count; i >= 1; --i) {
-        VariantHolder idx;
-        idx.ref() = MakeI4(i);
-
-        VariantHolder itemVar;
-        HRESULT hrItem = CallMethod(docs.get(), L"Item", idx.get(), 1, itemVar.get());
-        if (FAILED(hrItem) ||
-            itemVar.ref().vt != VT_DISPATCH ||
-            !itemVar.ref().pdispVal) {
-            continue;
-        }
-
-        ComPtr<IDispatch> doc(itemVar.ref().pdispVal);
-        itemVar.ref().pdispVal->AddRef();
-
-        VariantHolder closeArg;
-        closeArg.ref() = MakeBool(false);
-        CallMethod(doc.get(), L"Close", closeArg.get(), 1, nullptr);
-    }
-}
-
-template <typename F>
-class ScopeExit {
-public:
-    explicit ScopeExit(F f) : m_f(std::move(f)) {}
-    ~ScopeExit() { m_f(); }
-
-    ScopeExit(const ScopeExit&) = delete;
-    ScopeExit& operator=(const ScopeExit&) = delete;
-
-private:
-    F m_f;
-};
-
-template <typename F>
-static ScopeExit<F> MakeScopeExit(F f) {
-    return ScopeExit<F>(std::move(f));
 }
 
 } // namespace
@@ -410,27 +413,39 @@ DocxWorker::~DocxWorker() {
 
 bool DocxWorker::CheckWordInstalled() {
     CLSID clsid{};
-    return SUCCEEDED(CLSIDFromProgID(L"Word.Application", &clsid));
+    return SUCCEEDED(
+        CLSIDFromProgID(
+            L"Word.Application",
+            &clsid
+        )
+    );
 }
 
 void DocxWorker::Start() {
     bool expected = false;
+
     if (!m_running.compare_exchange_strong(expected, true)) {
         return;
     }
 
     m_hasWord = CheckWordInstalled();
-    m_thread = std::thread(&DocxWorker::WorkerLoop, this);
+
+    m_thread = std::thread(
+        &DocxWorker::WorkerLoop,
+        this
+    );
 }
 
 void DocxWorker::Stop() {
     bool expected = true;
+
     if (!m_running.compare_exchange_strong(expected, false)) {
         return;
     }
 
     {
         std::lock_guard<std::mutex> lock(m_mutex);
+
         std::queue<Task> empty;
         std::swap(m_queue, empty);
     }
@@ -442,7 +457,10 @@ void DocxWorker::Stop() {
     }
 }
 
-void DocxWorker::Enqueue(const std::string& path, Callback cb) {
+void DocxWorker::Enqueue(
+    const std::wstring& path,
+    Callback cb
+) {
     if (!cb) {
         return;
     }
@@ -459,25 +477,37 @@ void DocxWorker::Enqueue(const std::string& path, Callback cb) {
 
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_queue.push(Task{path, std::move(cb)});
+        m_queue.push(Task{
+            path,
+            std::move(cb)
+        });
     }
 
     m_cv.notify_one();
 }
 
 void DocxWorker::WorkerLoop() {
-    HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    HRESULT hr = CoInitializeEx(
+        nullptr,
+        COINIT_APARTMENTTHREADED
+    );
+
     CoInitGuard coGuard(hr);
 
     if (FAILED(hr)) {
-        const std::string err = "COM init failed: " + HrToString(hr);
+        const std::string err =
+            "COM init failed: " +
+            HrToString(hr);
 
         while (true) {
             Task task;
+
             {
                 std::unique_lock<std::mutex> lock(m_mutex);
+
                 m_cv.wait(lock, [&]() {
-                    return !m_running.load() || !m_queue.empty();
+                    return !m_running.load() ||
+                           !m_queue.empty();
                 });
 
                 if (!m_running.load()) {
@@ -495,14 +525,21 @@ void DocxWorker::WorkerLoop() {
     }
 
     std::string createError;
-    ComPtr<IDispatch> word(CreateWordApp(createError));
+
+    ComPtr<IDispatch> word(
+        CreateWordApp(createError)
+    );
+
     if (!word) {
         while (true) {
             Task task;
+
             {
                 std::unique_lock<std::mutex> lock(m_mutex);
+
                 m_cv.wait(lock, [&]() {
-                    return !m_running.load() || !m_queue.empty();
+                    return !m_running.load() ||
+                           !m_queue.empty();
                 });
 
                 if (!m_running.load()) {
@@ -513,33 +550,25 @@ void DocxWorker::WorkerLoop() {
                 m_queue.pop();
             }
 
-            SafeInvokeCallback(task.cb, 0, createError);
+            SafeInvokeCallback(
+                task.cb,
+                0,
+                createError
+            );
         }
 
         return;
     }
-
-    struct WordCleanupGuard {
-        ComPtr<IDispatch>& wordRef;
-
-        ~WordCleanupGuard() {
-            if (wordRef) {
-                VariantHolder quitArg;
-                quitArg.ref() = MakeBool(false);
-                CallMethod(wordRef.get(), L"Quit", quitArg.get(), 1, nullptr);
-                wordRef.reset();
-                CoFreeUnusedLibraries();
-            }
-        }
-    } wordCleanup{word};
 
     while (true) {
         Task task;
 
         {
             std::unique_lock<std::mutex> lock(m_mutex);
+
             m_cv.wait(lock, [&]() {
-                return !m_running.load() || !m_queue.empty();
+                return !m_running.load() ||
+                       !m_queue.empty();
             });
 
             if (!m_running.load()) {
@@ -554,38 +583,61 @@ void DocxWorker::WorkerLoop() {
         std::string error;
 
         do {
-            const std::wstring absW = GetAbsolutePathW(ToW(task.path));
+            const std::wstring absW =
+                GetAbsolutePathW(task.path);
+
             if (absW.empty()) {
                 error = "Empty path";
                 break;
             }
 
             if (!FileExistsW(absW)) {
-                error = "File not found: " + ToA(absW);
+                error =
+                    "File not found: " +
+                    ToA(absW);
+
                 break;
             }
 
             VariantHolder docsVar;
-            HRESULT hrDocs = GetProperty(word.get(), L"Documents", docsVar.get());
-            if (FAILED(hrDocs) || docsVar.ref().vt != VT_DISPATCH || !docsVar.ref().pdispVal) {
-                error = "Documents failed: " + HrToString(hrDocs);
+
+            HRESULT hrDocs = GetProperty(
+                word.get(),
+                L"Documents",
+                docsVar.get()
+            );
+
+            if (
+                FAILED(hrDocs) ||
+                docsVar.ref().vt != VT_DISPATCH ||
+                !docsVar.ref().pdispVal
+            ) {
+                error =
+                    "Documents failed: " +
+                    HrToString(hrDocs);
+
                 break;
             }
 
-            ComPtr<IDispatch> docs(docsVar.ref().pdispVal);
+            ComPtr<IDispatch> docs(
+                docsVar.ref().pdispVal
+            );
+
             docsVar.ref().pdispVal->AddRef();
 
             VARIANT args[3];
+
             for (int i = 0; i < 3; ++i) {
                 VariantInit(&args[i]);
             }
 
-            args[0] = MakeBool(true);   // ReadOnly
-            args[1].vt = VT_ERROR;      // ConfirmConversions omitted
+            args[0] = MakeBool(true);
+            args[1].vt = VT_ERROR;
             args[1].scode = DISP_E_PARAMNOTFOUND;
-            args[2] = MakeBstr(absW);   // FileName
+            args[2] = MakeBstr(absW);
 
             VariantHolder docVar;
+
             HRESULT hrOpen = CallMethod(
                 docs.get(),
                 L"Open",
@@ -598,13 +650,26 @@ void DocxWorker::WorkerLoop() {
                 VariantClear(&args[i]);
             }
 
-            if (FAILED(hrOpen) || docVar.ref().vt != VT_DISPATCH || !docVar.ref().pdispVal) {
-                error = "Open failed: " + HrToString(hrOpen);
-                std::cout << HrToString(hrOpen) << "[" << hrOpen << "]" << '\n';
+            if (
+                FAILED(hrOpen) ||
+                docVar.ref().vt != VT_DISPATCH ||
+                !docVar.ref().pdispVal
+            ) {
+                error =
+                    "Open failed: " +
+                    HrToString(hrOpen);
+
+                std::cout
+                    << HrToString(hrOpen)
+                    << "[" << hrOpen << "]\n";
+
                 break;
             }
 
-            ComPtr<IDispatch> doc(docVar.ref().pdispVal);
+            ComPtr<IDispatch> doc(
+                docVar.ref().pdispVal
+            );
+
             docVar.ref().pdispVal->AddRef();
 
             struct DocCloseGuard {
@@ -617,23 +682,41 @@ void DocxWorker::WorkerLoop() {
 
                     VariantHolder closeArg;
                     closeArg.ref() = MakeBool(false);
-                    CallMethod(doc, L"Close", closeArg.get(), 1, nullptr);
+
+                    CallMethod(
+                        doc,
+                        L"Close",
+                        closeArg.get(),
+                        1,
+                        nullptr
+                    );
                 }
             } closeGuard{doc.get()};
 
             VariantHolder statArg;
-            statArg.ref() = MakeI4(2); // wdStatisticPages
+            statArg.ref() = MakeI4(2);
 
             VariantHolder statRes;
-            HRESULT hrStat = CallMethod(doc.get(), L"ComputeStatistics", statArg.get(), 1, statRes.get());
+
+            HRESULT hrStat = CallMethod(
+                doc.get(),
+                L"ComputeStatistics",
+                statArg.get(),
+                1,
+                statRes.get()
+            );
+
             if (FAILED(hrStat)) {
-                error = "ComputeStatistics failed: " + HrToString(hrStat);
+                error =
+                    "ComputeStatistics failed: " +
+                    HrToString(hrStat);
             } else if (statRes.ref().vt == VT_I4) {
                 pages = statRes.ref().lVal;
             } else if (statRes.ref().vt == VT_I2) {
                 pages = statRes.ref().iVal;
             } else {
-                error = "ComputeStatistics returned unexpected type";
+                error =
+                    "ComputeStatistics returned unexpected type";
             }
 
         } while (false);
@@ -642,8 +725,34 @@ void DocxWorker::WorkerLoop() {
             error = "Unknown docx error";
         }
 
-        SafeInvokeCallback(task.cb, pages, error);
+        SafeInvokeCallback(
+            task.cb,
+            pages,
+            error
+        );
     }
+
+    if (word) {
+        VariantHolder quitArg;
+        quitArg.ref() = MakeBool(false);
+
+        CallMethod(
+            word.get(),
+            L"Quit",
+            quitArg.get(),
+            1,
+            nullptr
+        );
+
+        word.reset();
+        CoFreeUnusedLibraries();
+    }
+}
+
+int DocxWorker::CountWithWord(
+    const std::wstring&
+) {
+    return 0;
 }
 
 } // namespace counter
