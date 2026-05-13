@@ -6,7 +6,20 @@ namespace config {
 
 static std::string GetConfigPath()
 {
-    return "config.ini";
+    char buffer[MAX_PATH];
+
+    GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+
+    std::string path = buffer;
+
+    size_t pos = path.find_last_of("\\/");
+    if (pos != std::string::npos) {
+        path = path.substr(0, pos + 1);
+    }
+
+    path += "config.ini";
+
+    return path;
 }
 
 static std::string WStringToUtf8(const std::wstring& str)
@@ -81,6 +94,23 @@ static void WriteInt(
 void Write(const ConfigData& data)
 {
     std::string path = GetConfigPath();
+
+    // đảm bảo file tồn tại
+    {
+        HANDLE hFile = CreateFileA(
+            path.c_str(),
+            GENERIC_WRITE,
+            FILE_SHARE_READ,
+            nullptr,
+            OPEN_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr
+        );
+
+        if (hFile != INVALID_HANDLE_VALUE) {
+            CloseHandle(hFile);
+        }
+    }
 
     WritePrivateProfileStringA(
         "Basic",
@@ -209,6 +239,13 @@ void Write(const ConfigData& data)
             path.c_str()
         );
     }
+
+    WritePrivateProfileStringA(
+        nullptr,
+        nullptr,
+        nullptr,
+        path.c_str()
+    );
 }
 
 }

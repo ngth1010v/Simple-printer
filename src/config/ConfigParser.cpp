@@ -6,7 +6,20 @@ namespace config {
 
 static std::string GetConfigPath()
 {
-    return "config.ini";
+    char buffer[MAX_PATH];
+
+    GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+
+    std::string path = buffer;
+
+    size_t pos = path.find_last_of("\\/");
+    if (pos != std::string::npos) {
+        path = path.substr(0, pos + 1);
+    }
+
+    path += "config.ini";
+
+    return path;
 }
 
 static bool FileExists(const std::string& path)
