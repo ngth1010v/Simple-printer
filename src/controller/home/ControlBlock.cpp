@@ -15,12 +15,12 @@ ControlBlockController::ControlBlockController(HomeWindow& win, config::ConfigDa
 void ControlBlockController::Bind()
 {
     m_win.m_control.OnCancel([&]() {
-        config::Write("./config.ini", m_cfg);
+        config::Write(m_cfg);
         DestroyWindow(m_win.GetHwnd());
     });
 
     m_win.m_control.OnPrint([win = &m_win, cfg = &m_cfg]() {
-        config::Write("./config.ini", *cfg);
+        config::Write(*cfg);
 
         std::wstring cmd = L"SimplePrinter.exe --print";
 
