@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cwctype>
 #include <filesystem>
 #include <mutex>
 #include <string>
@@ -17,8 +18,8 @@
 
 #include <iostream>
 
-constexpr double kWhiteLumaThreshold = 252.0; 
-constexpr double kWhiteRatioThreshold = 0.9995; 
+constexpr double kWhiteLumaThreshold = 252.0;
+constexpr double kWhiteRatioThreshold = 0.9995;
 
 namespace controller::print {
 namespace fs = std::filesystem;
@@ -60,9 +61,9 @@ std::wstring Utf8ToWide(const std::string& text) {
     return out;
 }
 
-std::string ToLowerCopy(std::string s) {
-    for (char& ch : s) {
-        ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+std::wstring ToLowerCopy(std::wstring s) {
+    for (wchar_t& ch : s) {
+        ch = static_cast<wchar_t>(std::towlower(ch));
     }
     return s;
 }
@@ -71,28 +72,28 @@ bool IsBmpFile(const fs::directory_entry& entry) {
     if (!entry.is_regular_file()) {
         return false;
     }
-    return ToLowerCopy(entry.path().extension().string()) == ".bmp";
+    return ToLowerCopy(entry.path().extension().wstring()) == L".bmp";
 }
 
 // Hỗ trợ tên dạng: 12-d.bmp hoặc 12-i.bmp
 bool ExtractPageNumber(const fs::path& filePath, int& pageOut) {
-    const std::string stem = filePath.stem().string(); // ví dụ: "12-d", "12-D", "12"
-    const std::size_t dashPos = stem.find('-');
+    const std::wstring stem = filePath.stem().wstring(); // ví dụ: L"12-d", L"12-D", L"12"
+    const std::size_t dashPos = stem.find(L'-');
 
-    std::string pageStr = stem;
-    std::string suffix;
+    std::wstring pageStr = stem;
+    std::wstring suffix;
 
-    if (dashPos != std::string::npos) {
+    if (dashPos != std::wstring::npos) {
         if (dashPos == 0) {
             return false;
         }
 
         pageStr = stem.substr(0, dashPos);
         suffix  = stem.substr(dashPos + 1);
-        suffix   = ToLowerCopy(suffix);
+        suffix  = ToLowerCopy(suffix);
 
         // Chỉ chấp nhận hậu tố d / i nếu có dấu '-'
-        if (suffix != "d" && suffix != "i") {
+        if (suffix != L"d" && suffix != L"i") {
             return false;
         }
     }
@@ -101,8 +102,8 @@ bool ExtractPageNumber(const fs::path& filePath, int& pageOut) {
         return false;
     }
 
-    for (char c : pageStr) {
-        if (!std::isdigit(static_cast<unsigned char>(c))) {
+    for (wchar_t c : pageStr) {
+        if (!std::iswdigit(c)) {
             return false;
         }
     }
@@ -141,14 +142,12 @@ struct BmpInfoHeader {
 };
 #pragma pack(pop)
 
-
-
 struct PageBmp {
     int page = 0;
     fs::path path;
 };
 
-std::vector<PageBmp> CollectPageBmpsInTempDir(const std::string& tempDir) {
+std::vector<PageBmp> CollectPageBmpsInTempDir(const std::wstring& tempDir) {
     std::vector<PageBmp> out;
 
     try {
@@ -185,8 +184,7 @@ std::vector<PageBmp> CollectPageBmpsInTempDir(const std::string& tempDir) {
     return out;
 }
 
-
-bool IsBlankBmp(const std::string& bmpPath) {
+bool IsBlankBmp(const std::wstring& bmpPath) {
     std::ifstream in(fs::path(bmpPath), std::ios::binary);
     if (!in) {
         return false; // không đọc được thì đừng coi là blank
@@ -269,13 +267,13 @@ bool IsBlankBmp(const std::string& bmpPath) {
     return true; // quá ít pixel tối -> blank
 }
 
-std::string BuildPagePath(const std::string& tempDir, int page, char suffix) {
+std::wstring BuildPagePath(const std::wstring& tempDir, int page, char suffix) {
     fs::path p = fs::path(tempDir);
-    p /= std::to_string(page) + "-" + suffix + ".bmp";
-    return p.string();
+    p /= std::to_wstring(page) + L"-" + static_cast<wchar_t>(suffix) + L".bmp";
+    return p.wstring();
 }
 
-bool FileExists(const std::string& path) {
+bool FileExists(const std::wstring& path) {
     try {
         return fs::exists(fs::path(path));
     } catch (...) {
@@ -284,14 +282,14 @@ bool FileExists(const std::string& path) {
 }
 
 // Ưu tiên suffix đầu tiên, nếu không có thì fallback suffix thứ hai
-std::string ResolvePagePath(
-    const std::string& tempDir,
+std::wstring ResolvePagePath(
+    const std::wstring& tempDir,
     int page,
     char preferSuffix,
     char fallbackSuffix
 ) {
-    const std::string preferPath   = BuildPagePath(tempDir, page, preferSuffix);
-    const std::string fallbackPath = BuildPagePath(tempDir, page, fallbackSuffix);
+    const std::wstring preferPath   = BuildPagePath(tempDir, page, preferSuffix);
+    const std::wstring fallbackPath  = BuildPagePath(tempDir, page, fallbackSuffix);
 
     if (FileExists(preferPath)) {
         return preferPath;
@@ -299,11 +297,11 @@ std::string ResolvePagePath(
     if (FileExists(fallbackPath)) {
         return fallbackPath;
     }
-    return {};
+    return L"";
 }
 
 std::vector<int> BuildPrintablePages(
-    const std::string& tempDir,
+    const std::wstring& tempDir,
     bool skipBlankPage
 ) {
     const std::vector<PageBmp> pages = CollectPageBmpsInTempDir(tempDir);
@@ -319,14 +317,13 @@ std::vector<int> BuildPrintablePages(
     }
 
     for (const auto& item : pages) {
-        if (!IsBlankBmp(item.path.string())) {
+        if (!IsBlankBmp(item.path.wstring())) {
             out.push_back(item.page);
         }
     }
 
     return out;
 }
-
 
 constexpr const char* kEmptyBmpName = "empty.bmp";
 
@@ -340,15 +337,15 @@ bool NeedPadBlankPage(const std::string& mode, int pages) {
     return pages > 1 && IsDuplexLikeMode(mode) && (pages % 2 == 1);
 }
 
-std::string EmptyBmpPath(const std::string& tempDir) {
+std::wstring EmptyBmpPath(const std::wstring& tempDir) {
     fs::path p = fs::path(tempDir);
     p /= kEmptyBmpName;
-    return p.string();
+    return p.wstring();
 }
 
-bool CreateEmptyBmpFile(const std::string& tempDir, std::string& outPath, std::string& error) {
+bool CreateEmptyBmpFile(const std::wstring& tempDir, std::wstring& outPath, std::string& error) {
     const fs::path filePath = fs::path(EmptyBmpPath(tempDir));
-    outPath = filePath.string();
+    outPath = filePath.wstring();
 
     try {
         if (fs::exists(filePath)) {
@@ -402,7 +399,7 @@ bool CreateEmptyBmpFile(const std::string& tempDir, std::string& outPath, std::s
 
 void Printer::Init(
     config::ConfigData& cfg,
-    const std::string& tempDir,
+    const std::wstring& tempDir,
     std::atomic<bool>& cancelFlag,
     std::atomic<bool>& pauseFlag,
     ui::PrintWindow& win
@@ -545,11 +542,7 @@ void Printer::Run() {
         const int pagesPerCopy  = static_cast<int>(jobPages.size());
         const int totalJobPages = pagesPerCopy * copies;
 
-
-        // const bool padBlankPage = (pages > 1) && isDuplexLike && ((pages % 2) == 1);
-        // const int jobPages = padBlankPage ? (pages + 1) : pages;
-
-        std::string emptyBmpPath;
+        std::wstring emptyBmpPath;
         if (padBlankPage) {
             std::string createError;
             if (!CreateEmptyBmpFile(m_state.tempDir, emptyBmpPath, createError)) {
@@ -559,20 +552,19 @@ void Printer::Run() {
             }
         }
 
-        auto ResolvePagePathOrEmpty = [&](int page, char preferSuffix, char fallbackSuffix) -> std::string {
+        auto ResolvePagePathOrEmpty = [&](int page, char preferSuffix, char fallbackSuffix) -> std::wstring {
             if (page <= 0) {
                 return emptyBmpPath;
             }
             return ResolvePagePath(m_state.tempDir, page, preferSuffix, fallbackSuffix);
         };
 
-
         auto PrintSimplexOnePage = [&](int page, int totalPages, int completedPages, char preferSuffix, char fallbackSuffix) -> bool {
             if (!WaitIfPaused()) {
                 return false;
             }
 
-            const std::string path = ResolvePagePathOrEmpty(page, preferSuffix, fallbackSuffix);
+            const std::wstring path = ResolvePagePathOrEmpty(page, preferSuffix, fallbackSuffix);
             std::string error;
 
             if (path.empty()) {
@@ -594,8 +586,8 @@ void Printer::Run() {
                 return false;
             }
 
-            const std::string frontPath = ResolvePagePathOrEmpty(firstPage, 'd', 'i');
-            const std::string backPath  = ResolvePagePathOrEmpty(secondPage, 'i', 'd');
+            const std::wstring frontPath = ResolvePagePathOrEmpty(firstPage, 'd', 'i');
+            const std::wstring backPath   = ResolvePagePathOrEmpty(secondPage, 'i', 'd');
 
             std::string error;
 
@@ -644,7 +636,6 @@ void Printer::Run() {
         win->SetAllowContinue(false);
         win->SetNotification(L"");
         win->SetPrintProcess(totalJobPages, 0);
-
 
         if (mode == "Simplex") {
             int printedCount = 0;
@@ -697,7 +688,7 @@ void Printer::Run() {
             }
 
             // Chỉ flip 1 lần duy nhất cho cả job
-            if (pagesPerCopy > 1){
+            if (pagesPerCopy > 1) {
                 if (!WaitForManualFlip(L"Flip the paper on the long edge.")) {
                     return;
                 }
@@ -783,7 +774,6 @@ void Printer::Run() {
         cancelFlag->store(true, std::memory_order_relaxed);
     }
 }
-
 
 void Printer::Destroy() {
     std::thread workerToJoin;

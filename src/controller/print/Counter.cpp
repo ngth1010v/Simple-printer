@@ -5,6 +5,43 @@
 
 #include "counter/Counter.h"
 
+std::string WideToUtf8(const std::wstring& ws)
+{
+    if (ws.empty()) {
+        return {};
+    }
+
+    int size = WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        ws.c_str(),
+        -1,
+        nullptr,
+        0,
+        nullptr,
+        nullptr
+    );
+
+    if (size <= 0) {
+        return {};
+    }
+
+    std::string result(static_cast<size_t>(size - 1), '\0');
+
+    WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        ws.c_str(),
+        -1,
+        result.data(),
+        size,
+        nullptr,
+        nullptr
+    );
+
+    return result;
+}
+
 namespace controller::print {
 
 void Counter::Init(
@@ -48,11 +85,11 @@ void Counter::OnCountDone(
     if (cancelFlag_->load(std::memory_order_relaxed)) {
         return;
     }
-
+ 
     auto& file = cfg.files[index];
 
     if (!error.empty() || pages <= 0) {
-        std::string msg = "Failed to read file:\n" + file.path + "\n\nError: " + error;
+        std::string msg = "Failed to read file:\n" + WideToUtf8(file.path) + "\n\nError: " + error;
 
         int res = ShowErrorBox(
             msg,
@@ -81,7 +118,7 @@ void Counter::OnCountDone(
 
             if (!valid) {
                 std::string msg =
-                    "Range mismatch:\n" + file.path +
+                    "Range mismatch:\n" + WideToUtf8(file.path) +
                     "\n\nFile may have changed.\n";
 
                 int res = ShowErrorBox(

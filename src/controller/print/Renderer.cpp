@@ -11,7 +11,7 @@
 namespace controller::print {
 
 void Renderer::Init(config::ConfigData& cfg,
-                    std::string tempDir,
+                    std::wstring tempDir,
                     int dpi,
                     std::atomic<bool>& cancelFlag,
                     ui::PrintWindow& win) {
@@ -68,7 +68,7 @@ void Renderer::Run() {
         for (int p = from; p <= to; ++p) {
             if (cancelFlag_->load(std::memory_order_relaxed)) return;
 
-            std::string target = BuildTargetPath(f.path, index++);
+            std::wstring target = BuildTargetPath(f.path, index++);
 
             renderer::Render(
                 f.path,
@@ -124,22 +124,30 @@ void Renderer::Run() {
     }
 }
 
-std::string Renderer::BuildTargetPath(const std::string& inputPath, int index) const {
+std::wstring Renderer::BuildTargetPath(const std::wstring& inputPath, int index) const {
     std::filesystem::path p(inputPath);
 
-    std::string ext = p.extension().string();
-    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    std::wstring ext = p.extension().wstring();
 
-    std::string suffix;
+    std::transform(
+        ext.begin(),
+        ext.end(),
+        ext.begin(),
+        [](wchar_t ch) {
+            return static_cast<wchar_t>(std::towlower(ch));
+        }
+    );
 
-    if (ext == ".pdf" || ext == ".docx") {
-        suffix = "-d.bmp";
+    std::wstring suffix;
+
+    if (ext == L".pdf" || ext == L".docx") {
+        suffix = L"-d.bmp";
     } else {
-        suffix = "-i.bmp";
+        suffix = L"-i.bmp";
     }
 
-    std::ostringstream oss;
-    oss << tempDir_ << "/" << index << suffix;
+    std::wostringstream oss;
+    oss << tempDir_ << L"/" << index << suffix;
 
     return oss.str();
 }

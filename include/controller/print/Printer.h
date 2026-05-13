@@ -14,7 +14,7 @@ class Printer {
 public:
     void Init(
         config::ConfigData& cfg,
-        const std::string& tempDir,
+        const std::wstring& tempDir,
         std::atomic<bool>& cancelFlag,
         std::atomic<bool>& pauseFlag,
         ui::PrintWindow& win
@@ -30,7 +30,7 @@ private:
         bool running = false;
 
         config::ConfigData cfg;
-        std::string tempDir;
+        std::wstring tempDir;
 
         std::atomic<bool>* cancelFlag = nullptr;
         std::atomic<bool>* pauseFlag  = nullptr;

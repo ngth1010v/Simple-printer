@@ -16,7 +16,7 @@ namespace controller::print {
 class Renderer {
 public:
     void Init(config::ConfigData& cfg,
-              std::string tempDir,
+              std::wstring tempDir,
               int dpi,
               std::atomic<bool>& cancelFlag,
               ui::PrintWindow& win);
@@ -27,12 +27,12 @@ public:
     
 
 private:
-    std::string BuildTargetPath(const std::string& inputPath, int index) const;
+    std::wstring BuildTargetPath(const std::wstring& inputPath, int index) const;
     std::atomic<bool> done_ = false;
 
 private:
     config::ConfigData* cfg_ = nullptr;
-    std::string tempDir_;
+    std::wstring tempDir_;
     int dpi_ = 300;
 
     std::atomic<bool>* cancelFlag_ = nullptr;
