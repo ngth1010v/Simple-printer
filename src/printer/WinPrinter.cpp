@@ -1,3 +1,4 @@
+// printer/WinPrinter.cpp
 #include "printer/WinPrinter.h"
 
 #include <windows.h>
@@ -12,26 +13,11 @@
 namespace printer {
 namespace {
 
-constexpr double kWhiteLumaThreshold = 252.0;     // pixel >= ngưỡng này xem là trắng
-constexpr double kWhiteRatioThreshold = 0.9995;    // nếu > 99.95% pixel trắng -> coi là quá trắng
-constexpr int kAnchorMarginPx = 4;                 // cách mép phải/dưới bao nhiêu px
-constexpr int kAnchorSizePx = 2;                   // cụm pixel chèn vào
+constexpr double kWhiteLumaThreshold = 252.0;       // pixel >= ngưỡng này xem là trắng
+constexpr double kWhiteRatioThreshold = 0.9995;     // nếu > 99.95% pixel trắng -> coi là quá trắng
+constexpr int kAnchorMarginPx = 4;                  // cách mép phải/dưới bao nhiêu px
+constexpr int kAnchorSizePx = 2;                    // cụm pixel chèn vào
 constexpr std::uint32_t kAnchorColor = 0xFF000000u; // đen đậm, chắc chắn không bị skip
-
-std::wstring Utf8ToWide(const std::string& s) {
-    if (s.empty()) {
-        return {};
-    }
-
-    const int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
-    if (sizeNeeded <= 0) {
-        return {};
-    }
-
-    std::wstring out(static_cast<std::size_t>(sizeNeeded - 1), L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, out.data(), sizeNeeded);
-    return out;
-}
 
 std::string ToLowerAscii(std::string s) {
     for (char& ch : s) {
@@ -40,36 +26,33 @@ std::string ToLowerAscii(std::string s) {
     return s;
 }
 
-std::string NormalizeKey(const std::string& s) {
-    std::string out;
-    out.reserve(s.size());
-    for (unsigned char ch : s) {
-        if (std::isalnum(ch)) {
-            out.push_back(static_cast<char>(std::tolower(ch)));
+std::wstring ToLowerAsciiWide(std::wstring s) {
+    for (wchar_t& ch : s) {
+        if (ch >= L'A' && ch <= L'Z') {
+            ch = static_cast<wchar_t>(ch - L'A' + L'a');
         }
     }
-    return out;
+    return s;
 }
 
-bool LoadBitmap32(const std::string& bmpPath, BmpImage& out, std::string& error) {
-    const std::wstring wPath = Utf8ToWide(bmpPath);
-    if (wPath.empty()) {
-        error = "Failed to convert BMP path to wide string.";
+bool LoadBitmap32(const std::wstring& bmpPath, BmpImage& out, std::string& error) {
+    if (bmpPath.empty()) {
+        error = "BMP path is empty.";
         return false;
     }
 
     HBITMAP hBitmap = static_cast<HBITMAP>(
-        LoadImageW(nullptr, wPath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION));
+        LoadImageW(nullptr, bmpPath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION));
 
     if (hBitmap == nullptr) {
-        error = "LoadImageW failed for BMP: " + bmpPath;
+        error = "LoadImageW failed for BMP.";
         return false;
     }
 
     BITMAP bm{};
     if (GetObjectW(hBitmap, sizeof(bm), &bm) == 0) {
         DeleteObject(hBitmap);
-        error = "GetObjectW failed for BMP: " + bmpPath;
+        error = "GetObjectW failed for BMP.";
         return false;
     }
 
@@ -111,7 +94,7 @@ bool LoadBitmap32(const std::string& bmpPath, BmpImage& out, std::string& error)
     DeleteObject(hBitmap);
 
     if (scanLines == 0) {
-        error = "GetDIBits failed for BMP: " + bmpPath;
+        error = "GetDIBits failed for BMP.";
         return false;
     }
 
@@ -129,11 +112,15 @@ bool Rotate90Clockwise(const BmpImage& src, BmpImage& dst) {
 
     for (int y = 0; y < src.height; ++y) {
         const int srcRow = y * src.width;
+
         for (int x = 0; x < src.width; ++x) {
             const int dstX = src.height - 1 - y;
             const int dstY = x;
-            dst.pixels[static_cast<std::size_t>(dstY) * static_cast<std::size_t>(dst.width) + static_cast<std::size_t>(dstX)] =
-                src.pixels[static_cast<std::size_t>(srcRow + x)];
+
+            dst.pixels[
+                static_cast<std::size_t>(dstY) * static_cast<std::size_t>(dst.width) +
+                static_cast<std::size_t>(dstX)
+            ] = src.pixels[static_cast<std::size_t>(srcRow + x)];
         }
     }
 
@@ -150,13 +137,23 @@ bool ScaleNearest(const BmpImage& src, int dstWidth, int dstHeight, BmpImage& ds
     dst.pixels.assign(static_cast<std::size_t>(dstWidth) * static_cast<std::size_t>(dstHeight), 0);
 
     for (int y = 0; y < dstHeight; ++y) {
-        const int sy = std::min(src.height - 1, static_cast<int>((static_cast<long long>(y) * src.height) / dstHeight));
-        const std::size_t dstRow = static_cast<std::size_t>(y) * static_cast<std::size_t>(dstWidth);
-        const std::size_t srcRow = static_cast<std::size_t>(sy) * static_cast<std::size_t>(src.width);
+        const int sy = std::min(
+            src.height - 1,
+            static_cast<int>((static_cast<long long>(y) * src.height) / dstHeight));
+
+        const std::size_t dstRow =
+            static_cast<std::size_t>(y) * static_cast<std::size_t>(dstWidth);
+
+        const std::size_t srcRow =
+            static_cast<std::size_t>(sy) * static_cast<std::size_t>(src.width);
 
         for (int x = 0; x < dstWidth; ++x) {
-            const int sx = std::min(src.width - 1, static_cast<int>((static_cast<long long>(x) * src.width) / dstWidth));
-            dst.pixels[dstRow + static_cast<std::size_t>(x)] = src.pixels[srcRow + static_cast<std::size_t>(sx)];
+            const int sx = std::min(
+                src.width - 1,
+                static_cast<int>((static_cast<long long>(x) * src.width) / dstWidth));
+
+            dst.pixels[dstRow + static_cast<std::size_t>(x)] =
+                src.pixels[srcRow + static_cast<std::size_t>(sx)];
         }
     }
 
@@ -164,7 +161,9 @@ bool ScaleNearest(const BmpImage& src, int dstWidth, int dstHeight, BmpImage& ds
 }
 
 void ClearWhite(BmpImage& img) {
-    img.pixels.assign(static_cast<std::size_t>(img.width) * static_cast<std::size_t>(img.height), 0xFFFFFFFFu);
+    img.pixels.assign(
+        static_cast<std::size_t>(img.width) * static_cast<std::size_t>(img.height),
+        0xFFFFFFFFu);
 }
 
 void BlitClipped(BmpImage& dst, const BmpImage& src, int dstX, int dstY) {
@@ -202,26 +201,19 @@ void BlitClipped(BmpImage& dst, const BmpImage& src, int dstX, int dstY) {
     }
 
     for (int row = 0; row < copyHeight; ++row) {
-        const std::size_t dstOffset = static_cast<std::size_t>(dstY + row) * static_cast<std::size_t>(dst.width) + static_cast<std::size_t>(dstX);
-        const std::size_t srcOffset = static_cast<std::size_t>(srcY + row) * static_cast<std::size_t>(src.width) + static_cast<std::size_t>(srcX);
+        const std::size_t dstOffset =
+            static_cast<std::size_t>(dstY + row) * static_cast<std::size_t>(dst.width) +
+            static_cast<std::size_t>(dstX);
+
+        const std::size_t srcOffset =
+            static_cast<std::size_t>(srcY + row) * static_cast<std::size_t>(src.width) +
+            static_cast<std::size_t>(srcX);
 
         std::memcpy(
             &dst.pixels[dstOffset],
             &src.pixels[srcOffset],
             static_cast<std::size_t>(copyWidth) * sizeof(std::uint32_t));
     }
-}
-
-std::string NormalizeMode(std::string s) {
-    s = ToLowerAscii(std::move(s));
-    std::string out;
-    out.reserve(s.size());
-    for (char ch : s) {
-        if (std::isalnum(static_cast<unsigned char>(ch))) {
-            out.push_back(ch);
-        }
-    }
-    return out;
 }
 
 bool IsLandscapeByConfig(const std::string& orientation, const BmpImage& src) {
@@ -249,6 +241,7 @@ double GetLuma(std::uint32_t p) {
     const int b = static_cast<int>(p & 0xFFu);
     const int g = static_cast<int>((p >> 8) & 0xFFu);
     const int r = static_cast<int>((p >> 16) & 0xFFu);
+
     return 0.114 * static_cast<double>(b)
          + 0.587 * static_cast<double>(g)
          + 0.299 * static_cast<double>(r);
@@ -268,7 +261,9 @@ bool IsTooWhite(const BmpImage& img) {
         }
     }
 
-    const double whiteRatio = static_cast<double>(whiteCount) / static_cast<double>(total);
+    const double whiteRatio =
+        static_cast<double>(whiteCount) / static_cast<double>(total);
+
     return whiteRatio >= kWhiteRatioThreshold;
 }
 
@@ -284,24 +279,34 @@ void AddAnchorMark(BmpImage& img) {
     const int startY = std::max(0, img.height - kAnchorMarginPx - markH);
 
     for (int y = 0; y < markH; ++y) {
-        const std::size_t row = static_cast<std::size_t>(startY + y) * static_cast<std::size_t>(img.width);
+        const std::size_t row =
+            static_cast<std::size_t>(startY + y) * static_cast<std::size_t>(img.width);
+
         for (int x = 0; x < markW; ++x) {
             img.pixels[row + static_cast<std::size_t>(startX + x)] = kAnchorColor;
         }
     }
 }
 
-bool IsDocumentBmpPath(const std::string& bmpPath) {
-    std::string s = ToLowerAscii(bmpPath);
+bool EndsWith(const std::wstring& value, const std::wstring& suffix) {
+    if (value.size() < suffix.size()) {
+        return false;
+    }
 
-    const std::string suffix1 = "-d.bmp";
-    const std::string suffix2 = "_d.bmp"; // nếu sau này bạn có thể dùng kiểu khác
+    return value.compare(
+        value.size() - suffix.size(),
+        suffix.size(),
+        suffix) == 0;
+}
 
-    if (s.size() >= suffix1.size() && s.compare(s.size() - suffix1.size(), suffix1.size(), suffix1) == 0) {
+bool IsDocumentBmpPath(const std::wstring& bmpPath) {
+    const std::wstring s = ToLowerAsciiWide(bmpPath);
+
+    if (EndsWith(s, L"-d.bmp")) {
         return true;
     }
 
-    if (s.size() >= suffix2.size() && s.compare(s.size() - suffix2.size(), suffix2.size(), suffix2) == 0) {
+    if (EndsWith(s, L"_d.bmp")) {
         return true;
     }
 
@@ -317,7 +322,7 @@ void EnsureNotBlankPage(BmpImage& page) {
 }
 
 bool BuildPageImage(
-    const std::string& bmpPath,
+    const std::wstring& bmpPath,
     const std::string& orientation,
     const std::string& scale,
     int pageWidth,
@@ -335,17 +340,21 @@ bool BuildPageImage(
     }
 
     BmpImage working = source;
+
     if (IsLandscapeByConfig(orientation, source)) {
         BmpImage rotated;
+
         if (!Rotate90Clockwise(source, rotated)) {
             error = "Failed to rotate source BMP.";
             return false;
         }
+
         working = std::move(rotated);
     }
 
     outPage.width = pageWidth;
     outPage.height = pageHeight;
+
     ClearWhite(outPage);
 
     if (working.width <= 0 || working.height <= 0 || working.pixels.empty()) {
@@ -356,6 +365,7 @@ bool BuildPageImage(
     if (IsNoScale(scale)) {
         const int dstX = (pageWidth - working.width) / 2;
         const int dstY = (pageHeight - working.height) / 2;
+
         BlitClipped(outPage, working, dstX, dstY);
         return true;
     }
@@ -366,8 +376,13 @@ bool BuildPageImage(
     // -d: không trừ printable margin
     const double safeRatio = isDocumentBmp ? 1.0 : 0.95;
 
-    const int safeWidth = std::max(1, static_cast<int>(std::floor(static_cast<double>(pageWidth) * safeRatio)));
-    const int safeHeight = std::max(1, static_cast<int>(std::floor(static_cast<double>(pageHeight) * safeRatio)));
+    const int safeWidth = std::max(
+        1,
+        static_cast<int>(std::floor(static_cast<double>(pageWidth) * safeRatio)));
+
+    const int safeHeight = std::max(
+        1,
+        static_cast<int>(std::floor(static_cast<double>(pageHeight) * safeRatio)));
 
     BmpImage rendered;
 
@@ -377,12 +392,19 @@ bool BuildPageImage(
             return false;
         }
     } else {
-        const double scaleX = static_cast<double>(safeWidth) / static_cast<double>(working.width);
-        const double scaleY = static_cast<double>(safeHeight) / static_cast<double>(working.height);
+        const double scaleX =
+            static_cast<double>(safeWidth) / static_cast<double>(working.width);
+
+        const double scaleY =
+            static_cast<double>(safeHeight) / static_cast<double>(working.height);
+
         const double factor = std::min(scaleX, scaleY);
 
-        int dstWidth = static_cast<int>(std::lround(static_cast<double>(working.width) * factor));
-        int dstHeight = static_cast<int>(std::lround(static_cast<double>(working.height) * factor));
+        int dstWidth = static_cast<int>(
+            std::lround(static_cast<double>(working.width) * factor));
+
+        int dstHeight = static_cast<int>(
+            std::lround(static_cast<double>(working.height) * factor));
 
         dstWidth = std::max(1, dstWidth);
         dstHeight = std::max(1, dstHeight);
@@ -395,9 +417,11 @@ bool BuildPageImage(
 
     const int dstX = (pageWidth - rendered.width) / 2;
     const int dstY = (pageHeight - rendered.height) / 2;
+
     BlitClipped(outPage, rendered, dstX, dstY);
 
     EnsureNotBlankPage(outPage);
+
     return true;
 }
 

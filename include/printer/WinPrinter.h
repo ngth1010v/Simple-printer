@@ -1,3 +1,4 @@
+// printer/WinPrinter.h
 #pragma once
 
 #include <cstdint>
@@ -13,7 +14,7 @@ struct BmpImage {
 };
 
 bool BuildPageImage(
-    const std::string& bmpPath,
+    const std::wstring& bmpPath,
     const std::string& orientation,
     const std::string& scale,
     int pageWidth,

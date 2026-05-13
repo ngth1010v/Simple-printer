@@ -1,3 +1,4 @@
+// printer/Printer.cpp
 #include "printer/Printer.h"
 
 #include "printer/WinPrinter.h"
@@ -21,7 +22,7 @@ State& GetState() {
     return s;
 }
 
-int PrintInternal(const std::vector<std::string>& paths, bool duplex, std::string& error) {
+int PrintInternal(const std::vector<std::wstring>& paths, bool duplex, std::string& error) {
     State& state = GetState();
 
     config::ConfigData cfgCopy;
@@ -46,6 +47,7 @@ int PrintInternal(const std::vector<std::string>& paths, bool duplex, std::strin
 
     for (const auto& path : paths) {
         BmpImage page;
+
         if (!BuildPageImage(
                 path,
                 cfgCopy.orientation,
@@ -59,6 +61,7 @@ int PrintInternal(const std::vector<std::string>& paths, bool duplex, std::strin
             }
             return 1;
         }
+
         pages.emplace_back(std::move(page));
     }
 
@@ -75,22 +78,37 @@ int PrintInternal(const std::vector<std::string>& paths, bool duplex, std::strin
 
 void Init(config::ConfigData& cfg) {
     State& state = GetState();
+
     std::lock_guard<std::mutex> lock(state.mtx);
+
     state.cfg = cfg;
     state.initialized = true;
 }
 
-int PrintSimplex(std::string path, std::string& error) {
-    return PrintInternal(std::vector<std::string>{std::move(path)}, false, error);
+int PrintSimplex(std::wstring path, std::string& error) {
+    return PrintInternal(
+        std::vector<std::wstring>{std::move(path)},
+        false,
+        error
+    );
 }
 
-int PrintDuplex(std::string frontPath, std::string backPath, std::string& error) {
-    return PrintInternal(std::vector<std::string>{std::move(frontPath), std::move(backPath)}, true, error);
+int PrintDuplex(std::wstring frontPath, std::wstring backPath, std::string& error) {
+    return PrintInternal(
+        std::vector<std::wstring>{
+            std::move(frontPath),
+            std::move(backPath)
+        },
+        true,
+        error
+    );
 }
 
 void ShutDown() {
     State& state = GetState();
+
     std::lock_guard<std::mutex> lock(state.mtx);
+
     state.cfg = config::ConfigData{};
     state.initialized = false;
 }
