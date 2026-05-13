@@ -257,7 +257,7 @@ void FileListViewController::HandleAdd(const std::wstring& pathFromUi)
         const auto picked = platform::OpenFilePicker();
         paths.reserve(picked.size());
         for (const auto& p : picked) {
-            paths.push_back(ToWide(p));
+            paths.push_back(p);
         }
     }
 
@@ -304,9 +304,8 @@ void FileListViewController::HandleAdd(const std::wstring& pathFromUi)
 
 void FileListViewController::StartCountForPath(const std::wstring& path)
 {
-    const std::string narrowPath = ToNarrow(path);
 
-    counter::Count(narrowPath, [this, path](int pages, const std::string& error) {
+    counter::Count(path, [this, path](int pages, const std::string& error) {
         auto* payload = new CountResultMessage{};
         payload->path = path;
         payload->pages = pages;
