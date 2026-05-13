@@ -154,7 +154,7 @@ int PrintController::Run() {
                 dpiY = 300;
             }
 
-            renderer.Init(m_cfg, tempFolder.string(), std::max(dpiX, dpiY), cancelFlag, win);
+            renderer.Init(m_cfg, tempFolder.wstring(), std::max(dpiX, dpiY), cancelFlag, win);
             renderer.Run();
         }
 
@@ -165,7 +165,7 @@ int PrintController::Run() {
 
             win.SetNotification(L"Start printing...");
 
-            printer.Init(m_cfg, tempFolder.string(), cancelFlag, pauseFlag, win);
+            printer.Init(m_cfg, tempFolder.wstring(), cancelFlag, pauseFlag, win);
         }
 
         Sleep(1); // cực quan trọng: tránh ăn 100% CPU
