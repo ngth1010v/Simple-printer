@@ -26,15 +26,15 @@ public:
 
     void SetDpi(int dpi);
 
-    bool Enqueue(std::string srcPath,
-                 std::string targetPath,
+    bool Enqueue(std::wstring srcPath,
+                 std::wstring targetPath,
                  int page,
                  RenderCallback callback);
 
 private:
     struct Task {
-        std::string srcPath;
-        std::string targetPath;
+        std::wstring srcPath;
+        std::wstring targetPath;
         int page = 1;
         RenderCallback callback;
     };
@@ -43,14 +43,14 @@ private:
     void ProcessTask(const Task& task);
 
     bool EnsureWordApp(std::string& error);
-    bool ConvertDocxToTempPdf(const std::string& srcPath,
+    bool ConvertDocxToTempPdf(const std::wstring& srcPath,
                               const std::wstring& tempPdfPath,
                               std::string& error);
 
     void CloseCurrentPdf();
     void CloseWordApp();
 
-    std::wstring MakeTempPdfPath(const std::string& srcPath) const;
+    std::wstring MakeTempPdfPath(const std::wstring& srcPath) const;
 
     std::thread thread_;
     std::mutex mutex_;
@@ -61,14 +61,14 @@ private:
 
     std::atomic<int> dpi_{96};
 
-    std::string currentSource_;
+    std::wstring currentSource_;
     std::wstring currentTempPdfWide_;
     FPDF_DOCUMENT currentPdfDoc_ = nullptr;
 
     std::wstring tempDirWide_;
 
     IDispatch* wordApp_ = nullptr;
-    std::unordered_map<std::string, std::wstring> tempPdfMap_;
+    std::unordered_map<std::wstring, std::wstring> tempPdfMap_;
 };
 
 } // namespace renderer

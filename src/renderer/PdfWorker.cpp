@@ -1,3 +1,4 @@
+// renderer/PdfWorker.cpp
 #include "renderer/PdfWorker.h"
 
 #include <windows.h>
@@ -12,30 +13,6 @@
 namespace renderer {
 
 namespace {
-
-std::wstring ToWide(const std::string& s) {
-    if (s.empty()) {
-        return {};
-    }
-
-    int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s.c_str(), -1, nullptr, 0);
-    UINT cp = CP_UTF8;
-    DWORD flags = MB_ERR_INVALID_CHARS;
-
-    if (count <= 0) {
-        cp = CP_ACP;
-        flags = 0;
-        count = MultiByteToWideChar(cp, flags, s.c_str(), -1, nullptr, 0);
-    }
-
-    if (count <= 0) {
-        return {};
-    }
-
-    std::wstring result(static_cast<size_t>(count - 1), L'\0');
-    MultiByteToWideChar(cp, flags, s.c_str(), -1, result.data(), count);
-    return result;
-}
 
 std::string HrToString(const char* prefix, HRESULT hr) {
     std::ostringstream oss;
@@ -160,6 +137,42 @@ bool WriteBmp32TopDown(const std::wstring& filePath,
     return true;
 }
 
+std::string WideToUtf8(const std::wstring& ws) {
+    if (ws.empty()) {
+        return {};
+    }
+
+    int size = WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        ws.c_str(),
+        -1,
+        nullptr,
+        0,
+        nullptr,
+        nullptr
+    );
+
+    if (size <= 0) {
+        return {};
+    }
+
+    std::string result(static_cast<size_t>(size - 1), '\0');
+
+    WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        ws.c_str(),
+        -1,
+        result.data(),
+        size,
+        nullptr,
+        nullptr
+    );
+
+    return result;
+}
+
 } // namespace
 
 PdfWorker::PdfWorker() = default;
@@ -213,19 +226,27 @@ void PdfWorker::SetDpi(int dpi) {
     if (dpi <= 0) {
         dpi = 96;
     }
+
     dpi_.store(dpi, std::memory_order_relaxed);
 }
 
-bool PdfWorker::Enqueue(std::string srcPath,
-                        std::string targetPath,
+bool PdfWorker::Enqueue(std::wstring srcPath,
+                        std::wstring targetPath,
                         int page,
                         RenderCallback callback) {
     std::lock_guard<std::mutex> lock(mutex_);
+
     if (!started_ || stopping_) {
         return false;
     }
 
-    queue_.push(Task{std::move(srcPath), std::move(targetPath), page, std::move(callback)});
+    queue_.push(Task{
+        std::move(srcPath),
+        std::move(targetPath),
+        page,
+        std::move(callback)
+    });
+
     cv_.notify_one();
     return true;
 }
@@ -236,7 +257,10 @@ void PdfWorker::ThreadMain() {
 
         {
             std::unique_lock<std::mutex> lock(mutex_);
-            cv_.wait(lock, [&] { return stopping_ || !queue_.empty(); });
+
+            cv_.wait(lock, [&] {
+                return stopping_ || !queue_.empty();
+            });
 
             if (queue_.empty()) {
                 break;
@@ -249,6 +273,7 @@ void PdfWorker::ThreadMain() {
         ProcessTask(task);
 
         bool shouldStop = false;
+
         {
             std::lock_guard<std::mutex> lock(mutex_);
             shouldStop = stopping_;
@@ -256,6 +281,7 @@ void PdfWorker::ThreadMain() {
 
         if (shouldStop) {
             std::queue<Task> pending;
+
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 pending.swap(queue_);
@@ -264,10 +290,12 @@ void PdfWorker::ThreadMain() {
             while (!pending.empty()) {
                 Task t = std::move(pending.front());
                 pending.pop();
+
                 if (t.callback) {
                     t.callback("renderer is shutting down");
                 }
             }
+
             break;
         }
     }
@@ -282,50 +310,68 @@ void PdfWorker::ProcessTask(const Task& task) {
     std::string error;
 
     if (task.page <= 0) {
-        if (task.callback) task.callback("invalid page");
+        if (task.callback) {
+            task.callback("invalid page");
+        }
         return;
     }
 
     const int dpi = dpi_.load(std::memory_order_relaxed);
     const int pageIndex = task.page - 1;
 
-    // handle document switch
     if (task.srcPath != currentSource_) {
         if (currentDoc_) {
             FPDF_CloseDocument(currentDoc_);
             currentDoc_ = nullptr;
         }
+
         currentSource_ = task.srcPath;
     }
 
-    // open document if needed
     if (!currentDoc_) {
-        currentDoc_ = FPDF_LoadDocument(task.srcPath.c_str(), nullptr);
+        const std::string srcUtf8 = WideToUtf8(task.srcPath);
+        currentDoc_ = FPDF_LoadDocument(srcUtf8.c_str(), nullptr);
+
         if (!currentDoc_) {
             error = PdfErrorToString(FPDF_GetLastError());
-            if (error.empty()) error = "failed to open pdf";
 
-            if (task.callback) task.callback(error);
+            if (error.empty()) {
+                error = "failed to open pdf";
+            }
+
+            if (task.callback) {
+                task.callback(error);
+            }
+
             return;
         }
     }
 
     const int pageCount = FPDF_GetPageCount(currentDoc_);
+
     if (pageIndex < 0 || pageIndex >= pageCount) {
-        if (task.callback) task.callback("page out of range");
+        if (task.callback) {
+            task.callback("page out of range");
+        }
         return;
     }
 
     FPDF_PAGE page = FPDF_LoadPage(currentDoc_, pageIndex);
+
     if (!page) {
-        if (task.callback) task.callback("failed to load pdf page");
+        if (task.callback) {
+            task.callback("failed to load pdf page");
+        }
         return;
     }
 
     struct PageGuard {
         FPDF_PAGE page;
+
         ~PageGuard() {
-            if (page) FPDF_ClosePage(page);
+            if (page) {
+                FPDF_ClosePage(page);
+            }
         }
     } pageGuard{ page };
 
@@ -334,19 +380,26 @@ void PdfWorker::ProcessTask(const Task& task) {
 
     int width = static_cast<int>(std::lround(pageWidthPt * dpi / 72.0));
     int height = static_cast<int>(std::lround(pageHeightPt * dpi / 72.0));
+
     width = std::max(width, 1);
     height = std::max(height, 1);
 
     FPDF_BITMAP bitmap = FPDFBitmap_Create(width, height, 1);
+
     if (!bitmap) {
-        if (task.callback) task.callback("failed to create pdf bitmap");
+        if (task.callback) {
+            task.callback("failed to create pdf bitmap");
+        }
         return;
     }
 
     struct BitmapGuard {
         FPDF_BITMAP bmp;
+
         ~BitmapGuard() {
-            if (bmp) FPDFBitmap_Destroy(bmp);
+            if (bmp) {
+                FPDFBitmap_Destroy(bmp);
+            }
         }
     } bmpGuard{ bitmap };
 
@@ -357,14 +410,15 @@ void PdfWorker::ProcessTask(const Task& task) {
     const void* buffer = FPDFBitmap_GetBuffer(bitmap);
     const int stride = FPDFBitmap_GetStride(bitmap);
 
-    std::wstring dstWide = ToWide(task.targetPath);
-    if (dstWide.empty()) {
-        if (task.callback) task.callback("invalid target path");
+    if (task.targetPath.empty()) {
+        if (task.callback) {
+            task.callback("invalid target path");
+        }
         return;
     }
 
     if (!WriteBmp32TopDown(
-            dstWide,
+            task.targetPath,
             width,
             height,
             static_cast<const uint8_t*>(buffer),
@@ -373,7 +427,10 @@ void PdfWorker::ProcessTask(const Task& task) {
             static_cast<double>(dpi),
             error)) {
 
-        if (task.callback) task.callback(error);
+        if (task.callback) {
+            task.callback(error);
+        }
+
         return;
     }
 
@@ -383,4 +440,5 @@ void PdfWorker::ProcessTask(const Task& task) {
         task.callback(error);
     }
 }
+
 } // namespace renderer

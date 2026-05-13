@@ -1,3 +1,4 @@
+// renderer/ImageWorker.cpp
 #include "renderer/ImageWorker.h"
 
 #include <windows.h>
@@ -15,31 +16,6 @@
 namespace renderer {
 
 namespace {
-
-std::wstring ToWide(const std::string& s) {
-    if (s.empty()) {
-        return {};
-    }
-
-    int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s.c_str(), -1, nullptr, 0);
-    if (count <= 0) {
-        count = MultiByteToWideChar(CP_ACP, 0, s.c_str(), -1, nullptr, 0);
-    }
-    if (count <= 0) {
-        return {};
-    }
-
-    std::wstring result(static_cast<size_t>(count - 1), L'\0');
-    MultiByteToWideChar(
-        (GetLastError() == ERROR_NO_UNICODE_TRANSLATION) ? CP_ACP : CP_UTF8,
-        (GetLastError() == ERROR_NO_UNICODE_TRANSLATION) ? 0 : MB_ERR_INVALID_CHARS,
-        s.c_str(),
-        -1,
-        result.data(),
-        count
-    );
-    return result;
-}
 
 std::string HrToString(const char* prefix, HRESULT hr) {
     std::ostringstream oss;
@@ -183,8 +159,8 @@ void ImageWorker::Stop() {
     }
 }
 
-bool ImageWorker::Enqueue(std::string srcPath,
-                          std::string targetPath,
+bool ImageWorker::Enqueue(std::wstring srcPath,
+                          std::wstring targetPath,
                           RenderCallback callback) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!started_ || stopping_) {
@@ -267,13 +243,15 @@ void ImageWorker::ThreadMain() {
 using Microsoft::WRL::ComPtr;
 
 void ImageWorker::ProcessTask(const Task& task) {
-    std::wstring srcWide = ToWide(task.srcPath);
-    std::wstring dstWide = ToWide(task.targetPath);
+    const std::wstring& srcWide = task.srcPath;
+    const std::wstring& dstWide = task.targetPath;
 
     std::string error;
 
     if (srcWide.empty() || dstWide.empty()) {
-        if (task.callback) task.callback("invalid image path");
+        if (task.callback) {
+            task.callback("invalid image path");
+        }
         return;
     }
 
@@ -286,7 +264,9 @@ void ImageWorker::ProcessTask(const Task& task) {
     );
 
     if (FAILED(hr) || !factory) {
-        if (task.callback) task.callback("WIC factory creation failed");
+        if (task.callback) {
+            task.callback("WIC factory creation failed");
+        }
         return;
     }
 
@@ -294,8 +274,11 @@ void ImageWorker::ProcessTask(const Task& task) {
     ComPtr<IWICBitmapFrameDecode> frame;
     ComPtr<IWICFormatConverter> converter;
 
-    UINT width = 0, height = 0;
-    double dpiX = 96.0, dpiY = 96.0;
+    UINT width = 0;
+    UINT height = 0;
+
+    double dpiX = 96.0;
+    double dpiY = 96.0;
 
     do {
         hr = factory->CreateDecoderFromFilename(
@@ -305,6 +288,7 @@ void ImageWorker::ProcessTask(const Task& task) {
             WICDecodeMetadataCacheOnLoad,
             decoder.GetAddressOf()
         );
+
         if (FAILED(hr) || !decoder) {
             error = HrToString("failed to open image", hr);
             break;
@@ -330,6 +314,7 @@ void ImageWorker::ProcessTask(const Task& task) {
             0.0,
             WICBitmapPaletteTypeMedianCut
         );
+
         if (FAILED(hr)) {
             error = HrToString("failed to initialize format converter", hr);
             break;
@@ -376,4 +361,5 @@ void ImageWorker::ProcessTask(const Task& task) {
         task.callback(error);
     }
 }
+
 } // namespace renderer

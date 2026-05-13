@@ -1,3 +1,4 @@
+// renderer/ImageWorker.h
 #pragma once
 
 #include "Renderer.h"
@@ -18,14 +19,14 @@ public:
     void Start();
     void Stop();
 
-    bool Enqueue(std::string srcPath,
-                 std::string targetPath,
+    bool Enqueue(std::wstring srcPath,
+                 std::wstring targetPath,
                  RenderCallback callback);
 
 private:
     struct Task {
-        std::string srcPath;
-        std::string targetPath;
+        std::wstring srcPath;
+        std::wstring targetPath;
         RenderCallback callback;
     };
 

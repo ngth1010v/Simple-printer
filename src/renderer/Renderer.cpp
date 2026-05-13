@@ -1,3 +1,4 @@
+// renderer/Renderer.cpp
 #include "renderer/Renderer.h"
 
 #include "renderer/DocxWorker.h"
@@ -29,32 +30,37 @@ struct State {
 
 State g_state;
 
-std::string ToLowerAscii(std::string s) {
-    for (char& ch : s) {
-        ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+std::wstring ToLowerAscii(std::wstring s) {
+    for (wchar_t& ch : s) {
+        if (ch >= L'A' && ch <= L'Z') {
+            ch = static_cast<wchar_t>(ch - L'A' + L'a');
+        }
     }
     return s;
 }
 
-std::string GetExtension(std::string path) {
-    const auto slash = path.find_last_of("/\\");
-    const auto dot = path.find_last_of('.');
-    if (dot == std::string::npos || (slash != std::string::npos && dot < slash)) {
+std::wstring GetExtension(const std::wstring& path) {
+    const auto slash = path.find_last_of(L"/\\");
+    const auto dot = path.find_last_of(L'.');
+
+    if (dot == std::wstring::npos ||
+        (slash != std::wstring::npos && dot < slash)) {
         return {};
     }
+
     return ToLowerAscii(path.substr(dot));
 }
 
-bool IsImageExt(const std::string& ext) {
-    return ext == ".bmp"  ||
-           ext == ".png"  ||
-           ext == ".jpg"  ||
-           ext == ".jpeg" ||
-           ext == ".gif"  ||
-           ext == ".tif"  ||
-           ext == ".tiff" ||
-           ext == ".ico"  ||
-           ext == ".webp";
+bool IsImageExt(const std::wstring& ext) {
+    return ext == L".bmp"  ||
+           ext == L".png"  ||
+           ext == L".jpg"  ||
+           ext == L".jpeg" ||
+           ext == L".gif"  ||
+           ext == L".tif"  ||
+           ext == L".tiff" ||
+           ext == L".ico"  ||
+           ext == L".webp";
 }
 
 void CallCb(const RenderCallback& cb, std::string error) {
@@ -74,12 +80,15 @@ void Init(int dpi) {
 
     if (g_state.initialized) {
         g_state.dpi = dpi;
+
         if (g_state.pdfWorker) {
             g_state.pdfWorker->SetDpi(dpi);
         }
+
         if (g_state.docxWorker) {
             g_state.docxWorker->SetDpi(dpi);
         }
+
         return;
     }
 
@@ -100,12 +109,13 @@ void Init(int dpi) {
     g_state.imageWorker = std::move(imageWorker);
     g_state.pdfWorker = std::move(pdfWorker);
     g_state.docxWorker = std::move(docxWorker);
+
     g_state.dpi = dpi;
     g_state.initialized = true;
 }
 
-void Render(const std::string& srcPath,
-            const std::string& targetPath,
+void Render(const std::wstring& srcPath,
+            const std::wstring& targetPath,
             int page,
             RenderCallback callback) {
     if (srcPath.empty() || targetPath.empty()) {
@@ -119,16 +129,17 @@ void Render(const std::string& srcPath,
 
     {
         std::lock_guard<std::mutex> lock(g_state.mutex);
+
         if (!g_state.initialized) {
             CallCb(callback, "renderer not initialized");
             return;
         }
 
-        const std::string ext = GetExtension(srcPath);
+        const std::wstring ext = GetExtension(srcPath);
 
-        if (ext == ".pdf") {
+        if (ext == L".pdf") {
             pdfWorker = g_state.pdfWorker;
-        } else if (ext == ".docx") {
+        } else if (ext == L".docx") {
             docxWorker = g_state.docxWorker;
         } else if (IsImageExt(ext)) {
             imageWorker = g_state.imageWorker;
@@ -141,6 +152,7 @@ void Render(const std::string& srcPath,
         if (!imageWorker->Enqueue(srcPath, targetPath, std::move(callback))) {
             CallCb(callback, "renderer is shutting down");
         }
+
         return;
     }
 
@@ -149,9 +161,11 @@ void Render(const std::string& srcPath,
             CallCb(callback, "invalid page");
             return;
         }
+
         if (!pdfWorker->Enqueue(srcPath, targetPath, page, std::move(callback))) {
             CallCb(callback, "renderer is shutting down");
         }
+
         return;
     }
 
@@ -160,9 +174,11 @@ void Render(const std::string& srcPath,
             CallCb(callback, "invalid page");
             return;
         }
+
         if (!docxWorker->Enqueue(srcPath, targetPath, page, std::move(callback))) {
             CallCb(callback, "renderer is shutting down");
         }
+
         return;
     }
 }
@@ -171,10 +187,12 @@ void Shutdown() {
     std::shared_ptr<ImageWorker> imageWorker;
     std::shared_ptr<PdfWorker> pdfWorker;
     std::shared_ptr<DocxWorker> docxWorker;
+
     bool destroyPdfium = false;
 
     {
         std::lock_guard<std::mutex> lock(g_state.mutex);
+
         if (!g_state.initialized) {
             return;
         }
@@ -184,6 +202,7 @@ void Shutdown() {
         docxWorker = std::move(g_state.docxWorker);
 
         g_state.initialized = false;
+
         destroyPdfium = g_state.pdfiumInitialized;
         g_state.pdfiumInitialized = false;
     }
@@ -191,9 +210,11 @@ void Shutdown() {
     if (imageWorker) {
         imageWorker->Stop();
     }
+
     if (pdfWorker) {
         pdfWorker->Stop();
     }
+
     if (docxWorker) {
         docxWorker->Stop();
     }

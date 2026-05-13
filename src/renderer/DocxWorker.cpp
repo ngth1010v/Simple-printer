@@ -101,7 +101,6 @@ bool EnsureParentDir(const std::wstring& filePath) {
     return !ec;
 }
 
-
 static VARIANT MakeBool(bool v) {
     VARIANT var;
     VariantInit(&var);
@@ -160,7 +159,6 @@ static HRESULT CallMethod(IDispatch* obj, const wchar_t* name, VARIANT* args, UI
 
     return InvokeDispatch(obj, name, DISPATCH_METHOD, &params, result);
 }
-
 
 bool WriteBmp32TopDown(const std::wstring& filePath,
                        int width,
@@ -454,7 +452,7 @@ bool CallDocumentsOpen(IDispatch* documents,
     }
 
     if (FAILED(hrOpen) || docVar.ref().vt != VT_DISPATCH || !docVar.ref().pdispVal) {
-        error = "Open failed: " ;//+ HrToString(hrOpen);
+        error = "Open failed: ";
         return false;
     }
 
@@ -462,6 +460,7 @@ bool CallDocumentsOpen(IDispatch* documents,
     (*outDoc)->AddRef();
     return true;
 }
+
 bool CallExportAsPdf(IDispatch* doc,
                      const std::wstring& pdfPath,
                      std::string& error) {
@@ -485,7 +484,7 @@ bool CallExportAsPdf(IDispatch* doc,
     args[0] = MakeI4(0);               // wdExportAllDocument
     args[1] = MakeI4(0);               // wdExportOptimizeForPrint
     args[2] = MakeBool(false);         // OpenAfterExport = false
-    args[3] = MakeI4(kWordFormatPdf);  // wdExportFormatPDF
+    args[3] = MakeI4(kWordFormatPdf);   // wdExportFormatPDF
     args[4] = MakeBstr(pdfPath);        // OutputFileName
 
     HRESULT hr = CallMethod(
@@ -501,7 +500,7 @@ bool CallExportAsPdf(IDispatch* doc,
     }
 
     if (FAILED(hr)) {
-        error = "ExportAsFixedFormat failed: " ;//+ HrToString(hr);
+        error = "ExportAsFixedFormat failed: ";
         return false;
     }
 
@@ -657,8 +656,8 @@ void DocxWorker::SetDpi(int dpi) {
     dpi_.store(dpi, std::memory_order_relaxed);
 }
 
-bool DocxWorker::Enqueue(std::string srcPath,
-                         std::string targetPath,
+bool DocxWorker::Enqueue(std::wstring srcPath,
+                         std::wstring targetPath,
                          int page,
                          RenderCallback callback) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -671,8 +670,8 @@ bool DocxWorker::Enqueue(std::string srcPath,
     return true;
 }
 
-std::wstring DocxWorker::MakeTempPdfPath(const std::string& srcPath) const {
-    const size_t h = std::hash<std::string>{}(srcPath);
+std::wstring DocxWorker::MakeTempPdfPath(const std::wstring& srcPath) const {
+    const size_t h = std::hash<std::wstring>{}(srcPath);
     std::wstringstream ss;
     ss << tempDirWide_ << L"\\" << std::hex << std::uppercase << h << L".pdf";
     return ss.str();
@@ -726,7 +725,6 @@ void DocxWorker::CloseWordApp() {
         documents->Release();
     }
 
-    // thử Quit thêm 1 lần nữa sau khi đã đóng hết doc
     {
         std::string quitError;
         CallQuit(wordApp_, quitError);
@@ -759,7 +757,6 @@ bool DocxWorker::EnsureWordApp(std::string& error) {
         return false;
     }
 
-    // Best-effort settings, ignore failures.
     {
         std::string tmp;
         PutBoolProperty(wordApp_, L"Visible", false, tmp);
@@ -770,13 +767,13 @@ bool DocxWorker::EnsureWordApp(std::string& error) {
     }
     {
         std::string tmp;
-        PutLongProperty(wordApp_, L"AutomationSecurity", 3, tmp); // msoAutomationSecurityForceDisable
+        PutLongProperty(wordApp_, L"AutomationSecurity", 3, tmp);
     }
 
     return true;
 }
 
-bool DocxWorker::ConvertDocxToTempPdf(const std::string& srcPath,
+bool DocxWorker::ConvertDocxToTempPdf(const std::wstring& srcPath,
                                       const std::wstring& tempPdfPath,
                                       std::string& error) {
     if (!EnsureWordApp(error)) {
@@ -797,7 +794,7 @@ bool DocxWorker::ConvertDocxToTempPdf(const std::string& srcPath,
         return false;
     }
 
-    const std::wstring srcWide = GetAbsolutePathW(ToWide(srcPath));
+    const std::wstring srcWide = GetAbsolutePathW(srcPath);
     if (srcWide.empty()) {
         documents->Release();
         error = "invalid docx path";
@@ -831,7 +828,7 @@ bool DocxWorker::ConvertDocxToTempPdf(const std::string& srcPath,
 }
 
 void DocxWorker::ThreadMain() {
-ComInitGuard com;
+    ComInitGuard com;
 
     auto cleanup = MakeScopeExit([this] {
         CloseCurrentPdf();
@@ -979,7 +976,7 @@ void DocxWorker::ProcessTask(const Task& task) {
     const void* buffer = FPDFBitmap_GetBuffer(bitmap);
     const int stride = FPDFBitmap_GetStride(bitmap);
 
-    std::wstring dstWide = GetAbsolutePathW(ToWide(task.targetPath));
+    std::wstring dstWide = GetAbsolutePathW(task.targetPath);
     if (dstWide.empty()) {
         FPDFBitmap_Destroy(bitmap);
         FPDF_ClosePage(page);

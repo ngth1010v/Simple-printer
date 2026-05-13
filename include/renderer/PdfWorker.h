@@ -1,3 +1,4 @@
+// renderer/PdfWorker.h
 #pragma once
 
 #include "Renderer.h"
@@ -23,15 +24,15 @@ public:
 
     void SetDpi(int dpi);
 
-    bool Enqueue(std::string srcPath,
-                 std::string targetPath,
+    bool Enqueue(std::wstring srcPath,
+                 std::wstring targetPath,
                  int page,
                  RenderCallback callback);
 
 private:
     struct Task {
-        std::string srcPath;
-        std::string targetPath;
+        std::wstring srcPath;
+        std::wstring targetPath;
         int page = 1;
         RenderCallback callback;
     };
@@ -46,7 +47,7 @@ private:
     bool started_ = false;
     bool stopping_ = false;
 
-    std::string currentSource_;
+    std::wstring currentSource_;
     FPDF_DOCUMENT currentDoc_ = nullptr;
 
     std::atomic<int> dpi_{96};
