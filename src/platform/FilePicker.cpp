@@ -1,47 +1,23 @@
+// platform/FilePicker.cpp
 #include "platform/FilePicker.h"
 
 #include <windows.h>
-#include <shobjidl.h>  // IFileOpenDialog
+#include <shobjidl.h>
+
 #include <vector>
 #include <string>
 
 namespace platform {
 
-//////////////////////////////////////////////////////
-// UTF16 -> UTF8
-//////////////////////////////////////////////////////
-static std::string WStringToUtf8(const std::wstring& w)
+std::vector<std::wstring> OpenFilePicker()
 {
-    if (w.empty()) return {};
-
-    int size = WideCharToMultiByte(
-        CP_UTF8, 0,
-        w.data(), (int)w.size(),
-        nullptr, 0,
-        nullptr, nullptr
-    );
-
-    std::string result(size, 0);
-
-    WideCharToMultiByte(
-        CP_UTF8, 0,
-        w.data(), (int)w.size(),
-        result.data(), size,
-        nullptr, nullptr
-    );
-
-    return result;
-}
-
-//////////////////////////////////////////////////////
-// Main
-//////////////////////////////////////////////////////
-std::vector<std::string> OpenFilePicker()
-{
-    std::vector<std::string> results;
+    std::vector<std::wstring> results;
 
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    if (FAILED(hr)) return results;
+
+    if (FAILED(hr)) {
+        return results;
+    }
 
     IFileOpenDialog* pDialog = nullptr;
 
@@ -57,12 +33,16 @@ std::vector<std::string> OpenFilePicker()
         return results;
     }
 
-    // Options
-    DWORD options;
-    pDialog->GetOptions(&options);
-    pDialog->SetOptions(options | FOS_ALLOWMULTISELECT | FOS_FILEMUSTEXIST);
+    DWORD options = 0;
 
-    // Filter
+    pDialog->GetOptions(&options);
+
+    pDialog->SetOptions(
+        options |
+        FOS_ALLOWMULTISELECT |
+        FOS_FILEMUSTEXIST
+    );
+
     const COMDLG_FILTERSPEC filters[] = {
         { L"All Supported", L"*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.docx;*.pdf" },
         { L"Images",        L"*.png;*.jpg;*.jpeg;*.bmp;*.gif" },
@@ -72,15 +52,16 @@ std::vector<std::string> OpenFilePicker()
     pDialog->SetFileTypes(3, filters);
     pDialog->SetFileTypeIndex(1);
 
-    // Show dialog
     hr = pDialog->Show(nullptr);
 
     if (SUCCEEDED(hr)) {
         IShellItemArray* pItems = nullptr;
 
         hr = pDialog->GetResults(&pItems);
+
         if (SUCCEEDED(hr)) {
             DWORD count = 0;
+
             pItems->GetCount(&count);
 
             for (DWORD i = 0; i < count; ++i) {
@@ -90,8 +71,7 @@ std::vector<std::string> OpenFilePicker()
                     PWSTR path = nullptr;
 
                     if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &path))) {
-                        std::wstring wpath(path);
-                        results.push_back(WStringToUtf8(wpath));
+                        results.emplace_back(path);
                         CoTaskMemFree(path);
                     }
 
@@ -104,6 +84,7 @@ std::vector<std::string> OpenFilePicker()
     }
 
     pDialog->Release();
+
     CoUninitialize();
 
     return results;

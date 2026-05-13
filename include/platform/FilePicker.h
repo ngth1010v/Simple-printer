@@ -1,3 +1,4 @@
+// platform/FilePicker.h
 #pragma once
 
 #include <vector>
@@ -6,7 +7,7 @@
 namespace platform {
 
 /// Mở file picker của Windows
-/// @return danh sách path (UTF-8). rỗng nếu user cancel
-std::vector<std::string> OpenFilePicker();
+/// @return danh sách path (UTF-16). rỗng nếu user cancel
+std::vector<std::wstring> OpenFilePicker();
 
 }
