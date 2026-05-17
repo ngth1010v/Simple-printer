@@ -766,6 +766,8 @@ void Printer::Run() {
         if (!IsCancelled()) {
             win->SetPrintProcessColor("green");
             win->SetNotification(L"Printing finished.");
+
+            cancelFlag->store(true, std::memory_order_relaxed);
         }
     }
     catch (...) {
