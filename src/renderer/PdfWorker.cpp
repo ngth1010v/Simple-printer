@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <cstring>
 
 namespace renderer {
 
@@ -328,11 +329,52 @@ void PdfWorker::ProcessTask(const Task& task) {
         currentSource_ = task.srcPath;
     }
 
+    // if (!currentDoc_) {
+    //     const std::string srcUtf8 = WideToUtf8(task.srcPath);
+    //     currentDoc_ = FPDF_LoadDocument(srcUtf8.c_str(), nullptr);
+
+    //     if (!currentDoc_) {
+    //         error = PdfErrorToString(FPDF_GetLastError());
+
+    //         if (error.empty()) {
+    //             error = "failed to open pdf";
+    //         }
+
+    //         if (task.callback) {
+    //             task.callback(error);
+    //         }
+
+    //         return;
+    //     }
+    // }
+
     if (!currentDoc_) {
-        const std::string srcUtf8 = WideToUtf8(task.srcPath);
-        currentDoc_ = FPDF_LoadDocument(srcUtf8.c_str(), nullptr);
+        FILE* f = _wfopen(task.srcPath.c_str(), L"rb");
+        if (!f) {
+            if (task.callback) {
+                task.callback("failed to open pdf file");
+            }
+            return;
+        }
+
+        static FPDF_FILEACCESS fileAccess;
+        std::memset(&fileAccess, 0, sizeof(fileAccess));
+
+        fseek(f, 0, SEEK_END);
+        fileAccess.m_FileLen = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        fileAccess.m_Param = f;
+        fileAccess.m_GetBlock = [](void* param, unsigned long pos, unsigned char* buf, unsigned long size) -> int {
+            FILE* filePtr = static_cast<FILE*>(param);
+            fseek(filePtr, pos, SEEK_SET);
+            return fread(buf, 1, size, filePtr) == size ? 1 : 0;
+        };
+
+        currentDoc_ = FPDF_LoadCustomDocument(&fileAccess, nullptr);
 
         if (!currentDoc_) {
+            fclose(f);
             error = PdfErrorToString(FPDF_GetLastError());
 
             if (error.empty()) {
@@ -346,6 +388,8 @@ void PdfWorker::ProcessTask(const Task& task) {
             return;
         }
     }
+
+    //
 
     const int pageCount = FPDF_GetPageCount(currentDoc_);
 
