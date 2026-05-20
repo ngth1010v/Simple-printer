@@ -160,6 +160,13 @@ ConfigData Parse(bool keepFiles)
         configPath
     );
 
+    data.margin = ReadString(
+        "Advance",
+        "margin",
+        data.margin,
+        configPath
+    );
+
     // ===== Files =====
     if (keepFiles) {
         int count = ReadInt(

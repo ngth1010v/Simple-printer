@@ -191,6 +191,13 @@ void Write(const ConfigData& data)
         path
     );
 
+    WriteString(
+        "Advance",
+        "margin",
+        data.margin,
+        path
+    );
+
     // ===== Files =====
     if (!data.files.empty()) {
         WriteInt(

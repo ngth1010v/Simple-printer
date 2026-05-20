@@ -21,6 +21,7 @@ struct ConfigData {
     std::string scale       = "Fit to page (keep aspect ratio)";
     std::string orientation = "Auto";
     std::string skipBlankPage = "Yes (Actual sheets may be less than calculated)";
+    std::string margin      = "Auto";
 
     std::vector<FileData> files;
 };
