@@ -144,6 +144,36 @@ static void AdvSkipBlankPageUpdate(config::ConfigData& cfg, const std::string& v
     cfg.skipBlankPage = v;
 }
 
+//======
+static void AdvMarginInit(HomeWindow& win, config::ConfigData& cfg) {
+    std::vector<std::string> options = {
+        "Auto",
+        "Keep Original",
+        "Keep Original For Documents",
+        "Keep Original For Images",
+    };
+
+    win.m_adv.SetMarginOptions(options);
+
+    bool match = false;
+    for (auto& o : options) {
+        if (o == cfg.margin) {
+            match = true;
+            break;
+        }
+    }
+
+    if (!match) {
+        cfg.margin = "Auto";
+    }
+
+    win.m_adv.SetMarginValue(cfg.margin);
+}
+
+static void AdvMarginUpdate(config::ConfigData& cfg, const std::string& v) {
+    cfg.margin = v;
+}
+
 
 
 }
@@ -167,6 +197,7 @@ void AdvangeConfigSectionController::Init(ChangeCallback cb)
     AdvScaleInit(m_win, m_cfg);
     AdvOrientationInit(m_win, m_cfg);
     AdvSkipBlankPageInit(m_win, m_cfg);
+    AdvMarginInit(m_win, m_cfg);
 }
 
 void AdvangeConfigSectionController::Bind()
@@ -193,6 +224,11 @@ void AdvangeConfigSectionController::Bind()
 
     m_win.m_adv.OnSkipBlankPageChange([&](const std::string& v) {
         AdvSkipBlankPageUpdate(m_cfg, v);
+        Fire(m_cb);
+    });
+
+    m_win.m_adv.OnMarginChange([&](const std::string& v) {
+        AdvMarginUpdate(m_cfg, v);
         Fire(m_cb);
     });
 }
