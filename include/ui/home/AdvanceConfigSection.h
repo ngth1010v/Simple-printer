@@ -68,6 +68,7 @@ private:
     std::vector<std::wstring> m_scaleOptions;
     std::vector<std::wstring> m_orientationOptions;
     std::vector<std::wstring> m_skipBlankPageOptions;
+    std::vector<std::wstring> m_marginOptions;
 
     int m_selPrintMode = -1;
     int m_selPaper = -1;

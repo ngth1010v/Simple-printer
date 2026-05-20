@@ -125,7 +125,7 @@ LRESULT HomeWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return TRUE;
         }
 
-        if (dis->CtlID >= 4101 && dis->CtlID <= 4105) {
+        if (dis->CtlID >= 4101 && dis->CtlID <= 4106) {
             m_adv.HandleDrawItem(dis);
             return TRUE;
         }

@@ -117,7 +117,7 @@ namespace Layout {
         constexpr int SKIP_BLANK_PAGE_INPUT_X = SECTION_MARGIN;
         constexpr int SKIP_BLANK_PAGE_INPUT_Y = SKIP_BLANK_PAGE_LABEL_Y + LABEL_H + INPUT_GAP;
 
-        // Skip blank page
+        // Margin
         constexpr int MARGIN_LABEL_X = SECTION_MARGIN;
         constexpr int MARGIN_LABEL_Y = SKIP_BLANK_PAGE_INPUT_Y + INPUT_H + ROW_GAP;
 

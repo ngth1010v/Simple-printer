@@ -10,14 +10,14 @@ using namespace ui::home;
 #define ID_BTN_SCALE            4103
 #define ID_BTN_ORIENTATION      4104
 #define ID_BTN_SKIP_BLANK_PAGE  4105
-#define ID_BTN_MARGIN  4106
+#define ID_BTN_MARGIN           4106
 
 #define ID_MENU_PRINT_MODE      5101
 #define ID_MENU_PAPER           5201
 #define ID_MENU_SCALE           5301
 #define ID_MENU_ORIENTATION     5401
 #define ID_MENU_SKIP_BLANK_PAGE 5501
-#define ID_MENU_MARGIN 5601
+#define ID_MENU_MARGIN          5601
 
 namespace {
 
@@ -160,12 +160,12 @@ void AdvanceConfigSection::Create(HWND parent, HFONT font) {
         );
     };
 
-    m_btnPrintMode   = createBtn(ID_BTN_PRINT_MODE,   X + PRINT_MODE_INPUT_X,   Y + PRINT_MODE_INPUT_Y);
-    m_btnPaper       = createBtn(ID_BTN_PAPER,        X + PAPER_INPUT_X,        Y + PAPER_INPUT_Y);
-    m_btnScale       = createBtn(ID_BTN_SCALE,        X + SCALE_INPUT_X,        Y + SCALE_INPUT_Y);
-    m_btnOrientation = createBtn(ID_BTN_ORIENTATION,  X + ORIENTATION_INPUT_X,  Y + ORIENTATION_INPUT_Y);
-    m_btnSkipBlankPage = createBtn(ID_BTN_SKIP_BLANK_PAGE, X + SKIP_BLANK_PAGE_INPUT_X, Y + SKIP_BLANK_PAGE_INPUT_Y);
-    m_btnMargin = createBtn(ID_BTN_MARGIN, X + MARGIN_INPUT_X, Y + MARGIN_INPUT_Y);
+    m_btnPrintMode      = createBtn(ID_BTN_PRINT_MODE       , X + PRINT_MODE_INPUT_X        , Y + PRINT_MODE_INPUT_Y);
+    m_btnPaper          = createBtn(ID_BTN_PAPER            , X + PAPER_INPUT_X             , Y + PAPER_INPUT_Y);
+    m_btnScale          = createBtn(ID_BTN_SCALE            , X + SCALE_INPUT_X             , Y + SCALE_INPUT_Y);
+    m_btnOrientation    = createBtn(ID_BTN_ORIENTATION      , X + ORIENTATION_INPUT_X       , Y + ORIENTATION_INPUT_Y);
+    m_btnSkipBlankPage  = createBtn(ID_BTN_SKIP_BLANK_PAGE  , X + SKIP_BLANK_PAGE_INPUT_X   , Y + SKIP_BLANK_PAGE_INPUT_Y);
+    m_btnMargin         = createBtn(ID_BTN_MARGIN           , X + MARGIN_INPUT_X            , Y + MARGIN_INPUT_Y);
 
     HWND ctrls[] = {
         m_btnPrintMode,
@@ -202,7 +202,7 @@ void AdvanceConfigSection::Resize(int parentWidth) {
     moveBtn(m_btnScale,       X + SCALE_INPUT_X,       Y + SCALE_INPUT_Y);
     moveBtn(m_btnOrientation, X + ORIENTATION_INPUT_X, Y + ORIENTATION_INPUT_Y);
     moveBtn(m_btnSkipBlankPage, X + SKIP_BLANK_PAGE_INPUT_X, Y + SKIP_BLANK_PAGE_INPUT_Y);
-    moveBtn(m_btnMargin, X + MARGIN_INPUT_X, Y + MARGIN_INPUT_Y);
+    moveBtn(m_btnMargin     , X + MARGIN_INPUT_X, Y + MARGIN_INPUT_Y);
 }
 
 static void SetOptionsImpl(
@@ -343,14 +343,14 @@ void AdvanceConfigSection::OnSkipBlankPageChange(std::function<void(const std::s
 
 // Margin
 void AdvanceConfigSection::SetMarginOptions(const std::vector<std::string>& options) {
-    SetOptionsImpl(m_skipBlankPageOptions, m_selMargin, options);
+    SetOptionsImpl(m_marginOptions, m_selMargin, options);
     if (m_btnMargin) InvalidateRect(m_btnMargin, nullptr, TRUE);
 }
 
 void AdvanceConfigSection::SetMarginValue(const std::string& value) {
     std::wstring wv = ToWide(value);
-    for (int i = 0; i < (int)m_skipBlankPageOptions.size(); ++i) {
-        if (m_skipBlankPageOptions[i] == wv) {
+    for (int i = 0; i < (int)m_marginOptions.size(); ++i) {
+        if (m_marginOptions[i] == wv) {
             m_selMargin = i;
             if (m_btnMargin) InvalidateRect(m_btnMargin, nullptr, TRUE);
             return;
@@ -574,13 +574,13 @@ void AdvanceConfigSection::HandleCommand(WPARAM wParam) {
     }
 
     if (id == ID_BTN_MARGIN) {
-        if (m_skipBlankPageOptions.empty()) return;
+        if (m_marginOptions.empty()) return;
 
         HMENU menu = CreatePopupMenu();
         if (!menu) return;
 
-        for (size_t i = 0; i < m_skipBlankPageOptions.size(); ++i) {
-            AppendMenuW(menu, MF_STRING, ID_MENU_MARGIN + (UINT)i, m_skipBlankPageOptions[i].c_str());
+        for (size_t i = 0; i < m_marginOptions.size(); ++i) {
+            AppendMenuW(menu, MF_STRING, ID_MENU_MARGIN + (UINT)i, m_marginOptions[i].c_str());
         }
 
         RECT rc{};
@@ -599,11 +599,11 @@ void AdvanceConfigSection::HandleCommand(WPARAM wParam) {
         DestroyMenu(menu);
 
         if (cmd >= ID_MENU_MARGIN &&
-            cmd < ID_MENU_MARGIN + (int)m_skipBlankPageOptions.size()) {
+            cmd < ID_MENU_MARGIN + (int)m_marginOptions.size()) {
             m_selMargin = cmd - ID_MENU_MARGIN;
             InvalidateRect(m_btnMargin, nullptr, TRUE);
             if (m_cbMargin) {
-                m_cbMargin(ToNarrow(m_skipBlankPageOptions[m_selMargin]));
+                m_cbMargin(ToNarrow(m_marginOptions[m_selMargin]));
             }
         }
         return;
@@ -649,8 +649,8 @@ void AdvanceConfigSection::HandleDrawItem(const DRAWITEMSTRUCT* dis) {
         if (m_selSkipBlankPage >= 0 && m_selSkipBlankPage < (int)m_skipBlankPageOptions.size())
             text = m_skipBlankPageOptions[m_selSkipBlankPage];
     } else if (btn == m_btnMargin) {
-        if (m_selMargin >= 0 && m_selMargin < (int)m_skipBlankPageOptions.size())
-            text = m_skipBlankPageOptions[m_selMargin];
+        if (m_selMargin >= 0 && m_selMargin < (int)m_marginOptions.size())
+            text = m_marginOptions[m_selMargin];
     }
 
     RECT textRc = rc;
