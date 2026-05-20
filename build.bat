@@ -45,5 +45,4 @@ echo Build SUCCESS
 echo ================================
 
 echo.
-pause
 endlocal

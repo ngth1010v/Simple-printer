@@ -25,20 +25,13 @@ namespace Layout {
         constexpr int X = MARGIN;
         constexpr int Y = MARGIN;
         constexpr int W = 250;
-        constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 3 - ROW_GAP;
+        constexpr int H = 2 * SECTION_MARGIN + (LABEL_H + INPUT_GAP + INPUT_H + ROW_GAP) * 2 - ROW_GAP;
         
         constexpr int INPUT_W = W - 2 * SECTION_MARGIN;
 
-        // Total files
-        constexpr int TOTAL_FILES_LABEL_X = SECTION_MARGIN;
-        constexpr int TOTAL_FILES_LABEL_Y = SECTION_MARGIN;
-
-        constexpr int TOTAL_FILES_INPUT_X = SECTION_MARGIN;
-        constexpr int TOTAL_FILES_INPUT_Y = TOTAL_FILES_LABEL_Y + LABEL_H + INPUT_GAP;
-
         // Pages to print
         constexpr int PAGES_TO_PRINT_LABEL_X = SECTION_MARGIN;
-        constexpr int PAGES_TO_PRINT_LABEL_Y = TOTAL_FILES_INPUT_Y + INPUT_H + ROW_GAP;
+        constexpr int PAGES_TO_PRINT_LABEL_Y = SECTION_MARGIN;
 
         constexpr int PAGES_TO_PRINT_INPUT_X = SECTION_MARGIN;
         constexpr int PAGES_TO_PRINT_INPUT_Y = PAGES_TO_PRINT_LABEL_Y + LABEL_H + INPUT_GAP;

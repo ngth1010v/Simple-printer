@@ -17,7 +17,6 @@ void InfoConfigSectionController::Init()
 void InfoConfigSectionController::Reload()
 {
     // ===== total files =====
-    const int totalFiles = static_cast<int>(m_cfg.files.size());
     const int copies = static_cast<int>(m_cfg.copies);
 
     // ===== total pages in ranges =====
@@ -54,7 +53,6 @@ void InfoConfigSectionController::Reload()
     sheetsRequired *= copies;
     
     // ===== set UI =====
-    m_win.m_info.SetTotalFilesValue(std::to_string(totalFiles));
     m_win.m_info.SetPagesToPrintValue(pagesToPrintStr);
     m_win.m_info.SetSheetsRequiredValue(std::to_string(sheetsRequired));
 }

@@ -76,11 +76,6 @@ void InfoConfigSection::Resize(int parentWidth) {
 
 // ===== SET VALUE =====
 
-void InfoConfigSection::SetTotalFilesValue(const std::string& value) {
-    m_totalFiles = ToWide(value);
-    InvalidateRect(m_parent, nullptr, TRUE);
-}
-
 void InfoConfigSection::SetPagesToPrintValue(const std::string& value) {
     m_pagesToPrint = ToWide(value);
     InvalidateRect(m_parent, nullptr, TRUE);
@@ -124,9 +119,6 @@ void InfoConfigSection::OnPaint(HDC hdc) {
 
     HFONT oldFont = (HFONT)SelectObject(hdc, m_font);
 
-    RECT l1 = { X + TOTAL_FILES_LABEL_X, Y + TOTAL_FILES_LABEL_Y, X + sectionW, Y + TOTAL_FILES_LABEL_Y + Layout::LABEL_H };
-    DrawText(hdc, L"Total files", -1, &l1, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
     RECT l2 = { X + PAGES_TO_PRINT_LABEL_X, Y + PAGES_TO_PRINT_LABEL_Y, X + sectionW, Y + PAGES_TO_PRINT_LABEL_Y + Layout::LABEL_H };
     DrawText(hdc, L"Pages to print", -1, &l2, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
@@ -134,13 +126,6 @@ void InfoConfigSection::OnPaint(HDC hdc) {
     DrawText(hdc, L"Sheets required", -1, &l3, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
     // ===== fake inputs =====
-
-    RECT i1 = {
-        X + TOTAL_FILES_INPUT_X,
-        Y + TOTAL_FILES_INPUT_Y,
-        X + TOTAL_FILES_INPUT_X + inputW,
-        Y + TOTAL_FILES_INPUT_Y + Layout::INPUT_H
-    };
 
     RECT i2 = {
         X + PAGES_TO_PRINT_INPUT_X,
@@ -156,7 +141,6 @@ void InfoConfigSection::OnPaint(HDC hdc) {
         Y + SHEETS_REQUIRED_INPUT_Y + Layout::INPUT_H
     };
 
-    DrawFakeInput(hdc, i1, m_totalFiles, m_font);
     DrawFakeInput(hdc, i2, m_pagesToPrint, m_font);
     DrawFakeInput(hdc, i3, m_sheetsRequired, m_font);
 
