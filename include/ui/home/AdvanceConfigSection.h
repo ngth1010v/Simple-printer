@@ -41,6 +41,11 @@ public:
     void SetSkipBlankPageValue(const std::string& value);
     void OnSkipBlankPageChange(std::function<void(const std::string&)> cb);
 
+    // ===== Margin =====
+    void SetMarginOptions(const std::vector<std::string>& options);
+    void SetMarginValue(const std::string& value);
+    void OnMarginChange(std::function<void(const std::string&)> cb);
+
     void HandleCommand(WPARAM wParam);
     void HandleDrawItem(const DRAWITEMSTRUCT* dis);
     void OnPaint(HDC hdc);
@@ -54,6 +59,7 @@ private:
     HWND m_btnScale = nullptr;
     HWND m_btnOrientation = nullptr;
     HWND m_btnSkipBlankPage = nullptr;
+    HWND m_btnMargin = nullptr;
 
     HBITMAP m_printModeBmp = nullptr;
 
@@ -68,12 +74,14 @@ private:
     int m_selScale = -1;
     int m_selOrientation = -1;
     int m_selSkipBlankPage = -1;
+    int m_selMargin = -1;
 
     std::function<void(const std::string&)> m_cbPrintMode;
     std::function<void(const std::string&)> m_cbPaper;
     std::function<void(const std::string&)> m_cbScale;
     std::function<void(const std::string&)> m_cbOrientation;
     std::function<void(const std::string&)> m_cbSkipBlankPage;
+    std::function<void(const std::string&)> m_cbMargin;
 
 private:
     void ShowPopup(HWND btn, const std::vector<std::wstring>& opts, int& sel, int baseId, std::function<void(const std::string&)> cb);
