@@ -52,6 +52,8 @@ int PrintInternal(const std::vector<std::wstring>& paths, bool duplex, std::stri
                 path,
                 cfgCopy.orientation,
                 cfgCopy.scale,
+                cfgCopy.margin,
+                hdc,
                 pageInfo.horzRes,
                 pageInfo.vertRes,
                 page,

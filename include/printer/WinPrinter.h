@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <windows.h>
 
 namespace printer {
 
@@ -17,11 +18,12 @@ bool BuildPageImage(
     const std::wstring& bmpPath,
     const std::string& orientation,
     const std::string& scale,
+    const std::string& margin,
+    HDC printerDc,
     int pageWidth,
     int pageHeight,
     BmpImage& outPage,
-    std::string& error
-);
+    std::string& error);
 
 // NEW
 void EnsureNotBlankPage(BmpImage& page);

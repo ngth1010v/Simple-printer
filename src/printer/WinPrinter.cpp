@@ -19,6 +19,13 @@ constexpr int kAnchorMarginPx = 4;                  // cách mép phải/dưới
 constexpr int kAnchorSizePx = 2;                    // cụm pixel chèn vào
 constexpr std::uint32_t kAnchorColor = 0xFF000000u; // đen đậm, chắc chắn không bị skip
 
+struct PrintableArea {
+    int left = 0;
+    int top = 0;
+    int right = 0;
+    int bottom = 0;
+};
+
 std::string ToLowerAscii(std::string s) {
     for (char& ch : s) {
         ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
@@ -237,6 +244,56 @@ bool IsFillScale(const std::string& scale) {
     return scale == "Fill page (ignore aspect ratio)";
 }
 
+enum class MarginPolicy {
+    Auto,
+    KeepOriginal,
+    KeepOriginalForDocuments,
+    KeepOriginalForImages
+};
+
+MarginPolicy ParseMarginPolicy(const std::string& margin) {
+    if (margin == "Auto") {
+        return MarginPolicy::Auto;
+    }
+    if (margin == "Keep Original") {
+        return MarginPolicy::KeepOriginal;
+    }
+    if (margin == "Keep Original For Documents") {
+        return MarginPolicy::KeepOriginalForDocuments;
+    }
+    if (margin == "Keep Original For Images") {
+        return MarginPolicy::KeepOriginalForImages;
+    }
+
+    return MarginPolicy::Auto;
+}
+
+bool ShouldKeepOriginalMargin(MarginPolicy policy, bool isDocumentBmp) {
+    switch (policy) {
+    case MarginPolicy::KeepOriginal:
+        return true;
+
+    case MarginPolicy::KeepOriginalForDocuments:
+        return isDocumentBmp;
+
+    case MarginPolicy::KeepOriginalForImages:
+        return !isDocumentBmp;
+
+    case MarginPolicy::Auto:
+    default:
+        return false;
+    }
+}
+
+struct ContentBounds {
+    int left = 0;
+    int top = 0;
+    int right = -1;
+    int bottom = -1;
+    bool valid = false;
+};
+
+
 double GetLuma(std::uint32_t p) {
     const int b = static_cast<int>(p & 0xFFu);
     const int g = static_cast<int>((p >> 8) & 0xFFu);
@@ -245,6 +302,186 @@ double GetLuma(std::uint32_t p) {
     return 0.114 * static_cast<double>(b)
          + 0.587 * static_cast<double>(g)
          + 0.299 * static_cast<double>(r);
+}
+
+ContentBounds FindContentBounds(const BmpImage& img) {
+    ContentBounds bounds;
+
+    if (img.width <= 0 || img.height <= 0 || img.pixels.empty()) {
+        return bounds;
+    }
+
+    bounds.left = img.width;
+    bounds.top = img.height;
+    bounds.right = -1;
+    bounds.bottom = -1;
+
+    for (int y = 0; y < img.height; ++y) {
+        const std::size_t row = static_cast<std::size_t>(y) * static_cast<std::size_t>(img.width);
+
+        for (int x = 0; x < img.width; ++x) {
+            const std::uint32_t p = img.pixels[row + static_cast<std::size_t>(x)];
+
+            if (GetLuma(p) < kWhiteLumaThreshold) {
+                if (x < bounds.left)   bounds.left = x;
+                if (y < bounds.top)    bounds.top = y;
+                if (x > bounds.right)  bounds.right = x;
+                if (y > bounds.bottom) bounds.bottom = y;
+                bounds.valid = true;
+            }
+        }
+    }
+
+    return bounds;
+}
+
+// double CalcAutoSecondScaleFactor(
+//     const BmpImage& rendered,
+//     const ContentBounds& bounds,
+//     int pageWidth,
+//     int pageHeight) {
+//     // Printable area giả lập bằng 95% page, nằm giữa page.
+//     // Nếu sau scale lần 1 content vượt ra ngoài vùng này thì scale lần 2.
+//     constexpr double kPrintableRatio = 0.95;
+
+//     if (!bounds.valid || rendered.width <= 0 || rendered.height <= 0 ||
+//         pageWidth <= 0 || pageHeight <= 0) {
+//         return 1.0;
+//     }
+
+//     const double insetX = (1.0 - kPrintableRatio) * 0.5 * static_cast<double>(pageWidth);
+//     const double insetY = (1.0 - kPrintableRatio) * 0.5 * static_cast<double>(pageHeight);
+
+//     const double w = static_cast<double>(rendered.width);
+//     const double h = static_cast<double>(rendered.height);
+
+//     const double leftMarginInRendered = static_cast<double>(bounds.left);
+//     const double rightMarginInRendered = w - static_cast<double>(bounds.right + 1);
+//     const double topMarginInRendered = static_cast<double>(bounds.top);
+//     const double bottomMarginInRendered = h - static_cast<double>(bounds.bottom + 1);
+
+//     auto capFactor = [](double renderedHalf, double contentMargin, double pageHalf, double inset) -> double {
+//         const double denom = renderedHalf - contentMargin;
+
+//         // Nếu denom <= 0 thì cạnh đó không ép shrink thêm.
+//         if (denom <= 0.0) {
+//             return 1.0;
+//         }
+
+//         const double f = (pageHalf - inset) / denom;
+//         if (f <= 0.0) {
+//             return 0.0;
+//         }
+
+//         return f;
+//     };
+
+//     double factor = 1.0;
+//     factor = std::min(factor, capFactor(w * 0.5, leftMarginInRendered,   static_cast<double>(pageWidth)  * 0.5, insetX));
+//     factor = std::min(factor, capFactor(w * 0.5, rightMarginInRendered,  static_cast<double>(pageWidth)  * 0.5, insetX));
+//     factor = std::min(factor, capFactor(h * 0.5, topMarginInRendered,    static_cast<double>(pageHeight) * 0.5, insetY));
+//     factor = std::min(factor, capFactor(h * 0.5, bottomMarginInRendered, static_cast<double>(pageHeight) * 0.5, insetY));
+
+//     if (factor > 1.0) {
+//         factor = 1.0;
+//     }
+
+//     // Không để factor rơi về 0 vì sẽ làm hỏng scale.
+//     if (factor < 0.01) {
+//         factor = 0.01;
+//     }
+
+//     return factor;
+// }
+
+bool ApplySecondScaleIfNeeded(
+    BmpImage& rendered,
+    int pageWidth,
+    int pageHeight,
+    const PrintableArea& printable) {
+
+    const ContentBounds bounds = FindContentBounds(rendered);
+
+    if (!bounds.valid) {
+        return true;
+    }
+
+    // rendered đang được center vào page
+    const int dstX = (pageWidth - rendered.width) / 2;
+    const int dstY = (pageHeight - rendered.height) / 2;
+
+    const int contentLeft   = dstX + bounds.left;
+    const int contentTop    = dstY + bounds.top;
+    const int contentRight  = dstX + bounds.right;
+    const int contentBottom = dstY + bounds.bottom;
+
+    // hoàn toàn nằm trong printable
+    if (
+        contentLeft   >= printable.left  &&
+        contentTop    >= printable.top   &&
+        contentRight  <  printable.right &&
+        contentBottom <  printable.bottom) {
+        return true;
+    }
+
+    // scale factor thật sự cần thiết
+    double factor = 1.0;
+
+    if (contentLeft < printable.left) {
+        const double f =
+            static_cast<double>(printable.right - printable.left) /
+            static_cast<double>(contentRight - contentLeft + 1);
+
+        factor = std::min(factor, f);
+    }
+
+    if (contentRight >= printable.right) {
+        const double f =
+            static_cast<double>(printable.right - printable.left) /
+            static_cast<double>(contentRight - contentLeft + 1);
+
+        factor = std::min(factor, f);
+    }
+
+    if (contentTop < printable.top) {
+        const double f =
+            static_cast<double>(printable.bottom - printable.top) /
+            static_cast<double>(contentBottom - contentTop + 1);
+
+        factor = std::min(factor, f);
+    }
+
+    if (contentBottom >= printable.bottom) {
+        const double f =
+            static_cast<double>(printable.bottom - printable.top) /
+            static_cast<double>(contentBottom - contentTop + 1);
+
+        factor = std::min(factor, f);
+    }
+
+    factor *= 0.999; // tránh chạm mép do rounding
+
+    if (factor >= 0.999999) {
+        return true;
+    }
+
+    const int newWidth = std::max(
+        1,
+        static_cast<int>(std::lround(static_cast<double>(rendered.width) * factor)));
+
+    const int newHeight = std::max(
+        1,
+        static_cast<int>(std::lround(static_cast<double>(rendered.height) * factor)));
+
+    BmpImage scaled;
+
+    if (!ScaleNearest(rendered, newWidth, newHeight, scaled)) {
+        return false;
+    }
+
+    rendered = std::move(scaled);
+
+    return true;
 }
 
 bool IsTooWhite(const BmpImage& img) {
@@ -313,6 +550,33 @@ bool IsDocumentBmpPath(const std::wstring& bmpPath) {
     return false;
 }
 
+
+bool GetPrintableArea(HDC hdc, PrintableArea& out) {
+    if (hdc == nullptr) {
+        return false;
+    }
+
+    const int physicalWidth  = GetDeviceCaps(hdc, PHYSICALWIDTH);
+    const int physicalHeight = GetDeviceCaps(hdc, PHYSICALHEIGHT);
+
+    const int offsetX = GetDeviceCaps(hdc, PHYSICALOFFSETX);
+    const int offsetY = GetDeviceCaps(hdc, PHYSICALOFFSETY);
+
+    const int printableWidth  = GetDeviceCaps(hdc, HORZRES);
+    const int printableHeight = GetDeviceCaps(hdc, VERTRES);
+
+    out.left   = offsetX;
+    out.top    = offsetY;
+    out.right  = offsetX + printableWidth;
+    out.bottom = offsetY + printableHeight;
+
+    return
+        physicalWidth > 0 &&
+        physicalHeight > 0 &&
+        printableWidth > 0 &&
+        printableHeight > 0;
+}
+
 } // namespace
 
 void EnsureNotBlankPage(BmpImage& page) {
@@ -325,6 +589,8 @@ bool BuildPageImage(
     const std::wstring& bmpPath,
     const std::string& orientation,
     const std::string& scale,
+    const std::string& margin,
+    HDC printerDc,
     int pageWidth,
     int pageHeight,
     BmpImage& outPage,
@@ -333,6 +599,9 @@ bool BuildPageImage(
         error = "Invalid page size.";
         return false;
     }
+
+    PrintableArea printable;
+    GetPrintableArea(printerDc, printable);
 
     BmpImage source;
     if (!LoadBitmap32(bmpPath, source, error)) {
@@ -354,7 +623,6 @@ bool BuildPageImage(
 
     outPage.width = pageWidth;
     outPage.height = pageHeight;
-
     ClearWhite(outPage);
 
     if (working.width <= 0 || working.height <= 0 || working.pixels.empty()) {
@@ -362,49 +630,34 @@ bool BuildPageImage(
         return false;
     }
 
+    const bool isDocumentBmp = IsDocumentBmpPath(bmpPath);
+    const MarginPolicy marginPolicy = ParseMarginPolicy(margin);
+    const bool keepOriginalMargin = ShouldKeepOriginalMargin(marginPolicy, isDocumentBmp);
+
     if (IsNoScale(scale)) {
         const int dstX = (pageWidth - working.width) / 2;
         const int dstY = (pageHeight - working.height) / 2;
 
         BlitClipped(outPage, working, dstX, dstY);
+        EnsureNotBlankPage(outPage);
         return true;
     }
 
-    const bool isDocumentBmp = IsDocumentBmpPath(bmpPath);
-
-    // -i: giữ margin an toàn như cũ
-    // -d: không trừ printable margin
-    const double safeRatio = isDocumentBmp ? 1.0 : 0.95;
-
-    const int safeWidth = std::max(
-        1,
-        static_cast<int>(std::floor(static_cast<double>(pageWidth) * safeRatio)));
-
-    const int safeHeight = std::max(
-        1,
-        static_cast<int>(std::floor(static_cast<double>(pageHeight) * safeRatio)));
-
     BmpImage rendered;
 
+    // Scale lần 1: scale theo page đầy đủ, chưa trừ margin hard-code nữa.
     if (IsFillScale(scale)) {
-        if (!ScaleNearest(working, safeWidth, safeHeight, rendered)) {
+        if (!ScaleNearest(working, pageWidth, pageHeight, rendered)) {
             error = "Failed to scale BMP.";
             return false;
         }
     } else {
-        const double scaleX =
-            static_cast<double>(safeWidth) / static_cast<double>(working.width);
-
-        const double scaleY =
-            static_cast<double>(safeHeight) / static_cast<double>(working.height);
-
+        const double scaleX = static_cast<double>(pageWidth) / static_cast<double>(working.width);
+        const double scaleY = static_cast<double>(pageHeight) / static_cast<double>(working.height);
         const double factor = std::min(scaleX, scaleY);
 
-        int dstWidth = static_cast<int>(
-            std::lround(static_cast<double>(working.width) * factor));
-
-        int dstHeight = static_cast<int>(
-            std::lround(static_cast<double>(working.height) * factor));
+        int dstWidth = static_cast<int>(std::lround(static_cast<double>(working.width) * factor));
+        int dstHeight = static_cast<int>(std::lround(static_cast<double>(working.height) * factor));
 
         dstWidth = std::max(1, dstWidth);
         dstHeight = std::max(1, dstHeight);
@@ -415,14 +668,26 @@ bool BuildPageImage(
         }
     }
 
+    // Margin handling:
+    // - Keep Original => không scale lần 2
+    // - Auto => scan bitmap sau scale lần 1, nếu đè vùng unprintable thì scale lần 2
+    if (!keepOriginalMargin) {
+        if (!ApplySecondScaleIfNeeded(
+            rendered,
+            pageWidth,
+            pageHeight,
+            printable)) {
+            error = "Failed to apply auto margin scaling.";
+            return false;
+        }
+    }
+
     const int dstX = (pageWidth - rendered.width) / 2;
     const int dstY = (pageHeight - rendered.height) / 2;
 
     BlitClipped(outPage, rendered, dstX, dstY);
-
     EnsureNotBlankPage(outPage);
 
     return true;
 }
-
 } // namespace printer
